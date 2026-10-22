@@ -1,0 +1,52 @@
+(function () {
+  const topbar = document.querySelector('.topbar');
+  if (!topbar) return;
+  const button = document.createElement('button');
+  button.className = 'menu-toggle';
+  button.type = 'button';
+  button.setAttribute('aria-label', 'Open navigation menu');
+  button.setAttribute('aria-expanded', 'false');
+  button.innerHTML = '<span></span><span></span><span></span>';
+  topbar.prepend(button);
+
+  const drawer = document.createElement('aside');
+  drawer.className = 'site-menu';
+  drawer.setAttribute('aria-hidden', 'true');
+  drawer.innerHTML = `<div class="site-menu-head"><div><img src="/ogreena-preview/assets/ogreena-original-logo.jpg" alt="Ogreena logo"><b>Ogreena</b></div><button type="button" aria-label="Close navigation menu">×</button></div>
+    <div class="menu-search"><span>⌕</span><input type="search" aria-label="Search navigation" placeholder="Search services and pages…"><button type="button" aria-label="Clear navigation search" hidden>Clear</button></div>
+    <nav aria-label="Ogreena navigation" class="menu-link-list">
+      <a data-menu-search="home main ogreena profile" href="/ogreena-preview/">Home / Main Ogreena Profile</a>
+      <a data-menu-search="about us company" href="/ogreena-preview/#about">About Us</a>
+      <a data-menu-search="residential services house cleaning carpet deep move in move out upholstery windows pressure washing" href="/ogreena-preview/#services">Residential Services</a>
+      <a data-menu-search="commercial services cleaning janitorial facilities business" href="/ogreena-preview/services/commercial-cleaning/">Commercial Services</a>
+      <a data-menu-search="electrical services electrician outlets switches lighting" href="/ogreena-preview/services/electrical-services/">Electrical Services</a>
+      <a data-menu-search="all services" href="/ogreena-preview/#services">All Services</a>
+      <a data-menu-search="kinship network community" href="https://ogreena.com/kinship-network">Kinship Network</a>
+      <a data-menu-search="blog green articles cleaning tips" href="https://ogreena.com/eco-cleaning-home-1">Blog / Green Articles</a>
+      <a data-menu-search="careers hiring jobs application employment" href="https://ogreena.com/hiring-application">Careers / Hiring</a>
+      <a data-menu-search="contact phone call estimate" href="/ogreena-preview/#contact">Contact</a>
+    </nav>
+    <div class="menu-no-results" hidden>No matching pages found.</div>
+    <p>Proposed demo navigation. External Ogreena links open the existing public website.</p>`;
+  document.body.append(drawer);
+  const backdrop = document.createElement('button');
+  backdrop.className = 'menu-backdrop'; backdrop.type = 'button'; backdrop.setAttribute('aria-label', 'Close navigation menu'); document.body.append(backdrop);
+  const close = () => { drawer.classList.remove('open'); backdrop.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); button.setAttribute('aria-expanded', 'false'); };
+  const open = () => { drawer.classList.add('open'); backdrop.classList.add('open'); drawer.setAttribute('aria-hidden', 'false'); button.setAttribute('aria-expanded', 'true'); drawer.querySelector('.site-menu-head button').focus(); };
+  button.addEventListener('click', () => drawer.classList.contains('open') ? close() : open());
+  drawer.querySelector('.site-menu-head button').addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') close(); });
+  const search = drawer.querySelector('.menu-search input');
+  const clearSearch = drawer.querySelector('.menu-search button');
+  const links = [...drawer.querySelectorAll('[data-menu-search]')];
+  const noResults = drawer.querySelector('.menu-no-results');
+  const filterLinks = () => {
+    const query = search.value.trim().toLowerCase();
+    let matches = 0;
+    links.forEach(link => { const visible = !query || `${link.textContent} ${link.dataset.menuSearch}`.toLowerCase().includes(query); link.hidden = !visible; if (visible) matches += 1; });
+    clearSearch.hidden = !query; noResults.hidden = matches > 0;
+  };
+  search.addEventListener('input', filterLinks);
+  clearSearch.addEventListener('click', () => { search.value = ''; filterLinks(); search.focus(); });
+}());
