@@ -84,16 +84,17 @@ const serviceData = {
 
 const item = serviceData[document.body.dataset.service];
 const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(common.address)}`;
+const siteRoot = location.hostname.endsWith('.github.io') ? '/ogreena-preview/' : '/';
 
 if (item) {
   const cover = document.querySelector('.service-profile .cover');
-  cover.style.backgroundImage = `url('/ogreena-preview/assets/service-covers/${document.body.dataset.service}.jpg')`;
+  cover.style.backgroundImage = `url('${siteRoot}assets/service-covers/${document.body.dataset.service}.jpg')`;
   cover.setAttribute('role', 'img');
   cover.setAttribute('aria-label', `${item.name} demonstration cover image`);
   document.querySelector('#serviceTitle').textContent = item.name;
   document.querySelector('#serviceDesc').textContent = item.description;
   window.OgreenaServiceIcons.renderInto(document.querySelector('#serviceIcon'), { slug:document.body.dataset.service, name:item.name, icon:item.icon });
-  document.querySelectorAll('[data-request]').forEach(link => { link.removeAttribute('href'); link.setAttribute('aria-disabled', 'true'); link.classList.add('disabled-action'); link.textContent = 'Preview only'; });
+  document.querySelectorAll('[data-request]').forEach(link => { link.removeAttribute('href'); link.setAttribute('aria-disabled', 'true'); link.classList.add('disabled-action'); link.textContent = 'Online unavailable'; });
 
   document.querySelector('#overview').innerHTML = `
     <article class="card profile-accent">
@@ -110,7 +111,7 @@ if (item) {
       <div class="job-grid">${item.jobs.map(value => `<div class="job-chip">${value}</div>`).join('')}</div>
     </article>
     <article class="card action-card">
-      <div><h2>Ready to discuss the work?</h2><p class="muted">This public preview does not accept requests, bookings, payments, or uploads.</p></div>
+      <div><h2>Ready to discuss the work?</h2><p class="muted">This public website does not accept requests, bookings, payments, or uploads.</p></div>
       <div class="form-actions"><span class="small-btn disabled-action" aria-disabled="true">Online requests disabled</span></div>
     </article>`;
 

@@ -1,4 +1,5 @@
 (function () {
+  const siteRoot = location.hostname.endsWith('.github.io') ? '/ogreena-preview/' : '/';
   const topbar = document.querySelector('.topbar');
   if (!topbar) return;
   const button = document.createElement('button');
@@ -12,22 +13,23 @@
   const drawer = document.createElement('aside');
   drawer.className = 'site-menu';
   drawer.setAttribute('aria-hidden', 'true');
-  drawer.innerHTML = `<div class="site-menu-head"><div><img src="/ogreena-preview/assets/ogreena-original-logo.jpg" alt="Ogreena logo"><b>Ogreena</b></div><button type="button" aria-label="Close navigation menu">×</button></div>
+  drawer.innerHTML = `<div class="site-menu-head"><div><img src="${siteRoot}assets/ogreena-original-logo.jpg" alt="Ogreena logo"><b>Ogreena</b></div><button type="button" aria-label="Close navigation menu">×</button></div>
     <div class="menu-search"><span>⌕</span><input type="search" aria-label="Search navigation" placeholder="Search services and pages…"><button type="button" aria-label="Clear navigation search" hidden>Clear</button></div>
     <nav aria-label="Ogreena navigation" class="menu-link-list">
-      <a data-menu-search="home main ogreena profile" href="/ogreena-preview/">Home / Main Ogreena Profile</a>
-      <a data-menu-search="about us company" href="/ogreena-preview/#about">About Us</a>
-      <a data-menu-search="residential services house cleaning carpet deep move in move out upholstery windows pressure washing" href="/ogreena-preview/#services">Residential Services</a>
-      <a data-menu-search="commercial services cleaning janitorial facilities business" href="/ogreena-preview/services/commercial-cleaning/">Commercial Services</a>
-      <a data-menu-search="electrical services electrician outlets switches lighting" href="/ogreena-preview/services/electrical-services/">Electrical Services</a>
-      <a data-menu-search="all services" href="/ogreena-preview/#services">All Services</a>
-      <a data-menu-search="kinship network community" href="https://ogreena.com/kinship-network">Kinship Network</a>
-      <a data-menu-search="blog green articles cleaning tips" href="https://ogreena.com/eco-cleaning-home-1">Blog / Green Articles</a>
-      <a data-menu-search="careers hiring jobs application employment" href="https://ogreena.com/hiring-application">Careers / Hiring</a>
-      <a data-menu-search="contact phone call estimate" href="/ogreena-preview/#contact">Contact</a>
+      <a data-menu-search="home main ogreena profile" href="${siteRoot}">Home / Main Ogreena Profile</a>
+      <a data-menu-search="about us company" href="${siteRoot}#about">About Us</a>
+      <a data-menu-search="residential services house cleaning carpet deep move in move out upholstery windows pressure washing" href="${siteRoot}#services">Residential Services</a>
+      <a data-menu-search="commercial services cleaning janitorial facilities business" href="${siteRoot}services/commercial-cleaning/">Commercial Services</a>
+      <a data-menu-search="electrical services electrician outlets switches lighting" href="${siteRoot}services/electrical-services/">Electrical Services</a>
+      <a data-menu-search="all services" href="${siteRoot}#services">All Services</a>
+      <a data-menu-search="products natural cleaning products store" href="${siteRoot}products/">Products</a>
+      <a data-menu-search="kinship network community" href="${siteRoot}kinship-network/">Kinship Network</a>
+      <a data-menu-search="blog green articles cleaning tips" href="${siteRoot}eco-cleaning-home-1/">Blog / Green Articles</a>
+      <a data-menu-search="careers hiring jobs application employment" href="${siteRoot}hiring-application/">Careers / Hiring</a>
+      <a data-menu-search="contact phone call estimate" href="${siteRoot}#contact">Contact</a>
     </nav>
     <div class="menu-no-results" hidden>No matching pages found.</div>
-    <p>Proposed demo navigation. External Ogreena links open the existing public website.</p>`;
+    <p>Ogreena service navigation. Online bookings, payments, accounts, and uploads are currently disabled.</p>`;
   document.body.append(drawer);
   const backdrop = document.createElement('button');
   backdrop.className = 'menu-backdrop'; backdrop.type = 'button'; backdrop.setAttribute('aria-label', 'Close navigation menu'); document.body.append(backdrop);
