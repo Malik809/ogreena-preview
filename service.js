@@ -94,7 +94,15 @@ if (item) {
   document.querySelector('#serviceTitle').textContent = item.name;
   document.querySelector('#serviceDesc').textContent = item.description;
   window.OgreenaServiceIcons.renderInto(document.querySelector('#serviceIcon'), { slug:document.body.dataset.service, name:item.name, icon:item.icon });
-  document.querySelectorAll('[data-request]').forEach(link => { link.removeAttribute('href'); link.setAttribute('aria-disabled', 'true'); link.classList.add('disabled-action'); link.textContent = 'Online unavailable'; });
+  const showUnavailable = () => {
+    let toast = document.querySelector('#toast');
+    if (!toast) { toast = document.createElement('div'); toast.id = 'toast'; document.body.append(toast); }
+    toast.textContent = 'Online service requests are not available yet. Please call (510) 472-9327.';
+    toast.classList.add('show');
+    clearTimeout(showUnavailable.timer);
+    showUnavailable.timer = setTimeout(() => toast.classList.remove('show'), 4200);
+  };
+  document.querySelectorAll('[data-request],[data-unavailable]').forEach(control => control.addEventListener('click', showUnavailable));
 
   document.querySelector('#overview').innerHTML = `
     <article class="card profile-accent">
@@ -111,9 +119,10 @@ if (item) {
       <div class="job-grid">${item.jobs.map(value => `<div class="job-chip">${value}</div>`).join('')}</div>
     </article>
     <article class="card action-card">
-      <div><h2>Ready to discuss the work?</h2><p class="muted">This public website does not accept requests, bookings, payments, or uploads.</p></div>
-      <div class="form-actions"><span class="small-btn disabled-action" aria-disabled="true">Online requests disabled</span></div>
+      <div><h2>Ready to discuss the work?</h2><p class="muted">Tell Ogreena what you need and confirm availability.</p></div>
+      <div class="form-actions"><a class="small-btn" href="tel:+15104729327">Call ${common.phone}</a><button class="small-btn primary" type="button" data-generated-unavailable>Request service</button></div>
     </article>`;
+  document.querySelector('[data-generated-unavailable]').addEventListener('click', showUnavailable);
 
   document.querySelector('#coveragePanel').innerHTML = `
     <article class="card"><div class="card-title"><h2>Service areas</h2><span class="tag">Confirm availability</span></div>
@@ -132,9 +141,11 @@ if (item) {
       <div class="contact-grid">
         <a class="contact-option" href="tel:+15104729327"><b>Call Ogreena</b><span>${common.phone}</span></a>
         <a class="contact-option" href="${directionsUrl}" target="_blank" rel="noopener"><b>Get Directions</b><span>Open map directions</span></a>
+        <button class="contact-option" type="button" data-contact-unavailable><b>Request service</b><span>Start an online request</span></button>
       </div>
       <div class="address-block"><b>Ogreena</b><br>${common.address}<br>${common.hours}</div>
     </article>`;
+  document.querySelector('[data-contact-unavailable]').addEventListener('click', showUnavailable);
 
   const sidebar = document.querySelector('.service-layout aside .info-list');
   sidebar.innerHTML = `

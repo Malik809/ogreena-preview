@@ -34,7 +34,7 @@
   const backdrop = document.createElement('button');
   backdrop.className = 'menu-backdrop'; backdrop.type = 'button'; backdrop.setAttribute('aria-label', 'Close navigation menu'); document.body.append(backdrop);
   const close = () => { drawer.classList.remove('open'); backdrop.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); button.setAttribute('aria-expanded', 'false'); };
-  const open = () => { drawer.classList.add('open'); backdrop.classList.add('open'); drawer.setAttribute('aria-hidden', 'false'); button.setAttribute('aria-expanded', 'true'); drawer.querySelector('.site-menu-head button').focus(); };
+  const open = (focusSearch = false) => { drawer.classList.add('open'); backdrop.classList.add('open'); drawer.setAttribute('aria-hidden', 'false'); button.setAttribute('aria-expanded', 'true'); (focusSearch ? drawer.querySelector('.menu-search input') : drawer.querySelector('.site-menu-head button')).focus(); };
   button.addEventListener('click', () => drawer.classList.contains('open') ? close() : open());
   drawer.querySelector('.site-menu-head button').addEventListener('click', close);
   backdrop.addEventListener('click', close);
@@ -51,4 +51,10 @@
   };
   search.addEventListener('input', filterLinks);
   clearSearch.addEventListener('click', () => { search.value = ''; filterLinks(); search.focus(); });
+  const topSearch = topbar.querySelector('.search');
+  if (topSearch) {
+    topSearch.setAttribute('role', 'button'); topSearch.setAttribute('tabindex', '0'); topSearch.setAttribute('aria-label', 'Search Ogreena services and pages');
+    topSearch.addEventListener('click', () => open(true));
+    topSearch.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(true); } });
+  }
 }());

@@ -7,6 +7,25 @@ const services = [
   'janitorial-services', 'move-in-move-out-cleaning', 'pressure-washing',
   'tile-grout-cleaning', 'upholstery-cleaning', 'window-cleaning'
 ];
+const expectedProducts = [
+  ['Trinity All Purpose Cleaner', 'Gallon', '$30.00'],
+  ['Trinity All Purpose Cleaner', '32 oz', '$15.00'],
+  ['Floor Cleaner', 'Gallon', '$30.00'],
+  ['Floor Cleaner', '32 oz', '$15.00'],
+  ['T-Fresche Deodorizer', '32 oz', '$15.00']
+];
+
+async function assertProducts(page, label) {
+  const cards = page.locator('.product-card');
+  if (await cards.count() !== 5) throw new Error(`${label} expected 5 products`);
+  const text = await page.locator('[data-ogreena-products]').innerText();
+  for (const [name, size, price] of expectedProducts) {
+    if (!text.includes(name) || !text.includes(size) || !text.includes(price)) {
+      throw new Error(`${label} missing ${name} ${size} ${price}`);
+    }
+  }
+  if (/T-Fresche[^\n]*Gallon|T-Fresche Gallon/i.test(text)) throw new Error(`${label} includes incorrect T-Fresche gallon`);
+}
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
@@ -18,13 +37,47 @@ const services = [
     page.on('pageerror', error => errors.push(error.message));
     const response = await page.goto(`${base}/`, { waitUntil: 'networkidle' });
     if (!response?.ok()) throw new Error(`${viewport.name} homepage returned ${response?.status()}`);
+    const body = await page.textContent('body');
+    if (body.includes('ONLINE SERVICES LIMITED')) throw new Error(`${viewport.name} still shows announcement banner`);
     if (await page.locator('a[href="tel:+15104729327"]').count() < 1) throw new Error(`${viewport.name} phone link missing`);
-    if (await page.locator('form').count() !== 0) throw new Error(`${viewport.name} contains an enabled form`);
-    if (!(await page.textContent('body')).includes('Online bookings, payments, uploads, and accounts are disabled')) throw new Error(`${viewport.name} disabled-services notice missing`);
+    await assertProducts(page, `${viewport.name} homepage`);
+
     await page.locator('.menu-toggle').click();
     if (!(await page.locator('.site-menu').getAttribute('class')).includes('open')) throw new Error(`${viewport.name} navigation did not open`);
     if (await page.locator('.site-menu a', { hasText: 'Products' }).count() !== 1) throw new Error(`${viewport.name} products navigation missing`);
     await page.locator('.site-menu-head button').click();
+
+    if (await page.locator('.topbar .search').isVisible()) {
+      await page.locator('.topbar .search').click();
+      if (!(await page.locator('.site-menu').getAttribute('class')).includes('open')) throw new Error(`${viewport.name} top search did not open search panel`);
+      await page.locator('.site-menu-head button').click();
+    }
+
+    await page.locator('#productSearch').fill('T-Fresche');
+    if (await page.locator('.product-card:not([hidden])').count() !== 1) throw new Error(`${viewport.name} product search failed`);
+    await page.locator('#productSearch').fill('');
+    await page.locator('.product-card').first().getByRole('button', { name: 'View Product' }).click();
+    if (!await page.locator('.product-dialog').isVisible()) throw new Error(`${viewport.name} product details did not open`);
+    await page.locator('.dialog-close').click();
+    await page.locator('.product-card').first().getByRole('button', { name: 'Buy Now' }).click();
+    if (!(await page.textContent('body')).includes('Checkout is unavailable')) throw new Error(`${viewport.name} checkout message missing`);
+
+    for (const tab of ['About', 'Services', 'Reviews', 'Contact']) {
+      await page.getByRole('button', { name: tab, exact: true }).click();
+      if (!await page.locator(`#panel-${tab.toLowerCase()}`).isVisible()) throw new Error(`${viewport.name} ${tab} tab failed`);
+    }
+    await page.getByRole('button', { name: 'About', exact: true }).click();
+    const toggle = page.getByRole('button', { name: 'View All', exact: true });
+    await toggle.click();
+    if (await page.locator('#serviceToggle').getAttribute('aria-expanded') !== 'true') throw new Error(`${viewport.name} View All failed`);
+    if (viewport.name === 'desktop') {
+      const before = await page.locator('[data-product-carousel]').evaluate(element => element.scrollLeft);
+      await page.getByRole('button', { name: 'Next products' }).click();
+      await page.waitForTimeout(500);
+      const after = await page.locator('[data-product-carousel]').evaluate(element => element.scrollLeft);
+      if (after <= before) throw new Error('desktop product carousel arrow failed');
+    }
+
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
     if (overflow) throw new Error(`${viewport.name} has horizontal overflow`);
     await page.screenshot({ path: `/tmp/ogreena-${viewport.name}.png`, fullPage: true });
@@ -40,19 +93,18 @@ const services = [
     if (await page.locator('a[href="tel:+15104729327"]').count() < 1) throw new Error(`${slug} phone link missing`);
     const cover = await page.locator('.cover').evaluate(element => getComputedStyle(element).backgroundImage);
     if (!cover || cover === 'none') throw new Error(`${slug} cover image missing`);
+    await assertProducts(page, slug);
   }
   results.push(`service profiles: ${services.length}/12 PASS`);
 
-  let response = await page.goto(`${base}/products/`, { waitUntil: 'networkidle' });
+  const response = await page.goto(`${base}/products/`, { waitUntil: 'networkidle' });
   if (!response?.ok()) throw new Error(`products returned ${response?.status()}`);
-  if (!(await page.textContent('body')).includes('ONLINE ORDERING DISABLED')) throw new Error('products disabled notice missing');
-  results.push('products landing page: PASS');
+  await assertProducts(page, 'catalog');
+  if (!await page.getByRole('link', { name: 'Back to Ogreena' }).isVisible()) throw new Error('catalog back link missing');
+  await page.screenshot({ path: '/tmp/ogreena-products-mobile.png', fullPage: true });
+  results.push('products catalog: 5/5 PASS');
 
-  for (const path of [
-    '/products/ols/products/t-fresche-gallon/',
-    '/products/ols/products/floor-32-oz/',
-    '/products/ols/products/trinity-gallon/'
-  ]) {
+  for (const path of ['/products/ols/products/t-fresche-gallon/', '/products/ols/products/floor-32-oz/', '/products/ols/products/trinity-gallon/']) {
     await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
     if (!page.url().includes('/products/')) throw new Error(`${path} compatibility redirect failed`);
   }
