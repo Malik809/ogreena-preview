@@ -10,6 +10,7 @@ const authPanel = document.querySelector('#authPanel');
 const accountPanel = document.querySelector('#accountPanel');
 const status = document.querySelector('#authStatus');
 const signOutButton = document.querySelector('#signOut');
+const REQUEST_TIMEOUT_MS = 20000;
 
 function setStatus(message, type = '') {
   status.textContent = message;
@@ -18,8 +19,50 @@ function setStatus(message, type = '') {
 
 function friendlyError(error) {
   if (!error) return 'Something went wrong. Please try again.';
-  if (/invalid login/i.test(error.message)) return 'The email or password is incorrect, or the email has not been verified.';
-  return error.message;
+  const code = error.code || '';
+  if (code === 'request_timeout') return 'The secure account service took too long to respond. Your account may already exist. Check your email, then use Sign In or Reset Password before trying again.';
+  if (['email_exists', 'user_already_exists', 'identity_already_exists'].includes(code)) return 'An account already exists for this email. Please sign in or use Reset Password.';
+  if (code === 'email_not_confirmed') return 'Please confirm your email before signing in. Check your inbox and spam folder for the Ogreena confirmation email.';
+  if (code === 'over_email_send_rate_limit') return 'Too many confirmation emails were requested. Please wait a few minutes, then try again.';
+  if (code === 'over_request_rate_limit') return 'Too many account requests were made. Please wait a few minutes, then try again.';
+  if (code === 'weak_password') return 'Please choose a stronger password with at least 8 characters.';
+  if (code === 'email_address_invalid') return 'Please enter a valid email address.';
+  if (code === 'invalid_credentials' || /invalid login/i.test(error.message || '')) return 'The email or password is incorrect, or the email has not been verified.';
+  if (error instanceof TypeError || /failed to fetch|network/i.test(error.message || '')) return 'Ogreena could not reach the secure account service. Check your connection and try again.';
+  return 'The secure account request could not be completed. Please try again, or use Sign In or Reset Password if you already registered.';
+}
+
+function withTimeout(request) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      const error = new Error('Account request timed out');
+      error.code = 'request_timeout';
+      reject(error);
+    }, REQUEST_TIMEOUT_MS);
+  });
+  return Promise.race([request, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
+function setFormBusy(form, busy) {
+  form.dataset.submitting = busy ? 'true' : 'false';
+  form.setAttribute('aria-busy', String(busy));
+  form.querySelectorAll('button,input').forEach(control => { control.disabled = busy; });
+}
+
+async function runFormRequest(form, pendingMessage, request, onSuccess) {
+  if (form.dataset.submitting === 'true') return;
+  setStatus(pendingMessage);
+  setFormBusy(form, true);
+  try {
+    const result = await withTimeout(request());
+    if (result.error) throw result.error;
+    await onSuccess(result.data);
+  } catch (error) {
+    setStatus(friendlyError(error), 'error');
+  } finally {
+    setFormBusy(form, false);
+  }
 }
 
 function switchTab(name) {
@@ -33,41 +76,54 @@ const requestedMode = new URLSearchParams(location.search).get('mode');
 if (['signin', 'signup', 'recovery'].includes(requestedMode)) switchTab(requestedMode);
 
 document.querySelector('#signUpForm').addEventListener('submit', async event => {
-  event.preventDefault(); setStatus('Creating your secure customer account…');
-  const values = Object.fromEntries(new FormData(event.currentTarget));
-  const { data, error } = await supabase.auth.signUp({ email: values.email, password: values.password, options: { data: { display_name: values.display_name }, emailRedirectTo: authRedirect } });
-  if (error) return setStatus(friendlyError(error), 'error');
-  event.currentTarget.reset();
-  setStatus(data.session ? 'Account created and signed in.' : 'Account created. Check your email to verify your address before signing in.', 'success');
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form));
+  await runFormRequest(form, 'Creating your secure customer account…', () => supabase.auth.signUp({ email: values.email, password: values.password, options: { data: { display_name: values.display_name }, emailRedirectTo: authRedirect } }), async data => {
+    form.reset();
+    setStatus(data.session ? 'Account created and signed in.' : 'Account created. Check your email for the Ogreena confirmation link before signing in.', 'success');
+  });
 });
 
 document.querySelector('#signInForm').addEventListener('submit', async event => {
-  event.preventDefault(); setStatus('Signing in…');
-  const values = Object.fromEntries(new FormData(event.currentTarget));
-  const { error } = await supabase.auth.signInWithPassword({ email: values.email, password: values.password });
-  if (error) return setStatus(friendlyError(error), 'error');
-  event.currentTarget.reset(); setStatus('Signed in.', 'success');
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form));
+  await runFormRequest(form, 'Signing in…', () => supabase.auth.signInWithPassword({ email: values.email, password: values.password }), async () => {
+    form.reset(); setStatus('Signed in.', 'success');
+  });
 });
 
 document.querySelector('#recoveryForm').addEventListener('submit', async event => {
-  event.preventDefault(); setStatus('Requesting a secure recovery email…');
-  const values = Object.fromEntries(new FormData(event.currentTarget));
-  const { error } = await supabase.auth.resetPasswordForEmail(values.email, { redirectTo: authRedirect });
-  if (error) return setStatus(friendlyError(error), 'error');
-  event.currentTarget.reset(); setStatus('If that account exists, a recovery email has been sent.', 'success');
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form));
+  await runFormRequest(form, 'Requesting a secure recovery email…', () => supabase.auth.resetPasswordForEmail(values.email, { redirectTo: authRedirect }), async () => {
+    form.reset(); setStatus('If that account exists, a recovery email has been sent.', 'success');
+  });
 });
 
 document.querySelector('#newPasswordForm').addEventListener('submit', async event => {
-  event.preventDefault(); setStatus('Saving the new password…');
-  const password = new FormData(event.currentTarget).get('password');
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) return setStatus(friendlyError(error), 'error');
-  event.currentTarget.reset(); setStatus('Password updated.', 'success');
+  event.preventDefault();
+  const form = event.currentTarget;
+  const password = new FormData(form).get('password');
+  await runFormRequest(form, 'Saving the new password…', () => supabase.auth.updateUser({ password }), async () => {
+    form.reset(); setStatus('Password updated. You can now sign in.', 'success');
+  });
 });
 
 signOutButton.addEventListener('click', async () => {
-  const { error } = await supabase.auth.signOut();
-  if (error) setStatus(friendlyError(error), 'error');
+  if (signOutButton.disabled) return;
+  signOutButton.disabled = true;
+  try {
+    const { error } = await withTimeout(supabase.auth.signOut());
+    if (error) throw error;
+    setStatus('Signed out.', 'success');
+  } catch (error) {
+    setStatus(friendlyError(error), 'error');
+  } finally {
+    signOutButton.disabled = false;
+  }
 });
 
 document.querySelector('#requestForm').addEventListener('submit', async event => {
