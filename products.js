@@ -1,7 +1,9 @@
 (function () {
   const products = window.OgreenaProductCatalog || [];
   const root = location.hostname.endsWith('.github.io') ? '/ogreena-preview/' : '/';
-  const isCatalog = location.pathname.replace(/\/+/g, '/').endsWith('/products/');
+  const path = location.pathname.replace(/\/+/g, '/');
+  const isCatalog = path.endsWith('/products/');
+  const isBusinessProfile = path === '/' || path === '/ogreena-preview/';
 
   function card(product) {
     return `<article class="product-card" data-product-card data-search="${product.name} ${product.size}">
@@ -21,7 +23,9 @@
   function ensureShowcase() {
     let section = document.querySelector('[data-ogreena-products]');
     if (!section && !isCatalog) {
-      const profile = document.querySelector('.profile-card');
+      const profile = isBusinessProfile
+        ? document.querySelector('.profile-card')
+        : document.querySelector('[data-customer-profile]');
       if (!profile) return null;
       section = document.createElement('section');
       section.className = 'card product-showcase';

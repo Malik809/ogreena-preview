@@ -8,11 +8,11 @@ const services = [
   'tile-grout-cleaning', 'upholstery-cleaning', 'window-cleaning'
 ];
 const expectedProducts = [
-  ['Trinity All Purpose Cleaner', 'Gallon', '$30.00'],
   ['Trinity All Purpose Cleaner', '32 oz', '$15.00'],
-  ['Floor Cleaner', 'Gallon', '$30.00'],
   ['Floor Cleaner', '32 oz', '$15.00'],
-  ['T-Fresche Deodorizer', '32 oz', '$15.00']
+  ['T-Fresche Deodorizer', '32 oz', '$15.00'],
+  ['Trinity All Purpose Cleaner', 'Gallon', '$30.00'],
+  ['Floor Cleaner', 'Gallon', '$30.00']
 ];
 
 async function assertProducts(page, label) {
@@ -25,6 +25,9 @@ async function assertProducts(page, label) {
     }
   }
   if (/T-Fresche[^\n]*Gallon|T-Fresche Gallon/i.test(text)) throw new Error(`${label} includes incorrect T-Fresche gallon`);
+  const ids = await cards.evaluateAll(elements => elements.map(element => element.querySelector('[data-view-product]').dataset.viewProduct));
+  const expectedIds = ['og-trinity-32oz', 'og-floor-32oz', 'og-t-fresche-32oz', 'og-trinity-gallon', 'og-floor-gallon'];
+  if (ids.join(',') !== expectedIds.join(',')) throw new Error(`${label} product order is incorrect: ${ids.join(',')}`);
 }
 
 (async () => {
@@ -96,9 +99,15 @@ async function assertProducts(page, label) {
     if (await page.locator('a[href="tel:+15104729327"]').count() < 1) throw new Error(`${slug} phone link missing`);
     const cover = await page.locator('.cover').evaluate(element => getComputedStyle(element).backgroundImage);
     if (!cover || cover === 'none') throw new Error(`${slug} cover image missing`);
-    await assertProducts(page, slug);
+    if (await page.locator('[data-ogreena-products], .product-card').count() !== 0) throw new Error(`${slug} still shows products`);
   }
-  results.push(`service profiles: ${services.length}/12 PASS`);
+  results.push(`service profiles without products: ${services.length}/12 PASS`);
+
+  await page.setContent('<main><section class="profile-card" data-customer-profile><h1>Future customer profile</h1></section></main>');
+  await page.addScriptTag({ url: `${base}/product-catalog.js` });
+  await page.addScriptTag({ url: `${base}/products.js` });
+  await assertProducts(page, 'future customer profile');
+  results.push('future customer profile product component: PASS');
 
   const response = await page.goto(`${base}/products/`, { waitUntil: 'networkidle' });
   if (!response?.ok()) throw new Error(`products returned ${response?.status()}`);
