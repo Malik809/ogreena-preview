@@ -27,8 +27,10 @@
       <a data-menu-search="blog green articles cleaning tips" href="${siteRoot}eco-cleaning-home-1/">Blog / Green Articles</a>
       <a data-menu-search="careers hiring jobs application employment" href="${siteRoot}hiring-application/">Careers / Hiring</a>
       <a data-menu-search="contact phone call estimate" href="${siteRoot}#contact">Contact</a>
-      <a data-menu-search="create account sign up register customer" href="${siteRoot}auth/?mode=signup">Create Account</a>
-      <a data-menu-search="sign in login customer owner employee" href="${siteRoot}auth/?mode=signin">Sign In</a>
+      <a data-auth-guest data-menu-search="create account sign up register customer" href="${siteRoot}auth/?mode=signup">Create Account</a>
+      <a data-auth-guest data-menu-search="sign in login customer owner employee" href="${siteRoot}auth/?mode=signin">Sign In</a>
+      <a data-auth-user data-menu-search="account profile requests appointments" href="${siteRoot}auth/" hidden>My Account</a>
+      <a data-auth-signout data-menu-search="sign out logout" href="#" hidden>Sign Out</a>
     </nav>
     <div class="menu-no-results" hidden>No matching pages found.</div>
     <p>Ogreena service navigation. Payments remain disabled until separately activated by an authorized owner.</p>`;
