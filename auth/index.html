@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Ogreena Account | Sign In or Create Account</title>
+  <link rel="icon" type="image/jpeg" href="../assets/ogreena-original-logo.jpg">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../brand.css">
+  <link rel="stylesheet" href="auth.css">
+  <style>[hidden]{display:none!important}.account-product img{display:block;width:100%;height:110px;object-fit:contain;margin-bottom:8px;background:#fff}</style>
+</head>
+<body class="auth-development">
+  <header class="topbar">
+    <a class="wordmark" href="../"><img src="../assets/ogreena-original-logo.jpg" alt="Ogreena logo">Ogreena</a>
+    <div class="search">Secure customer account</div>
+    <div class="top-actions"><button class="small-btn" id="signOut" hidden>Sign Out</button></div>
+  </header>
+  <main class="auth-shell">
+    <section class="auth-card" id="authPanel">
+      <div class="content-head"><div><span class="tag">Secure account</span><h1>Ogreena account</h1></div></div>
+      <div class="auth-tabs" role="tablist">
+        <button class="active" data-auth-tab="signin">Sign In</button>
+        <button data-auth-tab="signup">Sign Up</button>
+        <button data-auth-tab="recovery">Reset Password</button>
+      </div>
+      <form id="signInForm" class="auth-form">
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" minlength="8" required></label>
+        <button class="small-btn primary" type="submit">Sign In</button>
+      </form>
+      <form id="signUpForm" class="auth-form" hidden>
+        <label>Name<input name="display_name" autocomplete="name" maxlength="100" required></label>
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button class="small-btn primary" type="submit">Create Customer Account</button>
+        <p class="muted">A confirmation email is required before sign-in. New public registrations always receive the customer role.</p>
+      </form>
+      <form id="recoveryForm" class="auth-form" hidden>
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <button class="small-btn primary" type="submit">Send Recovery Email</button>
+      </form>
+      <form id="newPasswordForm" class="auth-form" hidden>
+        <label>New password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button class="small-btn primary" type="submit">Save New Password</button>
+      </form>
+      <p class="auth-status" id="authStatus" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="account-panel" id="accountPanel" hidden>
+      <div class="content-head"><div><span class="tag" id="roleBadge">Customer</span><h1 id="welcomeName">My Ogreena</h1></div></div>
+      <div class="account-grid">
+        <article class="card"><h2>Profile</h2><p id="accountEmail"></p><p class="muted">Private account data is protected by row-level security.</p></article>
+        <article class="card"><h2>Service requests</h2><form id="requestForm" class="auth-form compact"><label>Service<input name="service_slug" required placeholder="Carpet Cleaning"></label><label>What do you need?<textarea name="summary" maxlength="500" required></textarea></label><button class="small-btn primary">Submit Request</button></form><div id="requestList"></div></article>
+        <article class="card products-account"><h2>Ogreena Products</h2><p class="muted">Products are visible automatically on every customer profile.</p><div class="account-products" id="accountProducts"></div></article>
+        <article class="card owner-only" id="ownerPanel" hidden><h2>Owner controls</h2><p>Payment settings are visible only to the owner role. Payments remain disabled.</p><div id="paymentState"></div></article>
+        <article class="card" id="ownerRequestPanel"><h2>Business owner access</h2><p class="muted">Register normally, then request a manual authorization review. An email address alone never grants owner access.</p><form id="ownerRequestForm" class="auth-form compact"><label>Business name<input name="business_name" value="Ogreena" minlength="2" maxlength="150" required></label><label>Explain your authority to manage the business<textarea name="authority_description" minlength="10" maxlength="2000" required></textarea></label><button class="small-btn" type="submit">Request Owner Review</button></form><p id="ownerRequestStatus" class="muted"></p></article>
+      </div>
+    </section>
+  </main>
+  <div id="toast"></div>
+  <script type="module" src="auth.js"></script>
+</body>
+</html>

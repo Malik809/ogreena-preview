@@ -27,9 +27,11 @@
       <a data-menu-search="blog green articles cleaning tips" href="${siteRoot}eco-cleaning-home-1/">Blog / Green Articles</a>
       <a data-menu-search="careers hiring jobs application employment" href="${siteRoot}hiring-application/">Careers / Hiring</a>
       <a data-menu-search="contact phone call estimate" href="${siteRoot}#contact">Contact</a>
+      <a data-menu-search="create account sign up register customer" href="${siteRoot}auth/?mode=signup">Create Account</a>
+      <a data-menu-search="sign in login customer owner employee" href="${siteRoot}auth/?mode=signin">Sign In</a>
     </nav>
     <div class="menu-no-results" hidden>No matching pages found.</div>
-    <p>Ogreena service navigation. Online bookings, payments, accounts, and uploads are currently disabled.</p>`;
+    <p>Ogreena service navigation. Payments remain disabled until separately activated by an authorized owner.</p>`;
   document.body.append(drawer);
   const backdrop = document.createElement('button');
   backdrop.className = 'menu-backdrop'; backdrop.type = 'button'; backdrop.setAttribute('aria-label', 'Close navigation menu'); document.body.append(backdrop);
