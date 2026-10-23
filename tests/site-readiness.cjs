@@ -41,6 +41,9 @@ async function assertProducts(page, label) {
     if (body.includes('ONLINE SERVICES LIMITED')) throw new Error(`${viewport.name} still shows announcement banner`);
     if (await page.locator('a[href="tel:+15104729327"]').count() < 1) throw new Error(`${viewport.name} phone link missing`);
     await assertProducts(page, `${viewport.name} homepage`);
+    const showcaseHeight = await page.locator('.product-showcase:not(.catalog-page)').evaluate(element => element.getBoundingClientRect().height);
+    const heightLimit = viewport.name === 'desktop' ? 390 : 430;
+    if (showcaseHeight > heightLimit) throw new Error(`${viewport.name} product preview is too tall: ${showcaseHeight}px`);
 
     await page.locator('.menu-toggle').click();
     if (!(await page.locator('.site-menu').getAttribute('class')).includes('open')) throw new Error(`${viewport.name} navigation did not open`);
@@ -100,6 +103,8 @@ async function assertProducts(page, label) {
   const response = await page.goto(`${base}/products/`, { waitUntil: 'networkidle' });
   if (!response?.ok()) throw new Error(`products returned ${response?.status()}`);
   await assertProducts(page, 'catalog');
+  const catalogImageHeight = await page.locator('.catalog-page .product-card>img').first().evaluate(element => element.getBoundingClientRect().height);
+  if (catalogImageHeight < 200) throw new Error(`catalog was incorrectly compacted: ${catalogImageHeight}px images`);
   if (!await page.getByRole('link', { name: 'Back to Ogreena' }).isVisible()) throw new Error('catalog back link missing');
   await page.screenshot({ path: '/tmp/ogreena-products-mobile.png', fullPage: true });
   results.push('products catalog: 5/5 PASS');
