@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Ogreena Payment Verification</title>
+  <link rel="icon" href="../../assets/ogreena-original-logo.jpg">
+  <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="../../brand.css">
+  <link rel="stylesheet" href="../owner.css">
+  <link rel="stylesheet" href="payment-setup.css">
+</head>
+<body class="payment-verification">
+  <header class="topbar"><a class="wordmark" href="../../"><img src="../../assets/ogreena-original-logo.jpg" alt="Ogreena logo">Ogreena</a><div class="search">Secure payment setup</div><div class="top-actions"><a class="small-btn" href="../">Back to Dashboard</a></div></header>
+  <main class="verification-shell">
+    <section class="account-panel" id="deniedPanel"><h1>Owner access required</h1><p id="ownerStatus">Checking your authorization…</p></section>
+    <section id="verificationPage" hidden>
+      <a class="back-link" href="../">← Back to Owner Dashboard</a>
+      <p class="eyebrow">OGREENA OWNER PAYMENTS</p>
+      <h1>Set Up Payments</h1>
+      <p class="lead">Complete business verification and connect Ogreena’s payout bank account securely with Stripe.</p>
+      <ol class="setup-steps" aria-label="Payment setup steps"><li><b>1</b><span>Verify Your Business</span></li><li><b>2</b><span>Connect Bank Account</span></li><li><b>3</b><span>Return to Dashboard</span></li></ol>
+      <p class="security-note">Stripe securely collects identity, EIN, banking, and document information. Ogreena and Supabase never receive or store full routing numbers, account numbers, SSNs, or identity documents.</p>
+      <section class="verification-card">
+        <div class="verification-card-head"><div><p class="eyebrow">OGREENA PAYMENT VERIFICATION</p><h2>Securely powered by Stripe</h2></div><span class="status-pill" id="connectionStatus">Checking status…</span></div>
+        <div class="verification-body">
+          <p class="step-kicker">Business and payout details</p><h2>Complete your secure setup</h2>
+          <p>Ogreena uses its existing standalone Stripe account. Stripe therefore requires verification and bank changes in its secure hosted account settings. Sensitive details are never entered into an Ogreena form.</p>
+          <div class="detail-grid"><article><h3>Business verification</h3><p>Legal name, date of birth, business name, EIN, address, phone, website, and required documents.</p></article><article><h3>Bank account</h3><p>Account holder, routing number, account number, account type, and payout schedule remain inside Stripe.</p></article></div>
+          <div class="setup-status" id="setupStatus"><div><span>Business details</span><strong>Checking…</strong></div><div><span>Bank connection</span><strong>Checking…</strong></div><div><span>Customer charging</span><strong>Disabled</strong></div></div>
+          <div class="verification-actions"><a class="small-btn primary" href="https://dashboard.stripe.com/test/settings/verified" target="_blank" rel="noopener">Continue Securely with Stripe</a><a class="small-btn" href="https://dashboard.stripe.com/test/settings/payouts" target="_blank" rel="noopener">Manage Bank Account</a><button class="small-btn" id="refreshStatus" type="button">Refresh Status</button></div>
+          <p class="muted">After completing Stripe’s form, return here and choose Refresh Status. Product and service payments share Ogreena’s payout destination while remaining separate in reports.</p>
+        </div>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="payment-setup.js?v=1"></script>
+</body></html>
