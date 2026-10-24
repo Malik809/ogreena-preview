@@ -11,7 +11,10 @@ function applyProducts(products) {
   }));
   products.forEach(product => {
     const card = byId.get(product.id); if (!card) return;
-    card.hidden = !product.visible; card.dataset.search = `${product.name} ${product.size}`;
+    if (!product.visible) { card.remove(); return; }
+    const catalogProduct = (window.OgreenaProductCatalog || []).find(item => item.id === product.id);
+    if (catalogProduct) { catalogProduct.name = product.name; catalogProduct.size = product.size; catalogProduct.price = product.price_cents / 100; catalogProduct.image = `/${product.image_path.replace(/^\//,'')}`; }
+    card.dataset.search = `${product.name} ${product.size}`;
     const image = card.querySelector('img'); if (image) { image.src = `/${product.image_path.replace(/^\//,'')}`; image.alt = `${product.name} — ${product.size}`; }
     const size = card.querySelector('.product-size'); if (size) size.textContent = product.size;
     const name = card.querySelector('h3'); if (name) name.textContent = product.name;
