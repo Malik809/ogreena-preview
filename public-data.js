@@ -41,6 +41,7 @@ function applyServices(services) {
 
 function applyManagedContent(records) {
   records.forEach(record => {
+    if (record.visible === false) return;
     const entry = record.content_value || {}; if (!entry.selector || typeof entry.selector !== 'string') return;
     let nodes; try { nodes = document.querySelectorAll(entry.selector); } catch { return; }
     nodes.forEach(node => {
@@ -53,7 +54,7 @@ function applyManagedContent(records) {
 const [products, services, content] = await Promise.all([
   supabase.from('products').select('id,name,size,price_cents,image_path,display_order,visible').order('display_order'),
   supabase.from('services').select('id,name,summary,description,display_order,visible').order('display_order'),
-  supabase.from('website_content').select('content_key,content_value').eq('published', true),
+  supabase.from('website_content').select('content_key,content_value,visible,display_order').eq('published', true).eq('visible', true).order('display_order'),
 ]);
 if (!products.error) applyProducts(products.data || []);
 if (!services.error) applyServices(services.data || []);

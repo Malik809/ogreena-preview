@@ -11,10 +11,18 @@ function setVisible(element, visible) {
   element.style.display = visible ? '' : 'none';
 }
 
-function renderAccountNavigation(session) {
+async function renderAccountNavigation(session) {
   const signedIn = Boolean(session?.user);
   document.querySelectorAll('[data-auth-guest]').forEach(element => setVisible(element, !signedIn));
   document.querySelectorAll('[data-auth-user],[data-auth-signout]').forEach(element => setVisible(element, signedIn));
+  if (!signedIn) return;
+  const { data } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
+  const role = data?.role || 'customer';
+  document.querySelectorAll('[data-auth-user]').forEach(link => {
+    if (role === 'owner') { link.textContent = 'Owner Dashboard'; link.href = '/owner/'; }
+    else if (role === 'employee') { link.textContent = 'Employee Dashboard'; link.href = '/customer/'; }
+    else { link.textContent = 'My Account'; link.href = '/customer/'; }
+  });
 }
 
 document.querySelectorAll('[data-auth-signout]').forEach(element => {
@@ -27,4 +35,4 @@ document.querySelectorAll('[data-auth-signout]').forEach(element => {
 
 supabase.auth.onAuthStateChange((_event, session) => queueMicrotask(() => renderAccountNavigation(session)));
 const { data: { session } } = await supabase.auth.getSession();
-renderAccountNavigation(session);
+await renderAccountNavigation(session);
