@@ -26,7 +26,7 @@ document.querySelectorAll('[data-operation]').forEach(button => button.addEventL
 
 function productRow(product) {
   const draft = product.draft_data || {};
-  return `<form class="editor-row" data-product="${escapeHtml(product.id)}"><label>Name<input name="name" value="${escapeHtml(draft.name ?? product.name)}" required></label><label>Size<input name="size" value="${escapeHtml(draft.size ?? product.size)}" required></label><label>Price<input name="price" type="number" min="0" step="0.01" value="${((draft.price_cents ?? product.price_cents) / 100).toFixed(2)}" required></label><label>Available<select name="visible"><option value="true" ${(draft.visible ?? product.visible) ? 'selected':''}>Yes</option><option value="false" ${!(draft.visible ?? product.visible) ? 'selected':''}>No</option></select></label><label class="wide">Description<textarea name="description" rows="2">${escapeHtml(draft.description ?? product.description ?? '')}</textarea></label><div class="wide editor-actions"><button class="small-btn" type="submit">Save Draft</button><button class="small-btn primary" type="button" data-publish-product>Publish</button><span class="muted">${draft.name !== undefined ? 'Draft saved' : 'Published'}</span></div></form>`;
+  return `<form class="editor-row" data-product="${escapeHtml(product.id)}"><label>Name<input name="name" value="${escapeHtml(draft.name ?? product.name)}" required></label><label>Size<input name="size" value="${escapeHtml(draft.size ?? product.size)}" required></label><label>Price<input name="price" type="number" min="0" step="0.01" value="${((draft.price_cents ?? product.price_cents) / 100).toFixed(2)}" required></label><label>Order<input name="order" type="number" min="1" value="${Number(product.display_order) || 1}" required></label><label class="wide">Photo path<input name="image_path" value="${escapeHtml(draft.image_path ?? product.image_path)}" required></label><label>Available<select name="visible"><option value="true" ${(draft.visible ?? product.visible) ? 'selected':''}>Yes</option><option value="false" ${!(draft.visible ?? product.visible) ? 'selected':''}>No</option></select></label><label class="wide">Description<textarea name="description" rows="2">${escapeHtml(draft.description ?? product.description ?? '')}</textarea></label><div class="wide editor-actions"><button class="small-btn" type="submit">Save Draft</button><button class="small-btn primary" type="button" data-publish-product>Publish</button><button class="small-btn danger" type="button" data-remove-product>Remove</button><span class="muted">${draft.name !== undefined ? 'Draft saved' : 'Published'}</span></div></form>`;
 }
 
 async function loadProducts() {
@@ -34,10 +34,21 @@ async function loadProducts() {
   $('#productList').innerHTML = data.map(productRow).join('') || '<p class="empty-state">No products configured.</p>';
   $('#productCount').textContent = data.length;
   $('#productList').querySelectorAll('[data-product]').forEach(form => {
-    form.addEventListener('submit', event => { event.preventDefault(); run('Saving product draft', async () => { const values = new FormData(form); requireOk(await supabase.from('products').update({ draft_data:{ name:values.get('name').trim(), size:values.get('size').trim(), price_cents:Math.round(Number(values.get('price')) * 100), description:values.get('description').trim(), visible:values.get('visible') === 'true' } }).eq('id', form.dataset.product)); await loadProducts(); }); });
+    form.addEventListener('submit', event => { event.preventDefault(); run('Saving product draft', async () => { const values = new FormData(form); const requestedOrder=Number(values.get('order')) || 1; const current=requireOk(await supabase.from('products').select('display_order').eq('id',form.dataset.product).single()); if(current.display_order!==requestedOrder){const occupant=requireOk(await supabase.from('products').select('id').eq('display_order',requestedOrder).maybeSingle());requireOk(await supabase.from('products').update({display_order:-current.display_order}).eq('id',form.dataset.product));if(occupant)requireOk(await supabase.from('products').update({display_order:current.display_order}).eq('id',occupant.id));requireOk(await supabase.from('products').update({display_order:requestedOrder}).eq('id',form.dataset.product));} requireOk(await supabase.from('products').update({ draft_data:{ name:values.get('name').trim(), size:values.get('size').trim(), price_cents:Math.round(Number(values.get('price')) * 100), image_path:values.get('image_path').trim(), description:values.get('description').trim(), visible:values.get('visible') === 'true' } }).eq('id', form.dataset.product)); await loadProducts(); }); });
     form.querySelector('[data-publish-product]').addEventListener('click', () => run('Publishing product', async () => { requireOk(await supabase.rpc('publish_product', { product_id:form.dataset.product })); await loadProducts(); }));
+    form.querySelector('[data-remove-product]').addEventListener('click', () => { if (confirm('Remove this product from the public catalog? Existing orders are preserved.')) run('Removing product', async () => { requireOk(await supabase.from('products').update({ visible:false, draft_data:null }).eq('id', form.dataset.product)); await loadProducts(); }); });
   });
 }
+
+$('#newProduct').addEventListener('click', async () => {
+  const name = prompt('Product name'); if (!name) return;
+  const id = `og-${name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Date.now()}`;
+  await run('Adding product', async () => {
+    const existing = requireOk(await supabase.from('products').select('display_order').order('display_order', { ascending:false }).limit(1)) || [];
+    requireOk(await supabase.from('products').insert({ id, name, size:'', price_cents:0, image_path:'assets/products/', display_order:(existing[0]?.display_order || 0) + 1, visible:false }));
+    await loadProducts();
+  });
+});
 
 function serviceRow(service) {
   const draft = service.draft_data || {};
@@ -88,8 +99,7 @@ async function loadOperations() {
   const target = $('#operationList'); target.innerHTML = '<p class="empty-state">Loading…</p>';
   if (operationView === 'requests') {
     const [requestsResult, rolesResult, profilesResult] = await Promise.all([supabase.from('service_requests').select('*').order('created_at', { ascending:false }), supabase.from('user_roles').select('*').eq('role','employee'), supabase.from('profiles').select('*')]);
-    const data = requireOk(requestsResult) || [], employees = requireOk(rolesResult) || [], profiles = requireOk(profilesResult) || [];
-    const names = Object.fromEntries(profiles.map(profile => [profile.id, profile.display_name || 'Employee']));
+    const data = requireOk(requestsResult) || [], employees = requireOk(rolesResult) || [], profiles = requireOk(profilesResult) || []; const names = Object.fromEntries(profiles.map(profile => [profile.id, profile.display_name || 'Employee']));
     target.innerHTML = table(['Customer','Service / details','Preferred date','Notification','Status / employee','Actions'], data.map(row => `<tr><td><b>${escapeHtml(row.customer_name || row.summary)}</b><br>${escapeHtml(row.customer_phone || '—')}<br>${escapeHtml(row.customer_email || 'Account customer')}<br>${escapeHtml(row.service_address || '—')}</td><td><b>${escapeHtml(row.service_slug.replaceAll('-',' '))}</b><br>${escapeHtml(row.details || row.summary)}</td><td>${escapeHtml(row.preferred_date || '—')}</td><td><span class="tag">${escapeHtml(row.notification_status || 'not required')}</span>${row.notification_status === 'failed' ? '<br><small>Email queued for retry</small>' : ''}</td><td><select data-status-table="service_requests" data-id="${row.id}">${['submitted','reviewing','estimate_ready','scheduled','in_progress','completed','cancelled'].map(status => `<option ${row.status===status?'selected':''}>${status}</option>`).join('')}</select><select data-request-assignment data-id="${row.id}"><option value="">Unassigned</option>${employees.map(employee => `<option value="${employee.user_id}" ${row.assigned_employee_id===employee.user_id?'selected':''}>${escapeHtml(names[employee.user_id])}</option>`).join('')}</select></td><td><button class="small-btn" data-respond-request="${row.id}">Respond</button> <button class="small-btn" data-create-estimate="${row.id}" data-customer="${row.customer_id || ''}">Create Estimate</button> <button class="small-btn" data-schedule-request="${row.id}" data-customer="${row.customer_id || ''}" data-employee="${row.assigned_employee_id || ''}">Schedule</button></td></tr>`));
   } else if (operationView === 'appointments') {
     const [appointmentsResult, rolesResult, profilesResult] = await Promise.all([supabase.from('appointments').select('*').order('starts_at', { ascending:false }), supabase.from('user_roles').select('*').eq('role','employee'), supabase.from('profiles').select('*')]);
@@ -125,13 +135,25 @@ async function loadBusiness() { const data = requireOk(await supabase.from('busi
 $('#businessForm').addEventListener('submit', event => { event.preventDefault(); run('Saving business settings', async () => { const values = Object.fromEntries(new FormData(event.currentTarget)); requireOk(await supabase.from('business_settings').update({ ...values, updated_at:new Date().toISOString() }).eq('id', true)); }); });
 
 async function loadPayments() {
-  const [settingsResult, transactionResult] = await Promise.all([supabase.from('payment_settings').select('*').single(), supabase.from('payment_transactions').select('payment_kind,amount_cents,status')]);
+  const [settingsResult, transactionResult] = await Promise.all([supabase.from('payment_settings').select('*').single(), supabase.from('payment_transactions').select('id,payment_kind,amount_cents,refunded_amount_cents,status,created_at').order('created_at', { ascending:false }).limit(100)]);
   const settings = settingsResult.data; const transactions = transactionResult.data || [];
   $('#paymentState').textContent = settings ? `Existing Ogreena Stripe account found. Checkout ${settings.payments_enabled ? 'enabled' : 'disabled'}; live charges remain disabled pending Stripe verification and final owner approval.` : 'Payment schema is not configured yet.';
   $('#productSales').textContent = money(transactions.filter(row => row.payment_kind === 'product' && row.status === 'paid').reduce((sum,row) => sum + row.amount_cents, 0));
-  $('#serviceSales').textContent = money(transactions.filter(row => row.payment_kind === 'service' && row.status === 'paid').reduce((sum,row) => sum + row.amount_cents, 0));
+  $('#serviceSales').textContent = money(transactions.filter(row => ['service_deposit','service_full','invoice'].includes(row.payment_kind) && row.status === 'paid').reduce((sum,row) => sum + row.amount_cents, 0));
+  const statusResult = await supabase.functions.invoke('payment-status');
+  const state = statusResult.data;
+  $('#paymentDetails').innerHTML = `<div><dt>Mode</dt><dd>Live preparation</dd></div><div><dt>Sandbox backend</dt><dd>${state?.configured ? 'Connected' : 'Deployment required'}</dd></div><div><dt>Checkout</dt><dd>${settings?.payments_enabled ? 'Sandbox enabled' : 'Disabled'}</dd></div><div><dt>Live payments</dt><dd>Awaiting final approval</dd></div>`;
+  $('#paymentTransactions').innerHTML = table(['Date','Type','Amount','Refunded','Status','Action'], transactions.map(row => `<tr><td>${escapeHtml(new Date(row.created_at).toLocaleDateString())}</td><td>${escapeHtml(row.payment_kind.replaceAll('_',' '))}</td><td>${money(row.amount_cents)}</td><td>${money(row.refunded_amount_cents)}</td><td>${escapeHtml(row.status)}</td><td>${row.status === 'paid' ? `<button class="small-btn" data-refund="${row.id}">Refund in sandbox</button>` : '—'}</td></tr>`));
+  $('#paymentTransactions').querySelectorAll('[data-refund]').forEach(button => button.addEventListener('click', () => {
+    if (!confirm('Issue a full sandbox refund? No live money will move.')) return;
+    run('Creating sandbox refund', async () => { const result = await supabase.functions.invoke('create-refund', { body:{ transactionId:button.dataset.refund } }); requireOk(result); await loadPayments(); });
+  }));
 }
-document.querySelectorAll('[data-stripe-path]').forEach(button => button.addEventListener('click', () => window.open(`https://dashboard.stripe.com/acct_1UTpIlI19b4U0AqM/${button.dataset.stripePath.replace(/^test\//,'')}`, '_blank', 'noopener')));
+document.querySelectorAll('[data-stripe-path]').forEach(button => button.addEventListener('click', () => {
+  // Stripe Dashboard is the secure hosted interface for the business's direct account.
+  // Do not hardcode an account ID: Stripe selects the authenticated Ogreena account.
+  window.open(`https://dashboard.stripe.com/${button.dataset.stripePath}`, '_blank', 'noopener');
+}));
 
 async function initialize() {
   const denied = $('#deniedPanel'), dashboard = $('#ownerDashboard'), authStatus = $('#ownerStatus');
