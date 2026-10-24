@@ -27,7 +27,7 @@ function friendlyError(error) {
   if (code === 'over_request_rate_limit') return 'Too many account requests were made. Please wait a few minutes, then try again.';
   if (code === 'weak_password') return 'Please choose a stronger password with at least 8 characters.';
   if (code === 'email_address_invalid') return 'Please enter a valid email address.';
-  if (code === 'invalid_credentials' || /invalid login/i.test(error.message || '')) return 'The email or password is incorrect, or the email has not been verified.';
+  if (code === 'invalid_credentials' || /invalid login/i.test(error.message || '')) return 'The email or password is incorrect. If you already confirmed this account, use the same password or choose Reset Password.';
   if (error instanceof TypeError || /failed to fetch|network/i.test(error.message || '')) return 'Ogreena could not reach the secure account service. Check your connection and try again.';
   return 'The secure account request could not be completed. Please try again, or use Sign In or Reset Password if you already registered.';
 }
@@ -81,6 +81,12 @@ document.querySelector('#signUpForm').addEventListener('submit', async event => 
   const values = Object.fromEntries(new FormData(form));
   await runFormRequest(form, 'Creating your secure customer account…', () => supabase.auth.signUp({ email: values.email, password: values.password, options: { data: { display_name: values.display_name }, emailRedirectTo: authRedirect } }), async data => {
     form.reset();
+    if (!data.session && Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
+      switchTab('signin');
+      document.querySelector('#signInForm input[name="email"]').value = values.email;
+      setStatus('This account already exists and may already be verified. Sign in with the existing password instead of creating another account.', 'success');
+      return;
+    }
     setStatus(data.session ? 'Account created and signed in.' : 'Account created. Check your email for the Ogreena confirmation link before signing in.', 'success');
   });
 });
@@ -89,9 +95,16 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
   event.preventDefault();
   const form = event.currentTarget;
   const values = Object.fromEntries(new FormData(form));
-  await runFormRequest(form, 'Signing in…', () => supabase.auth.signInWithPassword({ email: values.email, password: values.password }), async data => {
+  await runFormRequest(form, 'Signing in…', () => supabase.auth.signInWithPassword({ email: values.email, password: values.password }), async () => {
     form.reset();
-    const { data: roleRow, error: roleError } = await supabase.from('user_roles').select('role').eq('user_id', data.user.id).single();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) throw userError || new Error('The signed-in account could not be refreshed.');
+    if (!user.email_confirmed_at) {
+      const error = new Error('Email is not confirmed');
+      error.code = 'email_not_confirmed';
+      throw error;
+    }
+    const { data: roleRow, error: roleError } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
     if (roleError) throw roleError;
     if (roleRow?.role === 'owner') {
       setStatus('Signed in. Opening the Owner Dashboard…', 'success');
@@ -171,12 +184,24 @@ async function loadProducts() {
 async function renderSession(session) {
   authPanel.hidden = Boolean(session); accountPanel.hidden = !session; signOutButton.hidden = !session;
   if (!session) return;
-  const user = session.user;
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    await supabase.auth.signOut({ scope: 'local' });
+    authPanel.hidden = false; accountPanel.hidden = true; signOutButton.hidden = true;
+    switchTab('signin');
+    setStatus('Your previous session expired. Sign in again with the existing account.', 'error');
+    return;
+  }
   const [{ data: profile }, { data: roleRow }] = await Promise.all([
     supabase.from('profiles').select('display_name').eq('id', user.id).single(),
     supabase.from('user_roles').select('role').eq('user_id', user.id).single()
   ]);
   const role = roleRow?.role || 'customer';
+  const isAuthCallback = new URLSearchParams(location.search).has('code') || /access_token=|refresh_token=/.test(location.hash);
+  if (role === 'owner' && (requestedMode === 'signin' || isAuthCallback)) {
+    location.replace('../owner/');
+    return;
+  }
   document.querySelector('#roleBadge').textContent = role[0].toUpperCase() + role.slice(1);
   document.querySelector('#welcomeName').textContent = profile?.display_name ? `Welcome, ${profile.display_name}` : 'My Ogreena';
   document.querySelector('#accountEmail').textContent = user.email;

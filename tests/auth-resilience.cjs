@@ -22,7 +22,8 @@ async function fillSignup(page, suffix) {
     await fillSignup(success, `${viewport.name}-success`);
     await success.locator('#authStatus.success').waitFor();
     const successText = await success.locator('#authStatus').innerText();
-    if (!/check your email/i.test(successText)) throw new Error(`${viewport.name}: signup success does not direct the user to email`);
+    if (!/already exists/i.test(successText)) throw new Error(`${viewport.name}: privacy-preserving duplicate response is not routed to sign in`);
+    if (!await success.locator('#signInForm').isVisible()) throw new Error(`${viewport.name}: existing account was not returned to sign in`);
     if (await success.locator('#signUpForm button[type="submit"]').isDisabled()) throw new Error(`${viewport.name}: signup button stayed disabled after success`);
     await success.close();
 
@@ -39,7 +40,22 @@ async function fillSignup(page, suffix) {
     if (await duplicate.locator('#signUpForm button[type="submit"]').isDisabled()) throw new Error(`${viewport.name}: signup button stayed disabled after error`);
     await duplicate.close();
 
-    console.log(`${viewport.name}: signup success and duplicate recovery PASS`);
+    const owner = await browser.newPage({ viewport });
+    const ownerUser = { id: '00000000-0000-4000-8000-000000000010', email: 'owner@example.invalid', email_confirmed_at: new Date().toISOString(), role: 'authenticated' };
+    await owner.route('**/rest/v1/**', route => route.fulfill({ status: 200, contentType: 'application/json', body:'[]' }));
+    await owner.route('**/rest/v1/user_roles**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ role:'owner' }) }));
+    await owner.route('**/auth/v1/user', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ownerUser) }));
+    await owner.route('**/auth/v1/token?grant_type=password', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access_token:'mock-owner-access', refresh_token:'mock-owner-refresh', expires_in:3600, expires_at:Math.floor(Date.now()/1000)+3600, token_type:'bearer', user:ownerUser }) }));
+    await owner.goto(`${base}/auth/?mode=signin`, { waitUntil:'networkidle' });
+    await owner.locator('#signInForm input[name="email"]').fill(ownerUser.email);
+    await owner.locator('#signInForm input[name="password"]').fill('SafeMockPassword123!');
+    await owner.locator('#signInForm button[type="submit"]').click();
+    await owner.locator('#ownerDashboard').waitFor({ state:'visible' });
+    if (!/\/owner\/$/.test(new URL(owner.url()).pathname)) throw new Error(`${viewport.name}: verified owner was not redirected to /owner/`);
+    if (!await owner.locator('#ownerDashboard').isVisible()) throw new Error(`${viewport.name}: verified owner did not reach the dashboard`);
+    await owner.close();
+
+    console.log(`${viewport.name}: duplicate recovery and verified owner redirect PASS`);
   }
   await browser.close();
 })().catch(error => { console.error(error.stack || error); process.exit(1); });
