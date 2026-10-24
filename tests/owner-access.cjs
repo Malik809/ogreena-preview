@@ -26,9 +26,14 @@ async function mockAccount(page, role) {
     await mockAccount(owner, 'owner');
     await owner.goto(`${base}/owner/`, { waitUntil: 'networkidle' });
     if (!await owner.locator('#ownerDashboard').isVisible()) throw new Error(`${viewport.name}: owner dashboard did not open`);
-    for (const heading of ['Customers', 'Employees', 'Customer requests', 'Appointments', 'Messages', 'Products', 'Services', 'Website Editor', 'Business settings', 'Payment Setup', 'Bank payouts', 'Reports']) {
+    for (const heading of ['Customers', 'Employees', 'Customer requests', 'Appointments', 'Messages', 'Products', 'Business settings']) {
       if (!await owner.getByRole('heading', { name: heading, exact: true }).isVisible()) throw new Error(`${viewport.name}: ${heading} section missing`);
     }
+    for (const section of [{ button:'Website Editor', heading:'Website Editor' }, { button:'Services', heading:'Services' }, { button:'Payment Setup', heading:'Payment Setup' }]) {
+      await owner.getByRole('button', { name:section.button, exact:true }).click();
+      if (!await owner.getByRole('heading', { name:section.heading, exact:true }).isVisible()) throw new Error(`${viewport.name}: ${section.heading} section missing`);
+    }
+    for (const heading of ['Bank payouts', 'Reports']) if (!await owner.getByRole('heading', { name:heading, exact:true }).isVisible()) throw new Error(`${viewport.name}: ${heading} section missing`);
     if (!(await owner.textContent('body')).includes('Payments remain disabled')) throw new Error(`${viewport.name}: disabled payment status missing`);
     await owner.close();
     console.log(`${viewport.name}: owner allow/customer deny PASS`);
