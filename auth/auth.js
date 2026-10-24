@@ -191,6 +191,9 @@ async function renderSession(session) {
     link.className = 'small-btn primary'; link.href = '../owner/'; link.textContent = 'Open Owner Dashboard';
     link.dataset.ownerDashboard = 'true'; document.querySelector('#ownerPanel').append(link);
   }
+  if (role === 'owner' && new URLSearchParams(location.search).get('mode') === 'signin') {
+    location.replace('../owner/');
+  }
 }
 
 function escapeHTML(value = '') { const node = document.createElement('div'); node.textContent = String(value); return node.innerHTML; }
