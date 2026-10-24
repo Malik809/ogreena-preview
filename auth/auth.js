@@ -89,8 +89,16 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
   event.preventDefault();
   const form = event.currentTarget;
   const values = Object.fromEntries(new FormData(form));
-  await runFormRequest(form, 'Signing in…', () => supabase.auth.signInWithPassword({ email: values.email, password: values.password }), async () => {
-    form.reset(); setStatus('Signed in.', 'success');
+  await runFormRequest(form, 'Signing in…', () => supabase.auth.signInWithPassword({ email: values.email, password: values.password }), async data => {
+    form.reset();
+    const { data: roleRow, error: roleError } = await supabase.from('user_roles').select('role').eq('user_id', data.user.id).single();
+    if (roleError) throw roleError;
+    if (roleRow?.role === 'owner') {
+      setStatus('Signed in. Opening the Owner Dashboard…', 'success');
+      location.replace('../owner/');
+      return;
+    }
+    setStatus('Signed in.', 'success');
   });
 });
 
