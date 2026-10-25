@@ -23,6 +23,12 @@ async function loadStatus(){
   $('#connectionStatus').className=`status-pill ${account.payoutsEnabled?'good':actionRequired?'attention':''}`;
   rows[0].textContent=actionRequired?'Action Required':pending?'Pending Verification':account.detailsSubmitted?'Submitted':'Not Submitted';
   rows[1].textContent=account.payoutsEnabled?'Bank Connected':pending?'Pending Verification':'Action Required';
+  const destination=$('#bankDestination');
+  destination.textContent=account.payoutDestination?.connected
+    ? `${account.payoutDestination.display} · managed securely by Stripe`
+    : pending?'Stripe is reviewing the payout destination.':'No verified payout destination is available.';
+  $('#setupPrompt').hidden=account.detailsSubmitted&&account.payoutsEnabled&&!actionRequired&&!pending;
+  $('#connectedPrompt').hidden=!$('#setupPrompt').hidden;
 }
 
 async function initialize(){
