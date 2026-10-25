@@ -33,6 +33,10 @@
             <p id="embeddedStripeStatus">Opening Stripe’s secure payout form…</p>
             <div id="stripeNotificationBanner"></div>
             <div id="stripePayoutDetails"></div>
+            <div class="stripe-fallback" id="stripeFallback" hidden>
+              <p>Stripe’s embedded authentication did not finish. Continue securely in Stripe to manage Ogreena’s payout bank account.</p>
+              <a class="small-btn primary" href="https://dashboard.stripe.com/acct_1UTpIlI19b4U0AqM/settings/payouts" target="_blank" rel="noopener noreferrer">Manage Bank Account Securely with Stripe</a>
+            </div>
           </section>
           <div class="verification-actions"><a class="small-btn primary" id="returnToDashboard" href="../">Save &amp; Return to Dashboard</a></div>
           <p class="secure-footer">Complete identity information only if Stripe requests it. Product and service payments remain disabled and separated in Ogreena reports.</p>
@@ -51,5 +55,5 @@
       });
     }
   </script>
-  <script type="module" src="payment-setup.js?v=live-bank-3"></script>
+  <script type="module" src="payment-setup.js?v=live-bank-4"></script>
 </body></html>

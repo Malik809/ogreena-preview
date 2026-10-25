@@ -5,15 +5,27 @@ const safariSafeAuthLock=async(_name,_acquireTimeout,callback)=>callback();
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage,storageKey:'ogreena-auth-session',lock:safariSafeAuthLock}});
 const $=selector=>document.querySelector(selector);
 let connectInstance;
+let stripeLoadTimer;
 const LIVE_MERCHANT_ACCOUNT='acct_1UTpIlI19b4U0AqM';
 const CONNECT_PLATFORM_ACCOUNT='acct_1UUSC7IBe0SKV30I';
 const SESSION_FUNCTION='create-connect-account-session';
+
+function showStripeFallback(message){
+  const status=$('#embeddedStripeStatus');
+  status.hidden=false;
+  status.textContent=message;
+  $('#stripeFallback').hidden=false;
+  $('#connectionStatus').textContent='Secure Stripe Access Available';
+  $('#connectionStatus').className='status-pill attention';
+}
 
 async function openEmbeddedStripe(){
   const panel=$('#embeddedStripe');
   const status=$('#embeddedStripeStatus');
   const openButton=$('#openPayoutForm');
   panel.hidden=false;status.hidden=false;
+  $('#stripeFallback').hidden=true;
+  clearTimeout(stripeLoadTimer);
   document.body.classList.add('payout-modal-open');
   openButton.disabled=true;
   status.textContent='Opening Stripe’s secure payout form…';
@@ -44,23 +56,33 @@ async function openEmbeddedStripe(){
     }
     const banner=connectInstance.create('notification-banner');
     const payoutDetails=connectInstance.create('account-management');
+    payoutDetails.setOnLoadError(({error})=>{
+      clearTimeout(stripeLoadTimer);
+      showStripeFallback(error?.type==='authentication_error'
+        ? 'Stripe authentication could not finish in this browser.'
+        : 'Stripe’s embedded bank-management controls could not load.');
+    });
     $('#stripeNotificationBanner').replaceChildren(banner);
     $('#stripePayoutDetails').replaceChildren(payoutDetails);
     $('#connectionStatus').textContent='Stripe Account Connected';
     $('#connectionStatus').className='status-pill good';
     status.hidden=true;
+    stripeLoadTimer=setTimeout(()=>showStripeFallback('Stripe authentication is taking longer than expected in this browser.'),20000);
   }catch(error){
+    clearTimeout(stripeLoadTimer);
     connectInstance=undefined;
     $('#connectionStatus').textContent='Action Required';
     $('#connectionStatus').className='status-pill attention';
     status.hidden=false;
     status.textContent=error?.context?.body?.error||error?.message||'Secure Stripe payout management is not available yet.';
+    $('#stripeFallback').hidden=false;
   }finally{
     openButton.disabled=false;
   }
 }
 
 function closeEmbeddedStripe(){
+  clearTimeout(stripeLoadTimer);
   $('#embeddedStripe').hidden=true;
   document.body.classList.remove('payout-modal-open');
   $('#openPayoutForm').focus();
