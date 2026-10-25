@@ -31,7 +31,7 @@
 .embedded-stripe-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid #ece5cf}
 .embedded-stripe-head h2{margin:0;color:#163e2d;font-size:1.45rem}
 .embedded-stripe .eyebrow{color:#0f6943}
-.embedded-stripe stripe-connect-notification-banner,.embedded-stripe stripe-connect-account-onboarding,.embedded-stripe stripe-connect-account-management{display:block;margin-top:16px}
+.embedded-stripe stripe-connect-notification-banner,.embedded-stripe stripe-connect-payouts{display:block;margin-top:16px}
 .component-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:20px 0 0;padding:5px;border:1px solid #d8b54e;border-radius:9px;background:#f4efdf}
 .component-tab{min-height:46px;padding:9px 12px;border:0;border-radius:6px;background:transparent;color:#28513f;font:inherit;font-weight:900;cursor:pointer}
 .component-tab.active{background:#0f6943;color:#fff;box-shadow:0 4px 12px rgba(15,105,67,.18)}

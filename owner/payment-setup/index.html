@@ -16,32 +16,23 @@
     <section class="account-panel" id="deniedPanel"><h1>Owner access required</h1><p id="ownerStatus">Checking your authorization…</p></section>
     <section id="verificationPage" hidden>
       <div class="page-brand"><a class="wordmark" href="../../"><img src="../../assets/ogreena-original-logo.jpg" alt="Ogreena logo"><span>Ogreena</span></a><a class="back-link" href="../">← Back to Dashboard</a></div>
-      <div class="page-intro"><p class="eyebrow">OGREENA OWNER PAYOUTS</p><h1>Set Up Payments</h1><p class="lead">Finish payment verification without leaving Ogreena. Stripe securely handles your business, identity, and bank information.</p></div>
+      <div class="page-intro"><p class="eyebrow">OGREENA PAYOUT SETUP</p><h1>Set Up Payouts</h1><p class="lead">Add or update the account where Ogreena receives payouts without leaving Ogreena.</p></div>
       <ol class="setup-steps" aria-label="Payment setup steps"><li><b>1</b><span>Verify Your Business</span></li><li><b>2</b><span>Add or Manage Bank Account</span></li><li><b>3</b><span>Finish Payment Setup</span></li></ol>
-      <p class="privacy-copy">Payment verification is handled securely. Ogreena never sees or stores your full banking, routing, Social Security, EIN, or identity-document details.</p>
+      <p class="privacy-copy">Stripe securely handles identity and payout details. Ogreena never sees or stores full bank, routing, debit-card, Social Security, EIN, or identity-document information.</p>
       <section class="verification-card">
-        <div class="verification-card-head"><div><p class="eyebrow">OGREENA PAYMENT VERIFICATION</p><h2>Securely powered by Stripe</h2><p class="save-later">Save &amp; return later</p></div><span class="status-pill" id="connectionStatus">Checking status…</span></div>
+        <div class="verification-card-head"><div><p class="eyebrow">OGREENA PAYOUT VERIFICATION</p><h2>Securely powered by Stripe</h2><p class="save-later">Save &amp; return later</p></div><span class="status-pill" id="connectionStatus">Opening secure form…</span></div>
         <div class="verification-body">
-          <div id="setupPrompt"><p class="step-kicker">Business and payout details</p><h2>Complete your secure setup</h2><p>Stripe requires outstanding verification and bank changes in its secure hosted account settings. Sensitive details are never entered into an Ogreena form.</p></div>
-          <div id="connectedPrompt" hidden><p class="step-kicker">Stripe account available</p><h2>Manage your payout details securely</h2><p>Use Stripe’s embedded controls below to review, add, or update an eligible payout bank account or debit card.</p></div>
-          <p class="account-type-line" id="accountTypeStatus">Checking the verified Stripe account type…</p>
-          <section class="embedded-stripe" id="embeddedStripe" hidden aria-live="polite">
-            <div class="embedded-stripe-head"><div><p class="eyebrow">OGREENA SECURE ACCOUNT MANAGEMENT</p><h2>Verification and payout bank</h2></div><button class="small-btn" id="closeEmbeddedStripe" type="button">Close</button></div>
-            <p id="embeddedStripeStatus">Opening Stripe’s secure verification and bank controls…</p>
+          <section class="embedded-stripe payout-only" id="embeddedStripe" aria-live="polite">
+            <div class="embedded-stripe-head"><div><p class="eyebrow">STRIPE-SECURED PAYOUT DETAILS</p><h2>Add Bank Account or Debit Card</h2></div></div>
+            <p id="embeddedStripeStatus">Opening Stripe’s secure payout form…</p>
             <div id="stripeNotificationBanner"></div>
-            <div class="component-tabs" role="tablist" aria-label="Stripe account setup sections"><button class="component-tab" id="showStripeOnboarding" type="button" role="tab" aria-selected="false">Verification form</button><button class="component-tab active" id="showStripeAccountManagement" type="button" role="tab" aria-selected="true">Bank &amp; account</button></div>
-            <div class="stripe-component-panel" id="stripeOnboardingPanel" role="tabpanel" aria-labelledby="showStripeOnboarding" hidden><h3>Business verification</h3><p>Complete any information Stripe still requires. Already verified details are not requested again.</p><div id="stripeAccountOnboarding"></div></div>
-            <div class="stripe-component-panel" id="stripeAccountManagementPanel" role="tabpanel" aria-labelledby="showStripeAccountManagement"><h3>Bank account and business details</h3><p>Use Stripe’s Add or Edit controls to add or replace an eligible payout bank account or debit card where Stripe supports it for this account.</p><div id="stripeAccountManagement"></div></div>
+            <div id="stripePayouts"></div>
           </section>
-          <div class="setup-status" id="setupStatus"><div><span>Business Verification</span><strong>Checking…</strong></div><div><span>Payout Destination</span><strong>Open secure form below</strong></div><div><span>Payments Ready</span><strong>Disabled pending final approval</strong></div></div>
-          <p class="bank-destination" id="bankDestination">Checking the secure payout destination…</p>
-          <p class="muted">Stripe account: Ogreena · <code>acct_1UTpIlI19b4U0AqM</code></p>
-          <div class="verification-actions"><button class="small-btn" id="authorizeOgreenaMerchant" type="button">Authorize Existing Ogreena Merchant</button><button class="small-btn" id="manageBankAccount" type="button">Manage Ogreena Bank Account Securely</button><button class="small-btn" id="refreshStatus" type="button">Refresh Status</button><a class="small-btn primary" href="../">Save &amp; Continue</a></div>
-          <div id="stripeAccountGuard" class="security-note" hidden><strong>Select Ogreena before continuing.</strong><br>Stripe’s Dashboard can remain signed into the last business used. Open Stripe, use the business switcher, and confirm the header says <strong>Ogreena</strong> and the account is <code>acct_1UTpIlI19b4U0AqM</code>. Do not enter bank information if Stripe shows CalyBayPOD or any other business.<div class="verification-actions"><a class="small-btn" href="https://dashboard.stripe.com/" target="_blank" rel="noopener">Open Stripe Account Switcher</a><button class="small-btn" id="closeStripeGuard" type="button">Cancel</button></div></div>
-          <p class="secure-footer">Stripe hosts all bank and identity changes for Ogreena’s account. Product and service payments remain separated in Ogreena reports.</p>
+          <div class="verification-actions"><a class="small-btn primary" href="../">Save &amp; Return to Dashboard</a></div>
+          <p class="secure-footer">Complete identity information only if Stripe requests it. Product and service payments remain disabled and separated in Ogreena reports.</p>
         </div>
       </section>
     </section>
   </main>
-  <script type="module" src="payment-setup.js?v=14"></script>
+  <script type="module" src="payment-setup.js?v=15"></script>
 </body></html>
