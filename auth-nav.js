@@ -20,8 +20,8 @@ async function renderAccountNavigation(session) {
   const role = data?.role || 'customer';
   document.querySelectorAll('[data-auth-user]').forEach(link => {
     if (role === 'owner') { link.textContent = 'Owner Dashboard'; link.href = '/owner/'; }
-    else if (role === 'employee') { link.textContent = 'Employee Dashboard'; link.href = '/customer/'; }
-    else { link.textContent = 'My Account'; link.href = '/customer/'; }
+    else if (role === 'employee') { link.textContent = 'Employee Dashboard'; link.href = '/auth/'; }
+    else { link.textContent = 'My Account'; link.href = '/auth/'; }
   });
 }
 

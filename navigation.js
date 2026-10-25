@@ -63,8 +63,8 @@
     const {data}=await client.from('user_roles').select('role').eq('user_id',user.id).single(); const role=data?.role||'customer';
     const account=drawer.querySelector('[data-auth-user]');
     if(role==='owner'){account.textContent='Owner Dashboard';account.href=`${siteRoot}owner/`;account.dataset.menuSearch='owner dashboard business account';}
-    else if(role==='employee'){account.textContent='Employee Dashboard';account.href=`${siteRoot}customer/`;account.dataset.menuSearch='employee dashboard jobs schedule account';}
-    else{account.textContent='My Account';account.href=`${siteRoot}customer/`;}
+    else if(role==='employee'){account.textContent='Employee Dashboard';account.href=`${siteRoot}auth/`;account.dataset.menuSearch='employee dashboard jobs schedule account';}
+    else{account.textContent='My Account';account.href=`${siteRoot}auth/`;}
     drawer.querySelector('[data-auth-signout]').addEventListener('click',async event=>{event.preventDefault();await client.auth.signOut();location.href=siteRoot;});
   }).catch(()=>{});
   const topSearch = topbar.querySelector('.search');
