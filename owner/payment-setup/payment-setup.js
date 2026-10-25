@@ -76,7 +76,7 @@ async function openEmbeddedStripe(shouldScroll=true){
     $('#stripeNotificationBanner').replaceChildren(banner);
     $('#stripeAccountOnboarding').replaceChildren(accountOnboarding);
     $('#stripeAccountManagement').replaceChildren(accountManagement);
-    showStripePanel('onboarding');
+    showStripePanel('management');
     status.hidden=true;
   }catch(error){
     connectInstance=undefined;
@@ -109,14 +109,14 @@ async function loadStatus(){
   const actionRequired=Boolean(account.disabledReason)||(account.currentlyDue||0)>0;
   const pending=(account.pendingVerification||0)>0;
   $('#accountTypeStatus').textContent=account.businessType==='company'?'Registered Business / LLC':account.businessType==='individual'?'Individual / Independent':'Account type already verified and managed by Stripe.';
-  $('#connectionStatus').textContent=actionRequired?'Action Required':pending?'Pending Verification':account.payoutsEnabled?'Bank Connected':'Setup Required';
+  $('#connectionStatus').textContent=actionRequired?'Action Required':pending?'Pending Verification':'Stripe Account Connected';
   $('#connectionStatus').className=`status-pill ${account.payoutsEnabled?'good':actionRequired?'attention':''}`;
   rows[0].textContent=actionRequired?'Action Required':pending?'Pending Verification':account.detailsSubmitted?'Submitted':'Not Submitted';
-  rows[1].textContent=account.payoutsEnabled?'Bank Connected':pending?'Pending Verification':'Action Required';
+  rows[1].textContent=pending?'Pending Verification':'Manage in secure Stripe form';
   const destination=$('#bankDestination');
-  destination.textContent=account.payoutDestination?.connected
-    ? `${account.payoutDestination.display} · managed securely by Stripe`
-    : pending?'Stripe is reviewing the payout destination.':'No verified payout destination is available.';
+  destination.textContent=pending
+    ? 'Stripe is reviewing the payout destination.'
+    : 'Stripe’s embedded Bank & account form below shows the current payout destination and provides eligible Add or Edit controls.';
   $('#setupPrompt').hidden=account.detailsSubmitted&&account.payoutsEnabled&&!actionRequired&&!pending;
   $('#connectedPrompt').hidden=!$('#setupPrompt').hidden;
 }

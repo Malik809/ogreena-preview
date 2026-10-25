@@ -23,17 +23,17 @@
         <div class="verification-card-head"><div><p class="eyebrow">OGREENA PAYMENT VERIFICATION</p><h2>Securely powered by Stripe</h2><p class="save-later">Save &amp; return later</p></div><span class="status-pill" id="connectionStatus">Checking status…</span></div>
         <div class="verification-body">
           <div id="setupPrompt"><p class="step-kicker">Business and payout details</p><h2>Complete your secure setup</h2><p>Stripe requires outstanding verification and bank changes in its secure hosted account settings. Sensitive details are never entered into an Ogreena form.</p></div>
-          <div id="connectedPrompt" hidden><p class="step-kicker">Payments ready for owner approval</p><h2>Your payout bank is connected</h2><p>Ogreena’s business and payout setup is already complete. You do not need to repeat verification or bank setup.</p></div>
+          <div id="connectedPrompt" hidden><p class="step-kicker">Stripe account available</p><h2>Manage your payout details securely</h2><p>Use Stripe’s embedded controls below to review, add, or update an eligible payout bank account or debit card.</p></div>
           <p class="account-type-line" id="accountTypeStatus">Checking the verified Stripe account type…</p>
           <section class="embedded-stripe" id="embeddedStripe" hidden aria-live="polite">
             <div class="embedded-stripe-head"><div><p class="eyebrow">OGREENA SECURE ACCOUNT MANAGEMENT</p><h2>Verification and payout bank</h2></div><button class="small-btn" id="closeEmbeddedStripe" type="button">Close</button></div>
             <p id="embeddedStripeStatus">Opening Stripe’s secure verification and bank controls…</p>
             <div id="stripeNotificationBanner"></div>
-            <div class="component-tabs" role="tablist" aria-label="Stripe account setup sections"><button class="component-tab active" id="showStripeOnboarding" type="button" role="tab" aria-selected="true">Verification form</button><button class="component-tab" id="showStripeAccountManagement" type="button" role="tab" aria-selected="false">Bank &amp; account</button></div>
-            <div class="stripe-component-panel" id="stripeOnboardingPanel" role="tabpanel" aria-labelledby="showStripeOnboarding"><h3>Business verification</h3><p>Complete any information Stripe still requires. Already verified details are not requested again.</p><div id="stripeAccountOnboarding"></div></div>
-            <div class="stripe-component-panel" id="stripeAccountManagementPanel" role="tabpanel" aria-labelledby="showStripeAccountManagement" hidden><h3>Bank account and business details</h3><p>Use Stripe’s Edit controls to add or replace an eligible payout bank account or debit card where Stripe supports it for this account.</p><div id="stripeAccountManagement"></div></div>
+            <div class="component-tabs" role="tablist" aria-label="Stripe account setup sections"><button class="component-tab" id="showStripeOnboarding" type="button" role="tab" aria-selected="false">Verification form</button><button class="component-tab active" id="showStripeAccountManagement" type="button" role="tab" aria-selected="true">Bank &amp; account</button></div>
+            <div class="stripe-component-panel" id="stripeOnboardingPanel" role="tabpanel" aria-labelledby="showStripeOnboarding" hidden><h3>Business verification</h3><p>Complete any information Stripe still requires. Already verified details are not requested again.</p><div id="stripeAccountOnboarding"></div></div>
+            <div class="stripe-component-panel" id="stripeAccountManagementPanel" role="tabpanel" aria-labelledby="showStripeAccountManagement"><h3>Bank account and business details</h3><p>Use Stripe’s Add or Edit controls to add or replace an eligible payout bank account or debit card where Stripe supports it for this account.</p><div id="stripeAccountManagement"></div></div>
           </section>
-          <div class="setup-status" id="setupStatus"><div><span>Business Verified</span><strong>Checking…</strong></div><div><span>Bank Connected</span><strong>Checking…</strong></div><div><span>Payments Ready</span><strong>Disabled pending final approval</strong></div></div>
+          <div class="setup-status" id="setupStatus"><div><span>Business Verification</span><strong>Checking…</strong></div><div><span>Payout Destination</span><strong>Open secure form below</strong></div><div><span>Payments Ready</span><strong>Disabled pending final approval</strong></div></div>
           <p class="bank-destination" id="bankDestination">Checking the secure payout destination…</p>
           <p class="muted">Stripe account: Ogreena · <code>acct_1UTpIlI19b4U0AqM</code></p>
           <div class="verification-actions"><button class="small-btn" id="authorizeOgreenaMerchant" type="button">Authorize Existing Ogreena Merchant</button><button class="small-btn" id="manageBankAccount" type="button">Manage Ogreena Bank Account Securely</button><button class="small-btn" id="refreshStatus" type="button">Refresh Status</button><a class="small-btn primary" href="../">Save &amp; Continue</a></div>
@@ -43,5 +43,5 @@
       </section>
     </section>
   </main>
-  <script type="module" src="payment-setup.js?v=13"></script>
+  <script type="module" src="payment-setup.js?v=14"></script>
 </body></html>
