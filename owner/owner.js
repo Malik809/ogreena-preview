@@ -8,6 +8,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '
 const money = cents => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' }).format((Number(cents) || 0) / 100);
 let operationView = 'requests';
 let currentUserId = null;
+const OWNER_SESSION_HANDOFF_KEY = 'ogreena-owner-session-handoff';
 
 function setStatus(message, error = false) { const node = $('#globalStatus'); node.textContent = message; node.classList.toggle('error', error); }
 async function run(label, action) { setStatus(`${label}…`); try { const value = await action(); setStatus(`${label} complete`); return value; } catch (error) { setStatus(error.message || `${label} failed`, true); throw error; } }
@@ -168,12 +169,23 @@ document.querySelector('[data-live-validation-checkout]')?.addEventListener('cli
 
 async function initialize() {
   const denied = $('#deniedPanel'), dashboard = $('#ownerDashboard'), authStatus = $('#ownerStatus');
-  const sessionResult = await Promise.race([
+  let sessionResult = await Promise.race([
     supabase.auth.getSession(),
     new Promise(resolve => setTimeout(() => resolve({ data:{ session:null }, error:new Error('Session check timed out') }), 8000))
   ]);
-  const session = sessionResult.data?.session;
+  let session = sessionResult.data?.session;
+  if (!session?.user) {
+    const handoff = JSON.parse(window.sessionStorage.getItem(OWNER_SESSION_HANDOFF_KEY) || 'null');
+    if (handoff?.access_token && handoff?.refresh_token) {
+      sessionResult = await Promise.race([
+        supabase.auth.setSession(handoff),
+        new Promise(resolve => setTimeout(() => resolve({ data:{ session:null }, error:new Error('Session restore timed out') }), 8000))
+      ]);
+      session = sessionResult.data?.session;
+    }
+  }
   if (sessionResult.error || !session?.user) { authStatus.innerHTML = 'Your owner session is not active in this browser. <a href="../auth/?mode=signin">Sign in to continue</a>.'; return; }
+  window.sessionStorage.removeItem(OWNER_SESSION_HANDOFF_KEY);
   const role = requireOk(await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single());
   if (role?.role !== 'owner') { authStatus.textContent = 'This account is not authorized as an owner. Owner access is never granted from an email address alone.'; return; }
   currentUserId = session.user.id;

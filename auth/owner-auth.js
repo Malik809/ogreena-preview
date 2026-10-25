@@ -6,6 +6,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: 'ogreena-auth-session', lock: safariSafeAuthLock }
 });
 const authRedirect = 'https://ogreena.com/auth/';
+const OWNER_SESSION_HANDOFF_KEY = 'ogreena-owner-session-handoff';
 
 const authPanel = document.querySelector('#authPanel');
 const accountPanel = document.querySelector('#accountPanel');
@@ -115,6 +116,7 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
     const { data: roleRow, error: roleError } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
     if (roleError) throw roleError;
     if (roleRow?.role === 'owner') {
+      window.sessionStorage.setItem(OWNER_SESSION_HANDOFF_KEY, JSON.stringify({ access_token:signedInSession.access_token, refresh_token:signedInSession.refresh_token }));
       setStatus('Signed in. Opening the Owner Dashboard…', 'success');
       location.replace('../owner/');
       return;
@@ -223,6 +225,7 @@ async function renderSession(session) {
   const profile = profileResult.data;
   const role = roleResult.data.role;
   if (role === 'owner') {
+    window.sessionStorage.setItem(OWNER_SESSION_HANDOFF_KEY, JSON.stringify({ access_token:session.access_token, refresh_token:session.refresh_token }));
     location.replace('../owner/');
     return;
   }
