@@ -2,7 +2,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../auth/supabase-config.js';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true }
+  auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage, storageKey: 'ogreena-auth-session' }
 });
 
 const { data: { user } } = await supabase.auth.getUser();

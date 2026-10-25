@@ -2,7 +2,7 @@ const { createClient } = window.supabase;
 const SUPABASE_URL = 'https://mhhjzifeaofgskimvuom.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM';
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: 'ogreena-auth-session' }
 });
 const authRedirect = 'https://ogreena.com/auth/';
 
@@ -97,8 +97,11 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
   const values = Object.fromEntries(new FormData(form));
   await runFormRequest(form, 'Signing in…', () => supabase.auth.signInWithPassword({ email: values.email, password: values.password }), async data => {
     form.reset();
-    const user = data?.session?.user || data?.user;
-    if (!user) throw new Error('The signed-in session was not returned.');
+    const signedInSession = data?.session;
+    const user = signedInSession?.user || data?.user;
+    if (!signedInSession?.access_token || !signedInSession?.refresh_token || !user) throw new Error('The signed-in session was not returned.');
+    const saved = await supabase.auth.setSession({ access_token: signedInSession.access_token, refresh_token: signedInSession.refresh_token });
+    if (saved.error || saved.data.session?.user?.id !== user.id) throw saved.error || new Error('The owner session could not be saved in this browser.');
     if (!user.email_confirmed_at) {
       const error = new Error('Email is not confirmed');
       error.code = 'email_not_confirmed';
