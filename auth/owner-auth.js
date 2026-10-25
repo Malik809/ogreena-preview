@@ -95,10 +95,10 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
   event.preventDefault();
   const form = event.currentTarget;
   const values = Object.fromEntries(new FormData(form));
-  await runFormRequest(form, 'Signing in…', () => supabase.auth.signInWithPassword({ email: values.email, password: values.password }), async () => {
+  await runFormRequest(form, 'Signing in…', () => supabase.auth.signInWithPassword({ email: values.email, password: values.password }), async data => {
     form.reset();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw userError || new Error('The signed-in account could not be refreshed.');
+    const user = data?.session?.user || data?.user;
+    if (!user) throw new Error('The signed-in session was not returned.');
     if (!user.email_confirmed_at) {
       const error = new Error('Email is not confirmed');
       error.code = 'email_not_confirmed';
@@ -184,14 +184,7 @@ async function loadProducts() {
 async function renderSession(session) {
   authPanel.hidden = Boolean(session); accountPanel.hidden = !session; signOutButton.hidden = !session;
   if (!session) return;
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    await supabase.auth.signOut({ scope: 'local' });
-    authPanel.hidden = false; accountPanel.hidden = true; signOutButton.hidden = true;
-    switchTab('signin');
-    setStatus('Your previous session expired. Sign in again with the existing account.', 'error');
-    return;
-  }
+  const user = session.user;
   const [profileResult, roleResult] = await Promise.all([
     supabase.from('profiles').select('display_name').eq('id', user.id).single(),
     supabase.from('user_roles').select('role').eq('user_id', user.id).single()
