@@ -45,6 +45,18 @@
     showMessage.timer = setTimeout(() => toast.classList.remove('show'), 4200);
   }
 
+  async function startCheckout(productId) {
+    try {
+      if (!window.supabase) throw new Error('Secure checkout is still loading. Please try again.');
+      const client = window.supabase.createClient('https://mhhjzifeaofgskimvuom.supabase.co','sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM',{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage,storageKey:'ogreena-auth-session'}});
+      const {data:{session}}=await client.auth.getSession();
+      if(!session){sessionStorage.setItem('ogreena-pending-product',productId);location.href=`${root}auth/?mode=signin&checkout=product`;return;}
+      const {data,error}=await client.functions.invoke('create-checkout-session',{body:{kind:'product',productId,idempotencyKey:crypto.randomUUID()}});
+      if(error||!data?.url)throw new Error(data?.error||'Checkout is unavailable');
+      location.href=data.url;
+    } catch (error) { showMessage(error.message || 'Checkout is unavailable until final owner approval.'); }
+  }
+
   function openProduct(product) {
     let dialog = document.querySelector('#productDialog');
     if (!dialog) {
@@ -55,7 +67,7 @@
     }
     dialog.innerHTML = `<button class="dialog-close" type="button" aria-label="Close product details">×</button><img src="${product.image}" alt="${product.name} — ${product.size}"><div><span class="product-size">${product.size}</span><h2>${product.name}</h2><strong>$${product.price.toFixed(2)}</strong><p>Original Ogreena cleaning product. Online checkout is not active yet.</p><button class="small-btn primary" type="button" data-buy-product="${product.id}">Buy Now</button></div>`;
     dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
-    dialog.querySelector('[data-buy-product]').addEventListener('click', () => showMessage('Checkout is unavailable until Ogreena’s verified Stripe account is connected.'));
+    dialog.querySelector('[data-buy-product]').addEventListener('click', () => startCheckout(product.id));
     dialog.showModal();
   }
 
@@ -65,7 +77,7 @@
   section.querySelector('.carousel-arrow.prev').addEventListener('click', () => carousel.scrollBy({ left: -Math.max(260, carousel.clientWidth * .72), behavior: 'smooth' }));
   section.querySelector('.carousel-arrow.next').addEventListener('click', () => carousel.scrollBy({ left: Math.max(260, carousel.clientWidth * .72), behavior: 'smooth' }));
   section.querySelectorAll('[data-view-product]').forEach(button => button.addEventListener('click', () => openProduct(products.find(product => product.id === button.dataset.viewProduct))));
-  section.querySelectorAll('[data-buy-product]').forEach(button => button.addEventListener('click', () => showMessage('Checkout is unavailable until Ogreena’s verified Stripe account is connected.')));
+  section.querySelectorAll('[data-buy-product]').forEach(button => button.addEventListener('click', () => startCheckout(button.dataset.buyProduct)));
   const search = section.querySelector('#productSearch');
   search.addEventListener('input', () => {
     const query = search.value.trim().toLowerCase();

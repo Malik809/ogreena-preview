@@ -174,7 +174,17 @@ async function loadRequests(userId) {
   const list = document.querySelector('#requestList');
   const { data, error } = await supabase.from('service_requests').select('id,service_slug,summary,status,created_at').eq('customer_id', userId).order('created_at', { ascending: false });
   if (error) { list.textContent = friendlyError(error); return; }
-  list.innerHTML = data.length ? data.map(item => `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(item.service_slug)} · ${escapeHTML(item.status)}</span></div>`).join('') : '<p class="muted">No service requests yet.</p>';
+  const { data: estimates } = await supabase.from('estimates').select('id,request_id,amount_cents,status').eq('customer_id', userId).eq('status','accepted');
+  const payable = Object.fromEntries((estimates || []).filter(item => item.amount_cents >= 50).map(item => [item.request_id,item]));
+  list.innerHTML = data.length ? data.map(item => `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(item.service_slug)} · ${escapeHTML(item.status)}</span>${payable[item.id]?`<button class="small-btn primary" data-pay-estimate="${escapeHTML(payable[item.id].id)}">Pay approved invoice</button>`:''}</div>`).join('') : '<p class="muted">No service requests yet.</p>';
+  list.querySelectorAll('[data-pay-estimate]').forEach(button=>button.addEventListener('click',()=>startCheckout({kind:'invoice',estimateId:button.dataset.payEstimate})));
+}
+
+async function startCheckout(body) {
+  const idempotencyKey = crypto.randomUUID();
+  const { data, error } = await supabase.functions.invoke('create-checkout-session', { body:{...body,idempotencyKey} });
+  if (error || !data?.url) return alert(data?.error || friendlyError(error));
+  location.href = data.url;
 }
 
 async function loadProducts() {
@@ -187,6 +197,12 @@ async function loadProducts() {
 async function renderSession(session) {
   authPanel.hidden = Boolean(session); accountPanel.hidden = !session; signOutButton.hidden = !session;
   if (!session) return;
+  const pendingProduct = sessionStorage.getItem('ogreena-pending-product');
+  if (pendingProduct) {
+    sessionStorage.removeItem('ogreena-pending-product');
+    await startCheckout({ kind:'product', productId:pendingProduct });
+    return;
+  }
   const user = session.user;
   const [profileResult, roleResult] = await Promise.all([
     supabase.from('profiles').select('display_name').eq('id', user.id).single(),
