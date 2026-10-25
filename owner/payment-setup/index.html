@@ -40,5 +40,16 @@
       </section>
     </section>
   </main>
-  <script type="module" src="payment-setup.js?v=19"></script>
+  <script>
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller && !sessionStorage.getItem('ogreena-payment-cache-refreshed')) {
+      navigator.serviceWorker.getRegistrations().then(async registrations => {
+        const sameOrigin = registrations.filter(registration => new URL(registration.scope).origin === location.origin);
+        if (!sameOrigin.length) return;
+        await Promise.all(sameOrigin.map(registration => registration.unregister()));
+        sessionStorage.setItem('ogreena-payment-cache-refreshed', '1');
+        location.reload();
+      });
+    }
+  </script>
+  <script type="module" src="payment-setup.js?v=c958f8a-cache2"></script>
 </body></html>
