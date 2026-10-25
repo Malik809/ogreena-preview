@@ -150,14 +150,14 @@ async function loadPayments() {
   }));
 }
 document.querySelectorAll('[data-stripe-path]').forEach(button => button.addEventListener('click', () => {
-  if (['test/dashboard','test/settings/verified','test/settings/payouts'].includes(button.dataset.stripePath)) {
-    location.href = 'payment-setup/';
-    return;
-  }
   // Stripe Dashboard is the secure hosted interface for the business's direct account.
   // Do not hardcode an account ID: Stripe selects the authenticated Ogreena account.
   window.open(`https://dashboard.stripe.com/${button.dataset.stripePath}`, '_blank', 'noopener');
 }));
+document.querySelector('[data-payment-setup]')?.addEventListener('click',()=>{
+  sessionStorage.removeItem('ogreena-stripe-mode');
+  location.href='payment-setup/?sandbox=onboarding';
+});
 
 async function initialize() {
   const denied = $('#deniedPanel'), dashboard = $('#ownerDashboard'), authStatus = $('#ownerStatus');

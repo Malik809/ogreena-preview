@@ -4,9 +4,12 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../auth/supabase-conf
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage,storageKey:'ogreena-auth-session'}});
 const $=selector=>document.querySelector(selector);
 let connectInstance;
+const STRIPE_MODE_KEY='ogreena-stripe-mode';
 
 function sandboxOnboardingEnabled(){
-  return new URLSearchParams(location.search).get('sandbox')==='onboarding';
+  const requested=new URLSearchParams(location.search).get('sandbox')==='onboarding';
+  if(requested)sessionStorage.setItem(STRIPE_MODE_KEY,'sandbox-onboarding');
+  return requested||sessionStorage.getItem(STRIPE_MODE_KEY)==='sandbox-onboarding';
 }
 
 async function openEmbeddedStripe(){
@@ -63,6 +66,10 @@ function closeEmbeddedStripe(){
   $('#openPayoutForm').focus();
 }
 
+function returnToDashboard(){
+  sessionStorage.removeItem(STRIPE_MODE_KEY);
+}
+
 async function initialize(){
   const {data:{user},error}=await supabase.auth.getUser();
   if(error||!user){$('#ownerStatus').textContent='Sign in with an authorized owner account to continue.';return;}
@@ -79,5 +86,6 @@ async function initialize(){
   }
   $('#openPayoutForm').addEventListener('click',openEmbeddedStripe);
   $('#closePayoutForm').addEventListener('click',closeEmbeddedStripe);
+  $('#returnToDashboard').addEventListener('click',returnToDashboard);
 }
 initialize().catch(error=>{$('#ownerStatus').textContent=error.message||'Payment setup could not load.';});
