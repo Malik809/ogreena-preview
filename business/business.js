@@ -8,6 +8,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 const $ = selector => document.querySelector(selector);
 let currentBusiness;
 let connectInstance;
+const sandboxMode = new URLSearchParams(location.search).get('sandbox') === 'onboarding';
+const connectEnvironment = sandboxMode ? 'test' : 'live';
 
 function message(target, text, error = false) {
   target.textContent = text;
@@ -55,18 +57,29 @@ async function loadBusinessDashboard(user) {
   $('#verificationStatus').classList.toggle('good', membership.verification_status === 'verified');
 
   if (membership.verification_status !== 'verified' || business.status !== 'verified') return;
-  $('#payoutSummary').textContent = 'Your business is verified. Stripe onboarding remains sandbox-only until production registration receives separate approval.';
+  $('#payoutSummary').textContent = sandboxMode
+    ? 'Sandbox onboarding is isolated from live Stripe and does not enable customer payments.'
+    : 'Complete Stripe verification and add this business’s payout account securely inside Ogreena.';
   const [{ data: accounts }, { data: consents }] = await Promise.all([
     supabase.from('business_connect_accounts').select('environment,onboarding_status').eq('business_id', business.id),
     supabase.from('business_connect_consents').select('environment,consented_at,revoked_at').eq('business_id', business.id),
   ]);
-  const testAccount = accounts?.find(account => account.environment === 'test');
-  const testConsent = consents?.find(consent => consent.environment === 'test' && !consent.revoked_at);
-  $('#connectAccountSummary').textContent = testAccount
-    ? `Sandbox payout status: ${testAccount.onboarding_status.replaceAll('_', ' ')}. Stripe account identifiers remain server-managed.`
-    : 'No sandbox connected account is assigned. Ogreena will not create one automatically.';
-  $('#consentPanel').hidden = Boolean(testConsent);
-  $('#startPayoutSetup').hidden = !(testConsent && testAccount);
+  const connectAccount = accounts?.find(account => account.environment === connectEnvironment);
+  const connectConsent = consents?.find(consent => consent.environment === connectEnvironment && !consent.revoked_at);
+  const environmentLabel = sandboxMode ? 'Sandbox' : 'Live';
+  $('#connectAccountSummary').textContent = connectAccount
+    ? `${environmentLabel} payout status: ${connectAccount.onboarding_status.replaceAll('_', ' ')}. Stripe account identifiers remain server-managed.`
+    : `No ${environmentLabel.toLowerCase()} Stripe connected account exists for this business.`;
+  $('#consentPanel').hidden = Boolean(connectConsent);
+  $('#startPayoutSetup').hidden = !connectConsent;
+  $('#startPayoutSetup').textContent = connectAccount ? `Continue ${environmentLabel} Payout Setup` : `Create ${environmentLabel} Payout Account`;
+  if (sandboxMode) {
+    $('#consentHeading').textContent = 'Sandbox onboarding consent';
+    $('#consentCopy').textContent = 'This isolated test flow never creates a live account or enables customer payments.';
+    $('#consentLabel').textContent = 'I explicitly consent to Ogreena starting Stripe Connect onboarding for this business in the sandbox.';
+    $('#recordConsent').textContent = 'Record Sandbox Consent';
+    $('#stripeEnvironmentTag').textContent = 'Stripe-secured sandbox';
+  }
 }
 
 $('#registrationForm').addEventListener('submit', async event => {
@@ -91,11 +104,13 @@ $('#recordConsent').addEventListener('click', async () => {
   const { error } = await supabase.from('business_connect_consents').insert({
     business_id:currentBusiness.id,
     user_id:user.id,
-    environment:'test',
-    terms_version:'connect-sandbox-v1',
+    environment:connectEnvironment,
+    terms_version:sandboxMode ? 'connect-sandbox-v1' : 'connect-live-v1',
   });
   if (error) return message($('#consentStatus'), error.message, true);
-  message($('#consentStatus'), 'Sandbox consent recorded. No live Stripe account was created.');
+  message($('#consentStatus'), sandboxMode
+    ? 'Sandbox consent recorded. No live Stripe account was created.'
+    : 'Live consent recorded. No account is created until you choose Create Live Payout Account.');
   setTimeout(() => location.reload(), 900);
 });
 
@@ -103,19 +118,23 @@ $('#startPayoutSetup').addEventListener('click', async () => {
   const button = $('#startPayoutSetup');
   button.disabled = true;
   $('#stripePanel').hidden = false;
-  $('#stripeStatus').textContent = 'Opening Stripe’s secure sandbox form…';
+  $('#stripeStatus').textContent = `Opening Stripe’s secure ${sandboxMode ? 'sandbox' : 'live'} form…`;
   try {
-    const { data, error } = await supabase.functions.invoke('create-business-connect-session', { body:{ businessId:currentBusiness.id } });
+    const provisionFunction = sandboxMode ? 'provision-sandbox-business-account' : 'provision-live-business-account';
+    const provisioned = await supabase.functions.invoke(provisionFunction, { body:{ businessId:currentBusiness.id } });
+    if (provisioned.error) throw new Error(provisioned.data?.error || provisioned.error.message);
+    if (provisioned.data?.livemode !== !sandboxMode) throw new Error('The Stripe provisioner returned the wrong environment.');
+    const { data, error } = await supabase.functions.invoke('create-business-connect-session', { body:{ businessId:currentBusiness.id, environment:connectEnvironment } });
     if (error) throw new Error(data?.error || error.message);
-    if (data.livemode !== false) throw new Error('The sandbox route rejected an unsafe Stripe environment.');
-    const { loadConnectAndInitialize } = await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.4.6/+esm');
+    if (data.livemode !== !sandboxMode) throw new Error('The Stripe session returned the wrong environment.');
+    const { loadConnectAndInitialize } = await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.3.1/+esm');
     let initialSecret = data.clientSecret;
     connectInstance = loadConnectAndInitialize({
       publishableKey:data.publishableKey,
       fetchClientSecret:async () => {
         if (initialSecret) { const secret = initialSecret; initialSecret = undefined; return secret; }
-        const refreshed = await supabase.functions.invoke('create-business-connect-session', { body:{ businessId:currentBusiness.id } });
-        if (refreshed.error || refreshed.data?.livemode !== false) throw new Error('Unable to refresh the secure sandbox session.');
+        const refreshed = await supabase.functions.invoke('create-business-connect-session', { body:{ businessId:currentBusiness.id, environment:connectEnvironment } });
+        if (refreshed.error || refreshed.data?.livemode !== !sandboxMode) throw new Error('Unable to refresh the secure Stripe session.');
         return refreshed.data.clientSecret;
       },
       appearance:{ overlays:'dialog', variables:{ colorPrimary:'#0f6943', colorBackground:'#fffdf6', colorText:'#163e2d', borderRadius:'12px' } },
@@ -124,7 +143,9 @@ $('#startPayoutSetup').addEventListener('click', async () => {
     const banner = connectInstance.create('notification-banner');
     $('#stripeNotification').replaceChildren(banner);
     $('#stripeComponent').replaceChildren(component);
-    $('#stripeStatus').textContent = data.mode === 'management' ? 'Secure sandbox payout management' : 'Secure sandbox business verification and payout setup';
+    $('#stripeStatus').textContent = data.mode === 'management'
+      ? 'Secure payout management for this business'
+      : 'Secure business verification and payout setup';
   } catch (error) {
     $('#stripeStatus').textContent = error.message || 'The secure sandbox form could not be opened.';
   } finally {

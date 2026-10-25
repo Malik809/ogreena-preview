@@ -37,23 +37,23 @@
       <label id="businessSelectorWrap" hidden>Manage business<select id="businessSelector"></select></label>
       <div class="account-grid">
         <article class="card"><h2>Private business profile</h2><p>Your membership and business record are protected by row-level security.</p><p class="muted">Only verified members of this business can view its connected-account status.</p></article>
-        <article class="card"><h2>Payout setup</h2><p id="payoutSummary">Business verification must be approved before payout onboarding.</p><div id="connectAccountSummary" class="muted"></div><button class="small-btn primary" id="startPayoutSetup" type="button" hidden>Set Up Payouts in Sandbox</button></article>
+        <article class="card"><h2>Payout setup</h2><p id="payoutSummary">Business verification must be approved before payout onboarding.</p><div id="connectAccountSummary" class="muted"></div><button class="small-btn primary" id="startPayoutSetup" type="button" hidden>Set Up Payouts</button></article>
       </div>
       <section class="card consent-card" id="consentPanel" hidden>
-        <h2>Sandbox onboarding consent</h2>
-        <p>This foundation is sandbox-only. Giving consent will not create a live Stripe account or enable customer payments.</p>
-        <label class="consent-line"><input id="connectConsent" type="checkbox"> I explicitly consent to Ogreena starting Stripe Connect onboarding for this business in the sandbox.</label>
-        <button class="small-btn" id="recordConsent" type="button">Record Sandbox Consent</button>
+        <h2 id="consentHeading">Live Stripe onboarding consent</h2>
+        <p id="consentCopy">Ogreena creates one private live Stripe connected account for this business only after its authorized owner gives consent. This does not enable customer charging.</p>
+        <label class="consent-line"><input id="connectConsent" type="checkbox"> <span id="consentLabel">I am authorized for this business and explicitly consent to Ogreena creating its live Stripe connected account and starting Stripe onboarding.</span></label>
+        <button class="small-btn" id="recordConsent" type="button">Record Live Consent</button>
         <p class="auth-status" id="consentStatus" role="status" aria-live="polite"></p>
       </section>
       <section class="card stripe-card" id="stripePanel" hidden>
-        <div class="content-head"><div><span class="tag">Stripe-secured sandbox</span><h2>Business payout onboarding</h2></div></div>
+        <div class="content-head"><div><span class="tag" id="stripeEnvironmentTag">Stripe-secured live onboarding</span><h2>Business payout onboarding</h2></div></div>
         <p id="stripeStatus">Opening Stripe’s secure form…</p>
         <div id="stripeNotification"></div>
         <div id="stripeComponent"></div>
       </section>
     </section>
   </main>
-  <script type="module" src="business.js?v=1"></script>
+  <script type="module" src="business.js?v=2"></script>
 </body>
 </html>

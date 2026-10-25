@@ -17,6 +17,7 @@ Deno.serve(async request => {
     const { user, client } = await requireAuthenticated(request);
     const body = await request.json().catch(() => ({}));
     const businessId = typeof body.businessId === 'string' ? body.businessId : '';
+    const environment = body.environment === 'live' ? 'live' : 'test';
     if (!UUID_PATTERN.test(businessId)) throw new Error('A valid business is required');
 
     const { data: membership, error: membershipError } = await client
@@ -32,9 +33,6 @@ Deno.serve(async request => {
     const business = Array.isArray(membership.businesses) ? membership.businesses[0] : membership.businesses;
     if (business?.status !== 'verified') throw new Error('Business verification is not complete');
 
-    // Foundation phase is deliberately sandbox-only. Enabling live provisioning
-    // requires a separate reviewed change and never happens from this function.
-    const environment = 'test';
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -42,7 +40,7 @@ Deno.serve(async request => {
     );
     const [{ data: consent }, { data: account, error: accountError }] = await Promise.all([
       admin.from('business_connect_consents')
-        .select('consented_at,revoked_at')
+        .select('consented_at,revoked_at,user_id')
         .eq('business_id', businessId)
         .eq('environment', environment)
         .maybeSingle(),
@@ -52,22 +50,25 @@ Deno.serve(async request => {
         .eq('environment', environment)
         .maybeSingle(),
     ]);
-    if (!consent?.consented_at || consent.revoked_at) throw new Error('Explicit business-owner consent is required');
+    if (!consent?.consented_at || consent.revoked_at || consent.user_id !== user.id) throw new Error('Explicit consent from the current verified business owner is required');
     if (accountError || !account?.stripe_account_id) {
       return Response.json({
-        error: 'No sandbox Stripe account is assigned to this verified business. No account was created.',
-        code: 'sandbox_account_not_assigned',
+        error: `No ${environment} Stripe account is assigned to this verified business. No account was created.`,
+        code: `${environment}_account_not_assigned`,
       }, { status: 409, headers });
     }
 
-    const secret = Deno.env.get('STRIPE_CONNECT_SECRET_KEY_TEST') || '';
-    const publishableKey = Deno.env.get('STRIPE_CONNECT_PUBLISHABLE_KEY_TEST') || '';
-    if (!secret.startsWith('sk_test_') && !secret.startsWith('rk_test_')) throw new Error('Sandbox Stripe credential is not configured');
-    if (!publishableKey.startsWith('pk_test_')) throw new Error('Sandbox Stripe publishable key is not configured');
+    const secret = Deno.env.get(environment === 'live' ? 'STRIPE_CONNECT_SECRET_KEY_LIVE' : 'STRIPE_CONNECT_SECRET_KEY_TEST') || '';
+    const publishableKey = Deno.env.get(environment === 'live' ? 'STRIPE_CONNECT_PUBLISHABLE_KEY_LIVE' : 'STRIPE_CONNECT_PUBLISHABLE_KEY_TEST') || '';
+    if (environment === 'live' && !secret.startsWith('rk_live_')) throw new Error('Live Stripe credential is not configured');
+    if (environment === 'test' && !secret.startsWith('sk_test_') && !secret.startsWith('rk_test_')) throw new Error('Sandbox Stripe credential is not configured');
+    if (!publishableKey.startsWith(environment === 'live' ? 'pk_live_' : 'pk_test_')) throw new Error(`${environment} Stripe publishable key is not configured`);
 
     const stripe = new Stripe(secret, { apiVersion: '2026-08-26.dahlia' });
-    const stripeAccount = await stripe.accounts.retrieve(account.stripe_account_id);
-    if (stripeAccount.livemode) throw new Error('A live Stripe account cannot be used by the sandbox onboarding route');
+    const stripeAccount = await stripe.v2.core.accounts.retrieve(account.stripe_account_id, {
+      include:['configuration.recipient','identity','requirements'],
+    });
+    if (stripeAccount.livemode !== (environment === 'live')) throw new Error('Stripe connected-account environment mismatch');
 
     const onboardingComplete = account.onboarding_status === 'complete';
     const accountSession = await stripe.accountSessions.create({
@@ -91,7 +92,8 @@ Deno.serve(async request => {
       businessId,
       clientSecret: accountSession.client_secret,
       expiresAt: accountSession.expires_at,
-      livemode: false,
+      livemode: environment === 'live',
+      environment,
       mode: onboardingComplete ? 'management' : 'onboarding',
       publishableKey,
     }, { headers });
