@@ -3,7 +3,6 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../auth/supabase-conf
 
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage,storageKey:'ogreena-auth-session'}});
 const $=selector=>document.querySelector(selector);
-const OGREENA_STRIPE_ACCOUNT_ID='acct_1UTpIlI19b4U0AqM';
 let connectInstance;
 
 function loadStripeConnect(){
@@ -34,7 +33,7 @@ async function openEmbeddedStripe(){
       const result=await supabase.functions.invoke('create-connect-account-session');
       if(result.error)throw result.error;
       const sessionData=result.data;
-      if(sessionData.accountId!==OGREENA_STRIPE_ACCOUNT_ID)throw new Error('Stripe returned the wrong Ogreena merchant account.');
+      if(!/^acct_[A-Za-z0-9]+$/.test(sessionData.accountId||''))throw new Error('Stripe returned an invalid connected account.');
       let firstClientSecret=sessionData.clientSecret;
       const connector=await stripeConnect.init({
         publishableKey:sessionData.publishableKey,
@@ -42,7 +41,7 @@ async function openEmbeddedStripe(){
           if(firstClientSecret){const secret=firstClientSecret;firstClientSecret=undefined;return secret;}
           const refresh=await supabase.functions.invoke('create-connect-account-session');
           if(refresh.error)throw refresh.error;
-          if(refresh.data.accountId!==OGREENA_STRIPE_ACCOUNT_ID)throw new Error('Stripe returned the wrong Ogreena merchant account.');
+          if(refresh.data.accountId!==sessionData.accountId)throw new Error('Stripe connected account ownership changed during this session.');
           return refresh.data.clientSecret;
         },
         appearance:{overlays:'dialog',variables:{colorPrimary:'#0f6943',colorBackground:'#fffdf6',colorText:'#163e2d',borderRadius:'12px'}},

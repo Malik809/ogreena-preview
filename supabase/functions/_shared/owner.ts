@@ -11,6 +11,13 @@ export function corsHeaders(origin: string | null) {
 }
 
 export async function requireOwner(request: Request) {
+  const { user, client } = await requireAuthenticated(request);
+  const { data: role } = await client.from('user_roles').select('role').eq('user_id', user.id).single();
+  if (role?.role !== 'owner') throw new Error('Owner access required');
+  return { user, client };
+}
+
+export async function requireAuthenticated(request: Request) {
   const auth = request.headers.get('Authorization');
   if (!auth?.startsWith('Bearer ')) throw new Error('Authentication required');
   const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -18,7 +25,16 @@ export async function requireOwner(request: Request) {
   });
   const { data: { user }, error } = await client.auth.getUser();
   if (error || !user) throw new Error('Authentication required');
-  const { data: role } = await client.from('user_roles').select('role').eq('user_id', user.id).single();
-  if (role?.role !== 'owner') throw new Error('Owner access required');
   return { user, client };
+}
+
+export async function requireConnectedAccountOwner(request: Request) {
+  const { user, client } = await requireAuthenticated(request);
+  const { data: account, error } = await client
+    .from('business_stripe_accounts')
+    .select('stripe_account_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (error || !account?.stripe_account_id) throw new Error('No Stripe payout account is assigned to this business user');
+  return { user, client, stripeAccountId: account.stripe_account_id as string };
 }
