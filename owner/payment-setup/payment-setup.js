@@ -6,6 +6,20 @@ const $=selector=>document.querySelector(selector);
 const OGREENA_STRIPE_ACCOUNT_ID='acct_1UTpIlI19b4U0AqM';
 let connectInstance;
 
+function loadStripeConnect(){
+  if(window.StripeConnect?.init)return Promise.resolve(window.StripeConnect);
+  return new Promise((resolve,reject)=>{
+    const existing=document.querySelector('script[data-ogreena-stripe-connect]');
+    if(existing){existing.addEventListener('load',()=>resolve(window.StripeConnect),{once:true});existing.addEventListener('error',()=>reject(new Error('Stripe Connect could not load.')),{once:true});return;}
+    const script=document.createElement('script');
+    script.src='https://connect-js.stripe.com/v1.0/connect.js';
+    script.async=true;script.dataset.ogreenaStripeConnect='true';
+    script.addEventListener('load',()=>window.StripeConnect?.init?resolve(window.StripeConnect):reject(new Error('Stripe Connect did not initialize.')),{once:true});
+    script.addEventListener('error',()=>reject(new Error('Stripe Connect could not load.')),{once:true});
+    document.head.appendChild(script);
+  });
+}
+
 async function authorizeOgreenaMerchant(){
   const button=$('#authorizeOgreenaMerchant');button.disabled=true;
   try{
@@ -26,13 +40,13 @@ async function openEmbeddedStripe(){
   panel.scrollIntoView({behavior:'smooth',block:'start'});
   try{
     if(!connectInstance){
-      const {loadConnectAndInitialize}=await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.4.6/dist/connect.esm.js');
+      const stripeConnect=await loadStripeConnect();
       const result=await supabase.functions.invoke('create-connect-account-session');
       if(result.error)throw result.error;
       const sessionData=result.data;
       if(sessionData.accountId!==OGREENA_STRIPE_ACCOUNT_ID)throw new Error('Stripe returned the wrong Ogreena merchant account.');
       let firstClientSecret=sessionData.clientSecret;
-      connectInstance=loadConnectAndInitialize({
+      const connector=await stripeConnect.init({
         publishableKey:sessionData.publishableKey,
         fetchClientSecret:async()=>{
           if(firstClientSecret){const secret=firstClientSecret;firstClientSecret=undefined;return secret;}
@@ -43,6 +57,7 @@ async function openEmbeddedStripe(){
         },
         appearance:{overlays:'dialog',variables:{colorPrimary:'#0f6943',colorBackground:'#fffdf6',colorText:'#163e2d',borderRadius:'12px'}},
       });
+      connectInstance={create(name){const element=document.createElement(`stripe-connect-${name}`);element.setConnector(connector.connect);return element;}};
     }
     const banner=connectInstance.create('notification-banner');
     const accountManagement=connectInstance.create('account-management');
