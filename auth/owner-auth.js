@@ -100,8 +100,6 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
     const signedInSession = data?.session;
     const user = signedInSession?.user || data?.user;
     if (!signedInSession?.access_token || !signedInSession?.refresh_token || !user) throw new Error('The signed-in session was not returned.');
-    const saved = await supabase.auth.setSession({ access_token: signedInSession.access_token, refresh_token: signedInSession.refresh_token });
-    if (saved.error || saved.data.session?.user?.id !== user.id) throw saved.error || new Error('The owner session could not be saved in this browser.');
     if (!user.email_confirmed_at) {
       const error = new Error('Email is not confirmed');
       error.code = 'email_not_confirmed';
