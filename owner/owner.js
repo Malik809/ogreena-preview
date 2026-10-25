@@ -158,6 +158,12 @@ document.querySelector('[data-payment-setup]')?.addEventListener('click',()=>{
   sessionStorage.removeItem('ogreena-stripe-mode');
   location.href='payment-setup/?sandbox=onboarding';
 });
+document.querySelector('[data-live-validation-checkout]')?.addEventListener('click',()=>run('Opening the owner-only $0.50 live checkout',async()=>{
+  const result=await supabase.functions.invoke('create-live-validation-checkout',{body:{}});
+  const data=requireOk(result);
+  if(!data?.url)throw new Error('The controlled live checkout URL was not returned');
+  location.href=data.url;
+}));
 
 async function initialize() {
   const denied = $('#deniedPanel'), dashboard = $('#ownerDashboard'), authStatus = $('#ownerStatus');
