@@ -100,6 +100,12 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
     const signedInSession = data?.session;
     const user = signedInSession?.user || data?.user;
     if (!signedInSession?.access_token || !signedInSession?.refresh_token || !user) throw new Error('The signed-in session was not returned.');
+    // Safari can return a valid Supabase session without retaining it before
+    // the next page loads. Persist the exact session returned by Auth using
+    // the same storage key configured on every Ogreena Supabase client.
+    window.localStorage.setItem('ogreena-auth-session', JSON.stringify(signedInSession));
+    const persistedSession = JSON.parse(window.localStorage.getItem('ogreena-auth-session') || 'null');
+    if (persistedSession?.user?.id !== user.id) throw new Error('The owner session could not be saved in this browser.');
     if (!user.email_confirmed_at) {
       const error = new Error('Email is not confirmed');
       error.code = 'email_not_confirmed';
