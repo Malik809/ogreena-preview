@@ -2,12 +2,16 @@ const { createClient } = window.supabase;
 const safariSafeAuthLock = async (_name, _acquireTimeout, callback) => callback();
 const SUPABASE_URL = 'https://mhhjzifeaofgskimvuom.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM';
+const OGREENA_LIVE_MERCHANT = 'acct_1UTpIlI19b4U0AqM';
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: 'ogreena-auth-session', lock: safariSafeAuthLock } });
 const $ = selector => document.querySelector(selector);
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[char]));
 const money = cents => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD' }).format((Number(cents) || 0) / 100);
 let operationView = 'requests';
 let currentUserId = null;
+let paymentView = 'product';
+let paymentRows = [];
+let paymentSettings = null;
 const OWNER_SESSION_HANDOFF_KEY = 'ogreena-owner-session-handoff';
 
 function setStatus(message, error = false) { const node = $('#globalStatus'); node.textContent = message; node.classList.toggle('error', error); }
@@ -147,20 +151,56 @@ async function loadOperations() {
 async function loadBusiness() { const data = requireOk(await supabase.from('business_settings').select('*').eq('id', true).single()); if (!data) return; for (const key of ['business_name','phone','service_area','contact_email']) $('#businessForm').elements[key].value = data[key] || ''; }
 $('#businessForm').addEventListener('submit', event => { event.preventDefault(); run('Saving business settings', async () => { const values = Object.fromEntries(new FormData(event.currentTarget)); requireOk(await supabase.from('business_settings').update({ ...values, updated_at:new Date().toISOString() }).eq('id', true)); }); });
 
-async function loadPayments() {
-  const [settingsResult, transactionResult] = await Promise.all([supabase.from('payment_settings').select('*').single(), supabase.from('payment_transactions').select('id,payment_kind,amount_cents,refunded_amount_cents,status,created_at').order('created_at', { ascending:false }).limit(100)]);
-  const settings = settingsResult.data; const transactions = transactionResult.data || [];
-  $('#paymentState').textContent = settings ? `Existing Ogreena Stripe account found. Checkout ${settings.payments_enabled ? 'enabled' : 'disabled'}; live charges remain disabled pending Stripe verification and final owner approval.` : 'Payment schema is not configured yet.';
-  $('#productSales').textContent = money(transactions.filter(row => row.payment_kind === 'product' && row.status === 'paid').reduce((sum,row) => sum + row.amount_cents, 0));
-  $('#serviceSales').textContent = money(transactions.filter(row => ['service_deposit','service_full','invoice'].includes(row.payment_kind) && row.status === 'paid').reduce((sum,row) => sum + row.amount_cents, 0));
-  const statusResult = await supabase.functions.invoke('payment-status');
-  const state = statusResult.data;
-  $('#paymentDetails').innerHTML = `<div><dt>Mode</dt><dd>Live preparation</dd></div><div><dt>Sandbox backend</dt><dd>${state?.configured ? 'Connected' : 'Deployment required'}</dd></div><div><dt>Checkout</dt><dd>${settings?.payments_enabled ? 'Sandbox enabled' : 'Disabled'}</dd></div><div><dt>Live payments</dt><dd>Awaiting final approval</dd></div>`;
-  $('#paymentTransactions').innerHTML = table(['Date','Type','Amount','Refunded','Status','Action'], transactions.map(row => `<tr><td>${escapeHtml(new Date(row.created_at).toLocaleDateString())}</td><td>${escapeHtml(row.payment_kind.replaceAll('_',' '))}</td><td>${money(row.amount_cents)}</td><td>${money(row.refunded_amount_cents)}</td><td>${escapeHtml(row.status)}</td><td>${row.status === 'paid' ? `<button class="small-btn" data-refund="${row.id}">Refund in sandbox</button>` : '—'}</td></tr>`));
-  $('#paymentTransactions').querySelectorAll('[data-refund]').forEach(button => button.addEventListener('click', () => {
-    if (!confirm('Issue a full sandbox refund? No live money will move.')) return;
-    run('Creating sandbox refund', async () => { const result = await supabase.functions.invoke('create-refund', { body:{ transactionId:button.dataset.refund } }); requireOk(result); await loadPayments(); });
+const servicePaymentKinds = new Set(['service_deposit','service_full','invoice']);
+const completedPaymentStatuses = new Set(['paid','refunded','partially_refunded']);
+function paymentGroup(row) { return row.payment_kind === 'product' ? 'product' : (servicePaymentKinds.has(row.payment_kind) ? 'service' : 'other'); }
+function paymentTotal(rows) { return rows.filter(row => completedPaymentStatuses.has(row.status)).reduce((sum,row) => sum + Number(row.amount_cents || 0) - Number(row.refunded_amount_cents || 0), 0); }
+function referenceCell(row) {
+  const reference = row.stripe_payment_intent_id || row.stripe_checkout_session_id || 'Pending';
+  return `<span class="payment-reference" title="${escapeHtml(reference)}">${escapeHtml(reference)}</span>`;
+}
+function renderPaymentTransactions() {
+  const rows = paymentRows.filter(row => paymentGroup(row) === paymentView);
+  $('#paymentTransactions').innerHTML = table(['Date','Type','Amount','Refunded','Status','Stripe reference','Action'], rows.map(row => {
+    const refundable = paymentSettings?.live_activation_approved && ['paid','partially_refunded'].includes(row.status);
+    return `<tr><td>${escapeHtml(new Date(row.created_at).toLocaleString())}</td><td>${escapeHtml(row.payment_kind.replaceAll('_',' '))}</td><td>${money(row.amount_cents)}</td><td>${money(row.refunded_amount_cents)}</td><td><span class="status-pill ${escapeHtml(row.status)}">${escapeHtml(row.status.replaceAll('_',' '))}</span></td><td>${referenceCell(row)}</td><td>${refundable ? `<button class="small-btn" data-refund="${row.id}" data-amount="${Number(row.amount_cents || 0) - Number(row.refunded_amount_cents || 0)}">Refund</button>` : 'Locked pending validation'}</td></tr>`;
   }));
+  $('#paymentTransactions').querySelectorAll('[data-refund]').forEach(button => button.addEventListener('click', () => {
+    if (!confirm(`Issue a live refund of ${money(button.dataset.amount)}? This moves real money and cannot be undone.`)) return;
+    run('Creating authorized refund', async () => { const result = await supabase.functions.invoke('create-refund', { body:{ transactionId:button.dataset.refund } }); requireOk(result); await loadPayments(); });
+  }));
+}
+document.querySelectorAll('[data-payment-view]').forEach(button => button.addEventListener('click', () => {
+  paymentView = button.dataset.paymentView;
+  document.querySelectorAll('[data-payment-view]').forEach(item => { item.classList.toggle('active', item === button); item.setAttribute('aria-selected', String(item === button)); });
+  renderPaymentTransactions();
+}));
+
+async function loadPayments() {
+  const [settingsResult, transactionResult, statusResult] = await Promise.all([
+    supabase.from('payment_settings').select('provider,payments_enabled,product_payments_enabled,service_payments_enabled,live_activation_approved,stripe_account_id').single(),
+    supabase.from('payment_transactions').select('id,payment_kind,amount_cents,refunded_amount_cents,status,currency,stripe_checkout_session_id,stripe_payment_intent_id,order_id,service_request_id,estimate_id,livemode,created_at').order('created_at', { ascending:false }).limit(200),
+    supabase.functions.invoke('payment-status')
+  ]);
+  if (settingsResult.error) throw settingsResult.error;
+  if (transactionResult.error) throw transactionResult.error;
+  paymentSettings = settingsResult.data;
+  paymentRows = transactionResult.data || [];
+  const productRows = paymentRows.filter(row => paymentGroup(row) === 'product');
+  const serviceRows = paymentRows.filter(row => paymentGroup(row) === 'service');
+  const refunded = paymentRows.reduce((sum,row) => sum + Number(row.refunded_amount_cents || 0), 0);
+  $('#productSales').textContent = money(paymentTotal(productRows));
+  $('#serviceSales').textContent = money(paymentTotal(serviceRows));
+  $('#refundedTotal').textContent = money(refunded);
+  $('#productSalesMeta').textContent = `${productRows.length} transaction${productRows.length === 1 ? '' : 's'} recorded; refunds deducted.`;
+  $('#serviceSalesMeta').textContent = `${serviceRows.length} transaction${serviceRows.length === 1 ? '' : 's'} recorded; refunds deducted.`;
+  const merchantMatches = paymentSettings?.stripe_account_id === OGREENA_LIVE_MERCHANT;
+  $('#paymentState').textContent = merchantMatches
+    ? 'Ogreena LLC’s existing live Stripe merchant is connected. Bank and identity details remain secured by Stripe.'
+    : 'The live Stripe merchant mapping does not match Ogreena LLC. Checkout remains disabled.';
+  const allPublicGatesOpen = Boolean(paymentSettings?.payments_enabled && paymentSettings?.product_payments_enabled && paymentSettings?.service_payments_enabled && paymentSettings?.live_activation_approved);
+  $('#paymentDetails').innerHTML = `<div><dt>Product checkout</dt><dd>${paymentSettings?.product_payments_enabled ? 'Configured' : 'Disabled'}</dd></div><div><dt>Service checkout</dt><dd>${paymentSettings?.service_payments_enabled ? 'Configured' : 'Disabled'}</dd></div><div><dt>Signed payment backend</dt><dd>${statusResult.data?.configured ? 'Connected' : 'Check required'}</dd></div><div><dt>Public charging</dt><dd>${allPublicGatesOpen ? 'Enabled' : 'Disabled'}</dd></div>`;
+  renderPaymentTransactions();
 }
 document.querySelectorAll('[data-stripe-path]').forEach(button => button.addEventListener('click', () => {
   // Stripe Dashboard is the secure hosted interface for the business's direct account.
