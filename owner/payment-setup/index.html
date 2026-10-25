@@ -30,17 +30,14 @@
               <div><dt>Payout destination</dt><dd><strong id="payoutDestinationStatus">Checking with Stripe…</strong></dd></div>
               <div><dt>Stripe requirements</dt><dd><strong id="payoutRequirementsStatus">Checking…</strong></dd></div>
             </dl>
-            <button class="small-btn primary" id="openPayoutForm" type="button">Add or Manage Bank Account / Debit Card</button>
+            <button class="small-btn primary" id="openPayoutForm" type="button">Add Bank Account or Debit Card</button>
           </div>
           <section class="embedded-stripe payout-only" id="embeddedStripe" aria-live="polite" hidden>
             <div class="embedded-stripe-head"><div><p class="eyebrow">STRIPE-SECURED PAYOUT DETAILS</p><h2>Add Bank Account or Debit Card</h2></div><button class="small-btn" id="closePayoutForm" type="button">Close</button></div>
             <p id="embeddedStripeStatus">Opening Stripe’s secure payout form…</p>
             <div id="stripeNotificationBanner"></div>
             <div id="stripePayoutDetails"></div>
-            <div class="stripe-fallback" id="stripeFallback" hidden>
-              <p>Stripe’s embedded authentication did not finish. Continue securely in Stripe to manage Ogreena’s payout bank account.</p>
-              <a class="small-btn primary" href="https://dashboard.stripe.com/acct_1UTpIlI19b4U0AqM/settings/payouts" target="_blank" rel="noopener noreferrer">Manage Bank Account Securely with Stripe</a>
-            </div>
+            <div class="stripe-fallback" id="stripeFallback" hidden><p>Stripe could not finish its secure embedded authentication. No bank information was changed. Close this panel and try again later.</p></div>
           </section>
           <div class="verification-actions"><a class="small-btn primary" id="returnToDashboard" href="../">Save &amp; Return to Dashboard</a></div>
           <p class="secure-footer">Complete identity information only if Stripe requests it. Product and service payments remain disabled and separated in Ogreena reports.</p>
@@ -59,5 +56,5 @@
       });
     }
   </script>
-  <script type="module" src="payment-setup.js?v=live-bank-5"></script>
+  <script type="module" src="payment-setup.js?v=live-payouts-1"></script>
 </body></html>

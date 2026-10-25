@@ -20,7 +20,7 @@ expect(ownerHtml, 'data-owner-tab="payments">Payments', 'owner navigation');
 expect(ownerHtml, 'data-payment-view="product">Product Sales', 'product reporting tab');
 expect(ownerHtml, 'data-payment-view="service">Service Payments', 'service reporting tab');
 expect(ownerHtml, 'Public checkout stays disabled', 'payment safety notice');
-expect(ownerHtml, 'data-stripe-path="balance/overview"', 'live payout reporting link');
+expect(ownerHtml, '>Add Bank Account or Debit Card</button>', 'single payout action');
 expect(ownerJs, "const OGREENA_LIVE_MERCHANT = 'acct_1UTpIlI19b4U0AqM'", 'merchant routing check');
 expect(ownerJs, 'product_payments_enabled', 'product payment gate');
 expect(ownerJs, 'service_payments_enabled', 'service payment gate');
@@ -29,7 +29,10 @@ expect(ownerJs, "supabase.functions.invoke('create-refund'", 'authorized refund 
 expect(ownerJs, "body:{ statusOnly:true }", 'owner payout status request');
 expect(connectSession, 'external_accounts?.data.find', 'Stripe-confirmed payout destination check');
 expect(connectSession, 'informationRequired', 'Stripe requirement status');
+expect(connectSession, 'payoutsEnabled: true', 'dedicated Stripe payouts component');
+expect(connectSession, 'disable_stripe_user_authentication: false', 'Stripe authentication preserved');
 expect(payoutSetup, 'renderPayoutStatus', 'payout status display');
+expect(payoutSetup, "connectInstance.create('payouts')", 'dedicated payout controls');
 expect(productJs, "kind:'product'", 'product checkout integration');
 expect(accountJs, "kind:'invoice'", 'approved service invoice checkout integration');
 expect(liveWebhook, "Deno.env.get('LIVE_PAYMENTS_ENABLED') === 'true'", 'server live-payment gate');
@@ -38,5 +41,7 @@ expect(liveWebhook, "event.type === 'charge.refunded'", 'refund event recording'
 expect(liveValidation, 'Public checkout gates must remain disabled', 'controlled test isolation');
 
 if (/data-stripe-path="test\//.test(ownerHtml)) throw new Error('Payments Dashboard still links to Stripe test mode');
+if (ownerHtml.includes('data-stripe-path=')) throw new Error('Payments Dashboard still includes full Stripe Dashboard links');
+if (payoutSetup.includes("create('account-management')")) throw new Error('Broad Stripe account-management component is still mounted');
 
 console.log('Payments Dashboard focused checks passed.');

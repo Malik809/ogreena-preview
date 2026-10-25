@@ -62,20 +62,24 @@ Deno.serve(async request => {
     const accountSession = await stripe.accountSessions.create({
       account: stripeAccountId,
       components: {
-        account_management: {
+        payouts: {
           enabled: true,
           features: {
             external_account_collection: true,
+            disable_stripe_user_authentication: false,
+            edit_payout_schedule: false,
+            instant_payouts: false,
+            standard_payouts: false,
           },
         },
         notification_banner: { enabled: true },
       },
     });
 
-    const accountManagement = accountSession.components?.account_management;
-    if (!accountManagement?.enabled) {
+    const payouts = accountSession.components?.payouts;
+    if (!payouts?.enabled) {
       return Response.json({
-        error: 'Stripe did not enable embedded account management for this connected account configuration',
+        error: 'Stripe did not enable embedded payout management for this connected account configuration',
         platformAccountId: PLATFORM_ACCOUNT_ID,
       }, { status: 409, headers });
     }
@@ -85,7 +89,7 @@ Deno.serve(async request => {
       clientSecret: accountSession.client_secret,
       expiresAt: accountSession.expires_at,
       livemode: accountSession.livemode,
-      accountManagementEnabled: true,
+      payoutsEnabled: true,
       platformAccountId: PLATFORM_ACCOUNT_ID,
       payoutStatus,
       publishableKey,
