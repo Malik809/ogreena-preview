@@ -3,6 +3,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '../../auth/supabase-conf
 
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=selector=>document.querySelector(selector);
+const OGREENA_STRIPE_ACCOUNT_ID='acct_1UTpIlI19b4U0AqM';
 
 async function loadStatus(){
   $('#connectionStatus').textContent='Checking status…';
@@ -15,6 +16,14 @@ async function loadStatus(){
     $('#connectionStatus').textContent=result.data?.configured?'Stripe connected':'Setup required';
     rows[0].textContent='Review securely in Stripe';
     rows[1].textContent='Review securely in Stripe';
+    return;
+  }
+  if(account.accountId!==OGREENA_STRIPE_ACCOUNT_ID){
+    $('#connectionStatus').textContent='Account Mismatch';
+    $('#connectionStatus').className='status-pill attention';
+    rows[0].textContent='Do not continue';rows[1].textContent='Account selection required';
+    $('#bankDestination').textContent='Ogreena payment management is blocked because Stripe returned a different account.';
+    const manage=$('#manageBankAccount');manage.removeAttribute('href');manage.setAttribute('aria-disabled','true');manage.textContent='Select Ogreena in Stripe';
     return;
   }
   const actionRequired=Boolean(account.disabledReason)||(account.currentlyDue||0)>0;

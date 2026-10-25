@@ -30,11 +30,12 @@
           <div class="detail-grid"><article><h3>Business verification</h3><p>Legal name, date of birth, business name, EIN, address, phone, website, and required documents.</p></article><article><h3>Bank account</h3><p>Account holder, routing number, account number, account type, and payout schedule remain inside Stripe.</p></article></div>
           <div class="setup-status" id="setupStatus"><div><span>Business details</span><strong>Checking…</strong></div><div><span>Bank connection</span><strong>Checking…</strong></div><div><span>Customer charging</span><strong>Disabled</strong></div></div>
           <p class="bank-destination" id="bankDestination">Checking the secure payout destination…</p>
-          <div class="verification-actions"><a class="small-btn" href="https://dashboard.stripe.com/settings/payouts" target="_blank" rel="noopener">Manage Bank Account Securely</a><button class="small-btn" id="refreshStatus" type="button">Refresh Status</button></div>
+          <p class="muted">Stripe account: Ogreena · <code>acct_1UTpIlI19b4U0AqM</code></p>
+          <div class="verification-actions"><a class="small-btn" id="manageBankAccount" href="https://dashboard.stripe.com/acct_1UTpIlI19b4U0AqM/settings/payouts" target="_blank" rel="noopener">Manage Ogreena Bank Account Securely</a><button class="small-btn" id="refreshStatus" type="button">Refresh Status</button></div>
           <p class="muted">Stripe hosts all bank and identity changes for Ogreena’s standalone account. Product and service payments use this same payout destination while remaining separate in reports.</p>
         </div>
       </section>
     </section>
   </main>
-  <script type="module" src="payment-setup.js?v=2"></script>
+  <script type="module" src="payment-setup.js?v=3"></script>
 </body></html>
