@@ -29,7 +29,23 @@ async function loadBusinessDashboard(user) {
     return;
   }
 
-  const membership = memberships[0];
+  const normalizedMemberships = memberships.map(item => ({ ...item, businesses:Array.isArray(item.businesses) ? item.businesses[0] : item.businesses }));
+  const requestedBusiness = new URLSearchParams(location.search).get('business');
+  const membership = normalizedMemberships.find(item => item.business_id === requestedBusiness) || normalizedMemberships[0];
+  const selector = $('#businessSelector');
+  selector.replaceChildren(...normalizedMemberships.map(item => {
+    const option = document.createElement('option');
+    option.value = item.business_id;
+    option.textContent = item.businesses.display_name;
+    option.selected = item.business_id === membership.business_id;
+    return option;
+  }));
+  $('#businessSelectorWrap').hidden = normalizedMemberships.length < 2;
+  selector.addEventListener('change', () => {
+    const url = new URL(location.href);
+    url.searchParams.set('business', selector.value);
+    location.href = url.href;
+  }, { once:true });
   const business = Array.isArray(membership.businesses) ? membership.businesses[0] : membership.businesses;
   currentBusiness = { ...business, membershipStatus:membership.verification_status };
   $('#accessPanel').hidden = true;
