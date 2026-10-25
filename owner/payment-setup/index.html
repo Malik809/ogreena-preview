@@ -31,11 +31,12 @@
           <div class="setup-status" id="setupStatus"><div><span>Business Verified</span><strong>Checking…</strong></div><div><span>Bank Connected</span><strong>Checking…</strong></div><div><span>Payments Ready</span><strong>Disabled pending final approval</strong></div></div>
           <p class="bank-destination" id="bankDestination">Checking the secure payout destination…</p>
           <p class="muted">Stripe account: Ogreena · <code>acct_1UTpIlI19b4U0AqM</code></p>
-          <div class="verification-actions"><a class="small-btn" id="manageBankAccount" href="https://dashboard.stripe.com/acct_1UTpIlI19b4U0AqM/settings/payouts" target="_blank" rel="noopener">Manage Ogreena Bank Account Securely</a><button class="small-btn" id="refreshStatus" type="button">Refresh Status</button><a class="small-btn primary" href="../">Save &amp; Continue</a></div>
+          <div class="verification-actions"><button class="small-btn" id="manageBankAccount" type="button">Manage Ogreena Bank Account Securely</button><button class="small-btn" id="refreshStatus" type="button">Refresh Status</button><a class="small-btn primary" href="../">Save &amp; Continue</a></div>
+          <div id="stripeAccountGuard" class="security-note" hidden><strong>Select Ogreena before continuing.</strong><br>Stripe’s Dashboard can remain signed into the last business used. Open Stripe, use the business switcher, and confirm the header says <strong>Ogreena</strong> and the account is <code>acct_1UTpIlI19b4U0AqM</code>. Do not enter bank information if Stripe shows CalyBayPOD or any other business.<div class="verification-actions"><a class="small-btn" href="https://dashboard.stripe.com/" target="_blank" rel="noopener">Open Stripe Account Switcher</a><button class="small-btn" id="closeStripeGuard" type="button">Cancel</button></div></div>
           <p class="muted">Stripe hosts all bank and identity changes for Ogreena’s standalone account. Product and service payments use this same payout destination while remaining separate in reports.</p>
         </div>
       </section>
     </section>
   </main>
-  <script type="module" src="payment-setup.js?v=4"></script>
+  <script type="module" src="payment-setup.js?v=5"></script>
 </body></html>

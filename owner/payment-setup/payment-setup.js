@@ -23,7 +23,7 @@ async function loadStatus(){
     $('#connectionStatus').className='status-pill attention';
     rows[0].textContent='Do not continue';rows[1].textContent='Account selection required';
     $('#bankDestination').textContent='Ogreena payment management is blocked because Stripe returned a different account.';
-    const manage=$('#manageBankAccount');manage.removeAttribute('href');manage.setAttribute('aria-disabled','true');manage.textContent='Select Ogreena in Stripe';
+    const manage=$('#manageBankAccount');manage.disabled=true;manage.textContent='Stripe Account Mismatch';
     return;
   }
   const actionRequired=Boolean(account.disabledReason)||(account.currentlyDue||0)>0;
@@ -51,4 +51,6 @@ async function initialize(){
 }
 
 $('#refreshStatus').addEventListener('click',()=>loadStatus().catch(error=>{$('#connectionStatus').textContent=error.message||'Status unavailable';$('#connectionStatus').className='status-pill attention';}));
+$('#manageBankAccount').addEventListener('click',()=>{$('#stripeAccountGuard').hidden=false;$('#stripeAccountGuard').scrollIntoView({behavior:'smooth',block:'center'});});
+$('#closeStripeGuard').addEventListener('click',()=>{$('#stripeAccountGuard').hidden=true;});
 initialize().catch(error=>{$('#ownerStatus').textContent=error.message||'Payment setup could not load.';});
