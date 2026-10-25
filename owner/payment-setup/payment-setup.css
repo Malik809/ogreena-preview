@@ -38,7 +38,7 @@
 .embedded-stripe-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid #ece5cf}
 .embedded-stripe-head h2{margin:0;color:#163e2d;font-size:1.45rem}
 .embedded-stripe .eyebrow{color:#0f6943}
-.embedded-stripe stripe-connect-notification-banner,.embedded-stripe stripe-connect-payouts,.embedded-stripe stripe-connect-account-onboarding{display:block;width:100%;margin-top:16px}
+.embedded-stripe stripe-connect-notification-banner,.embedded-stripe stripe-connect-account-management,.embedded-stripe stripe-connect-account-onboarding{display:block;width:100%;margin-top:16px}
 .stripe-fallback{margin-top:18px;padding:16px;border:1px solid #d8b54e;border-radius:9px;background:#fff8df;color:#3f3a26}
 .stripe-fallback[hidden]{display:none}.stripe-fallback p{margin:0 0 14px;line-height:1.55}.stripe-fallback .small-btn{display:flex;align-items:center;justify-content:center;min-height:48px;padding:11px 14px;border:1px solid #176943;border-radius:7px;background:#0f6943;color:#fff;font-weight:900;text-align:center;text-decoration:none}
 .component-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:20px 0 0;padding:5px;border:1px solid #d8b54e;border-radius:9px;background:#f4efdf}

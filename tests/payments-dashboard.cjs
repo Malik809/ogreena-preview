@@ -29,10 +29,10 @@ expect(ownerJs, "supabase.functions.invoke('create-refund'", 'authorized refund 
 expect(ownerJs, "body:{ statusOnly:true }", 'owner payout status request');
 expect(connectSession, 'external_accounts?.data.find', 'Stripe-confirmed payout destination check');
 expect(connectSession, 'informationRequired', 'Stripe requirement status');
-expect(connectSession, 'payoutsEnabled: true', 'dedicated Stripe payouts component');
+expect(connectSession, 'accountManagementEnabled: true', 'Stripe account-management component');
 expect(connectSession, 'disable_stripe_user_authentication: false', 'Stripe authentication preserved');
 expect(payoutSetup, 'renderPayoutStatus', 'payout status display');
-expect(payoutSetup, "connectInstance.create('payouts')", 'dedicated payout controls');
+expect(payoutSetup, "connectInstance.create('account-management')", 'embedded bank-management controls');
 expect(productJs, "kind:'product'", 'product checkout integration');
 expect(accountJs, "kind:'invoice'", 'approved service invoice checkout integration');
 expect(liveWebhook, "Deno.env.get('LIVE_PAYMENTS_ENABLED') === 'true'", 'server live-payment gate');
@@ -42,6 +42,5 @@ expect(liveValidation, 'Public checkout gates must remain disabled', 'controlled
 
 if (/data-stripe-path="test\//.test(ownerHtml)) throw new Error('Payments Dashboard still links to Stripe test mode');
 if (ownerHtml.includes('data-stripe-path=')) throw new Error('Payments Dashboard still includes full Stripe Dashboard links');
-if (payoutSetup.includes("create('account-management')")) throw new Error('Broad Stripe account-management component is still mounted');
 
 console.log('Payments Dashboard focused checks passed.');
