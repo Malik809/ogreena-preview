@@ -5,6 +5,14 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: 'ogreena-auth-session', lock: safariSafeAuthLock }
 });
+const storedSession = (() => {
+  try {
+    const value = JSON.parse(window.localStorage.getItem('ogreena-auth-session') || 'null');
+    return value?.access_token && value?.user ? value : null;
+  } catch {
+    return null;
+  }
+})();
 
 function setVisible(element, visible) {
   if (!element) return;
@@ -32,7 +40,11 @@ document.querySelectorAll('[data-auth-signout]').forEach(element => {
   });
 });
 
-supabase.auth.getSession().then(({ data: { session } }) => renderAccountNavigation(session));
+if (storedSession) renderAccountNavigation(storedSession);
+Promise.race([
+  supabase.auth.getSession(),
+  new Promise(resolve => setTimeout(() => resolve({ data:{ session:storedSession } }), 3000))
+]).then(({ data: { session } }) => renderAccountNavigation(session || storedSession));
 supabase.auth.onAuthStateChange((event, nextSession) => {
   if (event === 'SIGNED_OUT') {
     document.querySelectorAll('[data-auth-guest]').forEach(element => setVisible(element, true));
