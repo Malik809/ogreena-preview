@@ -9,6 +9,8 @@ const productJs = read('products.js');
 const accountJs = read('auth/owner-auth.js');
 const liveWebhook = read('supabase/functions/stripe-live-webhook/index.ts');
 const liveValidation = read('supabase/functions/create-live-validation-checkout/index.ts');
+const connectSession = read('supabase/functions/create-connect-account-session/index.ts');
+const payoutSetup = read('owner/payment-setup/payment-setup.js');
 
 function expect(source, value, label) {
   if (!source.includes(value)) throw new Error(`${label} missing: ${value}`);
@@ -24,6 +26,10 @@ expect(ownerJs, 'product_payments_enabled', 'product payment gate');
 expect(ownerJs, 'service_payments_enabled', 'service payment gate');
 expect(ownerJs, 'live_activation_approved', 'live activation gate');
 expect(ownerJs, "supabase.functions.invoke('create-refund'", 'authorized refund integration');
+expect(ownerJs, "body:{ statusOnly:true }", 'owner payout status request');
+expect(connectSession, 'external_accounts?.data.find', 'Stripe-confirmed payout destination check');
+expect(connectSession, 'informationRequired', 'Stripe requirement status');
+expect(payoutSetup, 'renderPayoutStatus', 'payout status display');
 expect(productJs, "kind:'product'", 'product checkout integration');
 expect(accountJs, "kind:'invoice'", 'approved service invoice checkout integration');
 expect(liveWebhook, "Deno.env.get('LIVE_PAYMENTS_ENABLED') === 'true'", 'server live-payment gate');

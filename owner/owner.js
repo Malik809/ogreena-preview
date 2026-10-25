@@ -177,10 +177,11 @@ document.querySelectorAll('[data-payment-view]').forEach(button => button.addEve
 }));
 
 async function loadPayments() {
-  const [settingsResult, transactionResult, statusResult] = await Promise.all([
+  const [settingsResult, transactionResult, statusResult, payoutStatusResult] = await Promise.all([
     supabase.from('payment_settings').select('provider,payments_enabled,product_payments_enabled,service_payments_enabled,live_activation_approved,stripe_account_id').single(),
     supabase.from('payment_transactions').select('id,payment_kind,amount_cents,refunded_amount_cents,status,currency,stripe_checkout_session_id,stripe_payment_intent_id,order_id,service_request_id,estimate_id,livemode,created_at').order('created_at', { ascending:false }).limit(200),
-    supabase.functions.invoke('payment-status')
+    supabase.functions.invoke('payment-status'),
+    supabase.functions.invoke('create-connect-account-session', { body:{ statusOnly:true } })
   ]);
   if (settingsResult.error) throw settingsResult.error;
   if (transactionResult.error) throw transactionResult.error;
@@ -195,9 +196,17 @@ async function loadPayments() {
   $('#productSalesMeta').textContent = `${productRows.length} transaction${productRows.length === 1 ? '' : 's'} recorded; refunds deducted.`;
   $('#serviceSalesMeta').textContent = `${serviceRows.length} transaction${serviceRows.length === 1 ? '' : 's'} recorded; refunds deducted.`;
   const merchantMatches = paymentSettings?.stripe_account_id === OGREENA_LIVE_MERCHANT;
+  const stripePayoutMatches = payoutStatusResult.data?.accountId === OGREENA_LIVE_MERCHANT && payoutStatusResult.data?.livemode === true;
+  const payoutStatus = stripePayoutMatches ? payoutStatusResult.data?.payoutStatus : null;
   $('#paymentState').textContent = merchantMatches
     ? 'Ogreena LLC’s existing live Stripe merchant is connected. Bank and identity details remain secured by Stripe.'
     : 'The live Stripe merchant mapping does not match Ogreena LLC. Checkout remains disabled.';
+  $('#dashboardPayoutDestination').textContent = payoutStatus?.connected && payoutStatus.destination
+    ? [payoutStatus.destination.label, payoutStatus.destination.last4 ? `•••• ${payoutStatus.destination.last4}` : ''].filter(Boolean).join(' ')
+    : (payoutStatusResult.error ? 'Check in Stripe' : 'Not connected');
+  $('#dashboardPayoutRequirements').textContent = payoutStatus?.pastDue
+    ? 'Past due'
+    : (payoutStatus?.informationRequired ? 'Information required' : (payoutStatus ? 'Current' : 'Check in Stripe'));
   const allPublicGatesOpen = Boolean(paymentSettings?.payments_enabled && paymentSettings?.product_payments_enabled && paymentSettings?.service_payments_enabled && paymentSettings?.live_activation_approved);
   $('#paymentDetails').innerHTML = `<div><dt>Product checkout</dt><dd>${paymentSettings?.product_payments_enabled ? 'Configured' : 'Disabled'}</dd></div><div><dt>Service checkout</dt><dd>${paymentSettings?.service_payments_enabled ? 'Configured' : 'Disabled'}</dd></div><div><dt>Signed payment backend</dt><dd>${statusResult.data?.configured ? 'Connected' : 'Check required'}</dd></div><div><dt>Public charging</dt><dd>${allPublicGatesOpen ? 'Enabled' : 'Disabled'}</dd></div>`;
   renderPaymentTransactions();

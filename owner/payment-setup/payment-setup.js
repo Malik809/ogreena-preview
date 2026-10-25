@@ -10,6 +10,25 @@ const LIVE_MERCHANT_ACCOUNT='acct_1UTpIlI19b4U0AqM';
 const CONNECT_PLATFORM_ACCOUNT='acct_1UUSC7IBe0SKV30I';
 const SESSION_FUNCTION='create-connect-account-session';
 
+function renderPayoutStatus(data){
+  const payoutStatus=data?.payoutStatus;
+  const destination=$('#payoutDestinationStatus');
+  const requirements=$('#payoutRequirementsStatus');
+  if(!payoutStatus){destination.textContent='Available in Stripe';requirements.textContent='Stripe verification required';return;}
+  if(payoutStatus.connected&&payoutStatus.destination){
+    const details=[payoutStatus.destination.label,payoutStatus.destination.last4?`ending in ${payoutStatus.destination.last4}`:''].filter(Boolean).join(' · ');
+    destination.textContent=details||payoutStatus.destination.type;
+  }else destination.textContent='Not connected';
+  requirements.textContent=payoutStatus.pastDue?'Past-due information required':payoutStatus.informationRequired?'Additional information required':'No current requirements';
+}
+
+async function loadPayoutStatus(){
+  const result=await supabase.functions.invoke(SESSION_FUNCTION,{body:{statusOnly:true}});
+  if(result.error)throw result.error;
+  if(result.data.accountId!==LIVE_MERCHANT_ACCOUNT||result.data.platformAccountId!==CONNECT_PLATFORM_ACCOUNT||result.data.livemode!==true)throw new Error('Stripe payout account verification failed.');
+  renderPayoutStatus(result.data);
+}
+
 function showStripeFallback(message){
   const status=$('#embeddedStripeStatus');
   status.hidden=false;
@@ -40,6 +59,7 @@ async function openEmbeddedStripe(){
       if(sessionData.accountManagementEnabled!==true)throw new Error('Stripe did not enable bank management for this account.');
       if(sessionData.platformAccountId!==CONNECT_PLATFORM_ACCOUNT)throw new Error('Stripe Connect platform mismatch.');
       if(sessionData.accountId!==LIVE_MERCHANT_ACCOUNT)throw new Error('Ogreena merchant account mismatch.');
+      renderPayoutStatus(sessionData);
       let firstClientSecret=sessionData.clientSecret;
       connectInstance=loadConnectAndInitialize({
         publishableKey:sessionData.publishableKey,
@@ -104,5 +124,6 @@ async function initialize(){
   }
   $('#openPayoutForm').addEventListener('click',openEmbeddedStripe);
   $('#closePayoutForm').addEventListener('click',closeEmbeddedStripe);
+  loadPayoutStatus().catch(()=>{renderPayoutStatus(null);});
 }
 initialize().catch(error=>{$('#ownerStatus').textContent=error.message||'Payment setup could not load.';});

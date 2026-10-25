@@ -13,6 +13,7 @@ Deno.serve(async request => {
   if (request.method !== 'POST') return Response.json({ error: 'Method not allowed' }, { status: 405, headers });
 
   try {
+    const body = await request.json().catch(() => ({})) as { statusOnly?: boolean };
     const { stripeAccountId } = await requireConnectedAccountOwner(request);
     const secret = Deno.env.get('STRIPE_CONNECT_SECRET_KEY_LIVE') || '';
     const publishableKey = Deno.env.get('STRIPE_CONNECT_PUBLISHABLE_KEY_LIVE') || '';
@@ -30,6 +31,33 @@ Deno.serve(async request => {
       }, { status: 409, headers });
     }
     if (account.id !== stripeAccountId) throw new Error('Connected Stripe account ownership mismatch');
+
+    const externalAccount = account.external_accounts?.data.find(item =>
+      item.object === 'bank_account' || (item.object === 'card' && item.funding === 'debit')
+    );
+    const payoutDestination = externalAccount ? {
+      type: externalAccount.object === 'bank_account' ? 'Bank account' : 'Debit card',
+      label: externalAccount.object === 'bank_account' ? (externalAccount.bank_name || 'Bank account') : (externalAccount.brand || 'Debit card'),
+      last4: externalAccount.last4 || null,
+      currency: externalAccount.currency || null,
+    } : null;
+    const currentlyDue = account.requirements?.currently_due || [];
+    const payoutStatus = {
+      connected: Boolean(payoutDestination),
+      destination: payoutDestination,
+      informationRequired: currentlyDue.length > 0,
+      pastDue: (account.requirements?.past_due || []).length > 0,
+      disabledReason: account.requirements?.disabled_reason || null,
+    };
+
+    if (body.statusOnly) {
+      return Response.json({
+        accountId: account.id,
+        livemode: true,
+        platformAccountId: PLATFORM_ACCOUNT_ID,
+        payoutStatus,
+      }, { headers });
+    }
 
     const accountSession = await stripe.accountSessions.create({
       account: stripeAccountId,
@@ -59,6 +87,7 @@ Deno.serve(async request => {
       livemode: accountSession.livemode,
       accountManagementEnabled: true,
       platformAccountId: PLATFORM_ACCOUNT_ID,
+      payoutStatus,
       publishableKey,
     }, { headers });
   } catch (error) {

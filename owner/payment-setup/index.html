@@ -26,6 +26,10 @@
             <p class="eyebrow">STRIPE-SECURED PAYOUT DETAILS</p>
             <h2>Add Bank Account or Debit Card</h2>
             <p>Open Stripe’s secure controls to add, edit, or replace an eligible payout bank account or debit card.</p>
+            <dl class="setup-status" aria-label="Stripe payout connection status">
+              <div><dt>Payout destination</dt><dd><strong id="payoutDestinationStatus">Checking with Stripe…</strong></dd></div>
+              <div><dt>Stripe requirements</dt><dd><strong id="payoutRequirementsStatus">Checking…</strong></dd></div>
+            </dl>
             <button class="small-btn primary" id="openPayoutForm" type="button">Add or Manage Bank Account / Debit Card</button>
           </div>
           <section class="embedded-stripe payout-only" id="embeddedStripe" aria-live="polite" hidden>
@@ -55,5 +59,5 @@
       });
     }
   </script>
-  <script type="module" src="payment-setup.js?v=live-bank-4"></script>
+  <script type="module" src="payment-setup.js?v=live-bank-5"></script>
 </body></html>
