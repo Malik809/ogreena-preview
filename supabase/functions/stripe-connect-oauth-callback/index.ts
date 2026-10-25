@@ -37,8 +37,10 @@ Deno.serve(async request => {
       .single();
     if (stateError || !stateRow) return finish('error', 'Authorization expired or already used');
 
-    const secret = Deno.env.get('STRIPE_CONNECT_SECRET_KEY_LIVE') || '';
-    if (!/^r?k_live_/.test(secret)) return finish('error', 'Connect credential is not configured');
+    const secret = Deno.env.get('STRIPE_CONNECT_OAUTH_SECRET_KEY_LIVE') || '';
+    if (!secret.startsWith('sk_live_')) {
+      return finish('error', 'OAuth-compatible Connect Platform secret is not configured');
+    }
     const tokenResponse = await fetch('https://connect.stripe.com/oauth/token', {
       method: 'POST',
       headers: {
