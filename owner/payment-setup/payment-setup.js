@@ -99,6 +99,16 @@ async function initialize(){
   if(roleError||role?.role!=='owner'){$('#ownerStatus').textContent='This account is not authorized to manage Ogreena payments.';return;}
   $('#deniedPanel').hidden=true;$('#verificationPage').hidden=false;
   await loadStatus();
+  const params=new URLSearchParams(location.search);
+  const connectResult=params.get('connect');
+  const connectReason=params.get('reason');
+  if(connectResult==='connected'){
+    $('#authorizeOgreenaMerchant').hidden=true;
+    await openEmbeddedStripe();
+  }else if(connectResult==='error'||connectResult==='cancelled'){
+    $('#embeddedStripe').hidden=false;
+    $('#embeddedStripeStatus').textContent=connectReason||'Stripe authorization was not completed.';
+  }
 }
 
 $('#refreshStatus').addEventListener('click',()=>loadStatus().catch(error=>{$('#connectionStatus').textContent=error.message||'Status unavailable';$('#connectionStatus').className='status-pill attention';}));
