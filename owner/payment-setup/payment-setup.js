@@ -19,7 +19,7 @@ async function openEmbeddedStripe(){
   status.textContent='Opening Stripe’s secure payout form…';
   try{
     if(!connectInstance){
-      const {loadConnectAndInitialize}=await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.3.1/+esm');
+      const {loadConnectAndInitialize}=await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.4.6/+esm');
       const result=await supabase.functions.invoke(SESSION_FUNCTION);
       if(result.error)throw result.error;
       const sessionData=result.data;
