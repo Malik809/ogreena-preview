@@ -5,18 +5,8 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persist
 const $=selector=>document.querySelector(selector);
 let connectInstance;
 
-function loadStripeConnect(){
-  if(window.StripeConnect?.init)return Promise.resolve(window.StripeConnect);
-  return new Promise((resolve,reject)=>{
-    const existing=document.querySelector('script[data-ogreena-stripe-connect]');
-    if(existing){existing.addEventListener('load',()=>resolve(window.StripeConnect),{once:true});existing.addEventListener('error',()=>reject(new Error('Stripe Connect could not load.')),{once:true});return;}
-    const script=document.createElement('script');
-    script.src='https://connect-js.stripe.com/v0.1/connect.js';
-    script.async=true;script.dataset.ogreenaStripeConnect='true';
-    script.addEventListener('load',()=>window.StripeConnect?.init?resolve(window.StripeConnect):reject(new Error('Stripe Connect did not initialize.')),{once:true});
-    script.addEventListener('error',()=>reject(new Error('Stripe Connect could not load.')),{once:true});
-    document.head.appendChild(script);
-  });
+function sandboxOnboardingEnabled(){
+  return new URLSearchParams(location.search).get('sandbox')==='onboarding';
 }
 
 async function openEmbeddedStripe(){
@@ -28,28 +18,29 @@ async function openEmbeddedStripe(){
   openButton.disabled=true;
   status.textContent='Opening Stripe’s secure payout form…';
   try{
+    const functionName=sandboxOnboardingEnabled()?'create-sandbox-onboarding-session':'create-connect-account-session';
+    const componentName=sandboxOnboardingEnabled()?'account-onboarding':'account-management';
     if(!connectInstance){
-      const stripeConnect=await loadStripeConnect();
-      const result=await supabase.functions.invoke('create-connect-account-session');
+      const {loadConnectAndInitialize}=await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.3.1/+esm');
+      const result=await supabase.functions.invoke(functionName);
       if(result.error)throw result.error;
       const sessionData=result.data;
       if(!/^acct_[A-Za-z0-9]+$/.test(sessionData.accountId||''))throw new Error('Stripe returned an invalid connected account.');
       let firstClientSecret=sessionData.clientSecret;
-      const connector=await stripeConnect.init({
+      connectInstance=loadConnectAndInitialize({
         publishableKey:sessionData.publishableKey,
         fetchClientSecret:async()=>{
           if(firstClientSecret){const secret=firstClientSecret;firstClientSecret=undefined;return secret;}
-          const refresh=await supabase.functions.invoke('create-connect-account-session');
+          const refresh=await supabase.functions.invoke(functionName);
           if(refresh.error)throw refresh.error;
           if(refresh.data.accountId!==sessionData.accountId)throw new Error('Stripe connected account ownership changed during this session.');
           return refresh.data.clientSecret;
         },
         appearance:{overlays:'dialog',variables:{colorPrimary:'#0f6943',colorBackground:'#fffdf6',colorText:'#163e2d',borderRadius:'12px'}},
       });
-      connectInstance={create(name){const element=document.createElement(`stripe-connect-${name}`);element.setConnector(connector.connect);return element;}};
     }
     const banner=connectInstance.create('notification-banner');
-    const payoutDetails=connectInstance.create('account-management');
+    const payoutDetails=connectInstance.create(componentName);
     $('#stripeNotificationBanner').replaceChildren(banner);
     $('#stripePayoutDetails').replaceChildren(payoutDetails);
     $('#connectionStatus').textContent='Stripe Account Connected';
