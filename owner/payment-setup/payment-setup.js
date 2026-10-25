@@ -26,7 +26,7 @@ async function openEmbeddedStripe(){
   panel.scrollIntoView({behavior:'smooth',block:'start'});
   try{
     if(!connectInstance){
-      const {loadConnectAndInitialize}=await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.3.1/+esm');
+      const {loadConnectAndInitialize}=await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.4.6/+esm');
       const result=await supabase.functions.invoke('create-connect-account-session');
       if(result.error)throw result.error;
       const sessionData=result.data;
