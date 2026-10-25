@@ -36,7 +36,7 @@ Deno.serve(async request => {
     const accountSession = await stripe.accountSessions.create({
       account: OGREENA_MERCHANT_ACCOUNT_ID,
       components: {
-        payouts: {
+        balances: {
           enabled: true,
           features: {
             external_account_collection: true,

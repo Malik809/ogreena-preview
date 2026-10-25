@@ -17,7 +17,7 @@
     <section id="verificationPage" hidden>
       <div class="page-brand"><a class="wordmark" href="../../"><img src="../../assets/ogreena-original-logo.jpg" alt="Ogreena logo"><span>Ogreena</span></a><a class="back-link" href="../">← Back to Dashboard</a></div>
       <div class="page-intro"><p class="eyebrow">OGREENA PAYOUT SETUP</p><h1>Set Up Payouts</h1><p class="lead">Add or update the account where Ogreena receives payouts without leaving Ogreena.</p></div>
-      <ol class="setup-steps" aria-label="Payment setup steps"><li><b>1</b><span>Verify Your Business</span></li><li><b>2</b><span>Add or Manage Bank Account</span></li><li><b>3</b><span>Finish Payment Setup</span></li></ol>
+      <ol class="setup-steps" aria-label="Payout setup steps"><li><b>1</b><span>Verify Your Identity</span></li><li><b>2</b><span>Add Bank Account or Debit Card</span></li><li><b>3</b><span>Finish Payout Setup</span></li></ol>
       <p class="privacy-copy">Stripe securely handles identity and payout details. Ogreena never sees or stores full bank, routing, debit-card, Social Security, EIN, or identity-document information.</p>
       <section class="verification-card">
         <div class="verification-card-head"><div><p class="eyebrow">OGREENA PAYOUT VERIFICATION</p><h2>Securely powered by Stripe</h2><p class="save-later">Save &amp; return later</p></div><span class="status-pill" id="connectionStatus">Opening secure form…</span></div>
@@ -26,7 +26,7 @@
             <div class="embedded-stripe-head"><div><p class="eyebrow">STRIPE-SECURED PAYOUT DETAILS</p><h2>Add Bank Account or Debit Card</h2></div></div>
             <p id="embeddedStripeStatus">Opening Stripe’s secure payout form…</p>
             <div id="stripeNotificationBanner"></div>
-            <div id="stripePayouts"></div>
+            <div id="stripePayoutDetails"></div>
           </section>
           <div class="verification-actions"><a class="small-btn primary" href="../">Save &amp; Return to Dashboard</a></div>
           <p class="secure-footer">Complete identity information only if Stripe requests it. Product and service payments remain disabled and separated in Ogreena reports.</p>
@@ -34,5 +34,5 @@
       </section>
     </section>
   </main>
-  <script type="module" src="payment-setup.js?v=15"></script>
+  <script type="module" src="payment-setup.js?v=16"></script>
 </body></html>

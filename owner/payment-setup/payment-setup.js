@@ -47,9 +47,9 @@ async function openEmbeddedStripe(){
       connectInstance={create(name){const element=document.createElement(`stripe-connect-${name}`);element.setConnector(connector.connect);return element;}};
     }
     const banner=connectInstance.create('notification-banner');
-    const payouts=connectInstance.create('payouts');
+    const payoutDetails=connectInstance.create('balances');
     $('#stripeNotificationBanner').replaceChildren(banner);
-    $('#stripePayouts').replaceChildren(payouts);
+    $('#stripePayoutDetails').replaceChildren(payoutDetails);
     $('#connectionStatus').textContent='Stripe Account Connected';
     $('#connectionStatus').className='status-pill good';
     status.hidden=true;
