@@ -20,22 +20,22 @@
       <p class="eyebrow">OGREENA OWNER PAYMENTS</p>
       <h1>Set Up Payments</h1>
       <p class="lead">Review Ogreena’s verified payment and payout connection without re-entering sensitive information.</p>
-      <ol class="setup-steps" aria-label="Payment setup steps"><li><b>1</b><span>Verify Your Business</span></li><li><b>2</b><span>Connect Bank Account</span></li><li><b>3</b><span>Return to Dashboard</span></li></ol>
+      <ol class="setup-steps" aria-label="Payment setup steps"><li><b>1</b><span>Choose Account Type</span></li><li><b>2</b><span>Business Verification</span></li><li><b>3</b><span>Connect Bank Account</span></li><li><b>4</b><span>Complete Setup</span></li></ol>
       <p class="security-note">Stripe securely collects identity, EIN, banking, and document information. Ogreena and Supabase never receive or store full routing numbers, account numbers, SSNs, or identity documents.</p>
       <section class="verification-card">
         <div class="verification-card-head"><div><p class="eyebrow">OGREENA PAYMENT VERIFICATION</p><h2>Securely powered by Stripe</h2></div><span class="status-pill" id="connectionStatus">Checking status…</span></div>
         <div class="verification-body">
           <div id="setupPrompt"><p class="step-kicker">Business and payout details</p><h2>Complete your secure setup</h2><p>Stripe requires outstanding verification and bank changes in its secure hosted account settings. Sensitive details are never entered into an Ogreena form.</p></div>
           <div id="connectedPrompt" hidden><p class="step-kicker">Payments ready for owner approval</p><h2>Your payout bank is connected</h2><p>Ogreena’s business and payout setup is already complete. You do not need to repeat verification or bank setup.</p></div>
-          <div class="detail-grid"><article><h3>Business verification</h3><p>Legal name, date of birth, business name, EIN, address, phone, website, and required documents.</p></article><article><h3>Bank account</h3><p>Account holder, routing number, account number, account type, and payout schedule remain inside Stripe.</p></article></div>
-          <div class="setup-status" id="setupStatus"><div><span>Business details</span><strong>Checking…</strong></div><div><span>Bank connection</span><strong>Checking…</strong></div><div><span>Customer charging</span><strong>Disabled</strong></div></div>
+          <div class="detail-grid"><article><h3>Account type</h3><p><b>Individual / Independent</b><br>or<br><b>Registered Business / LLC</b></p><p class="muted" id="accountTypeStatus">Checking the verified Stripe account type…</p></article><article><h3>Business verification</h3><p>Stripe securely manages the legal business name, EIN, address, phone, website, authorized representative, and any identity requirements.</p></article><article><h3>Bank account</h3><p>Stripe securely manages the account holder, routing and account numbers, account type, and payout schedule.</p></article><article><h3>Complete setup</h3><p>Completed status appears only after Stripe confirms business verification and the payout destination.</p></article></div>
+          <div class="setup-status" id="setupStatus"><div><span>Business Verified</span><strong>Checking…</strong></div><div><span>Bank Connected</span><strong>Checking…</strong></div><div><span>Payments Ready</span><strong>Disabled pending final approval</strong></div></div>
           <p class="bank-destination" id="bankDestination">Checking the secure payout destination…</p>
           <p class="muted">Stripe account: Ogreena · <code>acct_1UTpIlI19b4U0AqM</code></p>
-          <div class="verification-actions"><a class="small-btn" id="manageBankAccount" href="https://dashboard.stripe.com/acct_1UTpIlI19b4U0AqM/settings/payouts" target="_blank" rel="noopener">Manage Ogreena Bank Account Securely</a><button class="small-btn" id="refreshStatus" type="button">Refresh Status</button></div>
+          <div class="verification-actions"><a class="small-btn" id="manageBankAccount" href="https://dashboard.stripe.com/acct_1UTpIlI19b4U0AqM/settings/payouts" target="_blank" rel="noopener">Manage Ogreena Bank Account Securely</a><button class="small-btn" id="refreshStatus" type="button">Refresh Status</button><a class="small-btn primary" href="../">Save &amp; Continue</a></div>
           <p class="muted">Stripe hosts all bank and identity changes for Ogreena’s standalone account. Product and service payments use this same payout destination while remaining separate in reports.</p>
         </div>
       </section>
     </section>
   </main>
-  <script type="module" src="payment-setup.js?v=3"></script>
+  <script type="module" src="payment-setup.js?v=4"></script>
 </body></html>

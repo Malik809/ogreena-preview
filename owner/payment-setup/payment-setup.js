@@ -28,6 +28,7 @@ async function loadStatus(){
   }
   const actionRequired=Boolean(account.disabledReason)||(account.currentlyDue||0)>0;
   const pending=(account.pendingVerification||0)>0;
+  $('#accountTypeStatus').textContent=account.businessType==='company'?'Registered Business / LLC':account.businessType==='individual'?'Individual / Independent':'Account type already verified and managed by Stripe.';
   $('#connectionStatus').textContent=actionRequired?'Action Required':pending?'Pending Verification':account.payoutsEnabled?'Bank Connected':'Setup Required';
   $('#connectionStatus').className=`status-pill ${account.payoutsEnabled?'good':actionRequired?'attention':''}`;
   rows[0].textContent=actionRequired?'Action Required':pending?'Pending Verification':account.detailsSubmitted?'Submitted':'Not Submitted';
