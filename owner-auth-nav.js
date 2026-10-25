@@ -1,8 +1,8 @@
-const { createClient } = window.supabase;
+const { createClient, processLock } = window.supabase;
 const SUPABASE_URL = 'https://mhhjzifeaofgskimvuom.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM';
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: 'ogreena-auth-session' }
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: 'ogreena-auth-session', lock: processLock }
 });
 
 function setVisible(element, visible) {
