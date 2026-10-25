@@ -161,11 +161,15 @@ document.querySelectorAll('[data-stripe-path]').forEach(button => button.addEven
 
 async function initialize() {
   const denied = $('#deniedPanel'), dashboard = $('#ownerDashboard'), authStatus = $('#ownerStatus');
-  const { data:{ user }, error } = await supabase.auth.getUser();
-  if (error || !user) { authStatus.textContent = 'Sign in with an authorized owner account to continue.'; return; }
-  const role = requireOk(await supabase.from('user_roles').select('role').eq('user_id', user.id).single());
+  const sessionResult = await Promise.race([
+    supabase.auth.getSession(),
+    new Promise(resolve => setTimeout(() => resolve({ data:{ session:null }, error:new Error('Session check timed out') }), 8000))
+  ]);
+  const session = sessionResult.data?.session;
+  if (sessionResult.error || !session?.user) { authStatus.innerHTML = 'Your owner session is not active in this browser. <a href="../auth/?mode=signin">Sign in to continue</a>.'; return; }
+  const role = requireOk(await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single());
   if (role?.role !== 'owner') { authStatus.textContent = 'This account is not authorized as an owner. Owner access is never granted from an email address alone.'; return; }
-  currentUserId = user.id;
+  currentUserId = session.user.id;
   denied.hidden = true; dashboard.hidden = false;
   const [roles, requests, appointments, messages] = await Promise.all([supabase.from('user_roles').select('role'), count('service_requests'), count('appointments'), count('messages')]);
   const roleRows = roles.data || []; $('#customerCount').textContent = roleRows.filter(row => row.role === 'customer').length; $('#employeeCount').textContent = roleRows.filter(row => row.role === 'employee').length; $('#requestCount').textContent = requests; $('#appointmentCount').textContent = appointments; $('#messageCount').textContent = messages;

@@ -17,7 +17,9 @@
     <div class="menu-search"><span>⌕</span><input type="search" aria-label="Search navigation" placeholder="Search services and pages…"><button type="button" aria-label="Clear navigation search" hidden>Clear</button></div>
     <nav aria-label="Ogreena navigation" class="menu-link-list">
       <a data-menu-search="home main ogreena profile" href="${siteRoot}">Home / Main Ogreena Profile</a>
-      <a class="menu-featured" data-auth-user data-menu-search="account dashboard profile requests appointments" href="${siteRoot}auth/" hidden>My Account</a>
+      <a class="menu-featured" data-auth-profile data-menu-search="my profile account requests appointments" href="${siteRoot}auth/" hidden>My Profile</a>
+      <a class="menu-featured" data-auth-owner data-menu-search="owner dashboard business account" href="${siteRoot}owner/" hidden>Owner Dashboard</a>
+      <a class="menu-featured" data-auth-employee data-menu-search="employee dashboard jobs schedule" href="${siteRoot}auth/" hidden>Employee Dashboard</a>
       <a data-menu-search="about us company" href="${siteRoot}#about">About Us</a>
       <a data-menu-search="residential services house cleaning carpet deep move in move out upholstery windows pressure washing" href="${siteRoot}#services">Residential Services</a>
       <a data-menu-search="commercial services cleaning janitorial facilities business" href="${siteRoot}services/commercial-cleaning/">Commercial Services</a>
@@ -55,18 +57,6 @@
   };
   search.addEventListener('input', filterLinks);
   clearSearch.addEventListener('click', () => { search.value = ''; filterLinks(); search.focus(); });
-  Promise.all([import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm'), import(`${siteRoot}auth/supabase-config.js`)]).then(async ([library, config]) => {
-    const client=library.createClient(config.SUPABASE_URL,config.SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
-    const {data:{user}}=await client.auth.getUser(); if(!user)return;
-    drawer.querySelectorAll('[data-auth-guest]').forEach(node=>node.hidden=true);
-    drawer.querySelectorAll('[data-auth-user],[data-auth-signout]').forEach(node=>node.hidden=false);
-    const {data}=await client.from('user_roles').select('role').eq('user_id',user.id).single(); const role=data?.role||'customer';
-    const account=drawer.querySelector('[data-auth-user]');
-    if(role==='owner'){account.textContent='Owner Dashboard';account.href=`${siteRoot}owner/`;account.dataset.menuSearch='owner dashboard business account';}
-    else if(role==='employee'){account.textContent='Employee Dashboard';account.href=`${siteRoot}auth/`;account.dataset.menuSearch='employee dashboard jobs schedule account';}
-    else{account.textContent='My Account';account.href=`${siteRoot}auth/`;}
-    drawer.querySelector('[data-auth-signout]').addEventListener('click',async event=>{event.preventDefault();await client.auth.signOut();location.href=siteRoot;});
-  }).catch(()=>{});
   const topSearch = topbar.querySelector('.search');
   if (topSearch) {
     topSearch.setAttribute('role', 'button'); topSearch.setAttribute('tabindex', '0'); topSearch.setAttribute('aria-label', 'Search Ogreena services and pages');
