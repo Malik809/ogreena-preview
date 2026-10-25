@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Business Dashboard | Ogreena</title>
+  <link rel="icon" href="../assets/ogreena-original-logo.jpg">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../brand.css">
+  <link rel="stylesheet" href="../auth/auth.css">
+  <link rel="stylesheet" href="business.css">
+</head>
+<body class="auth-development">
+  <header class="topbar">
+    <a class="wordmark" href="../"><img src="../assets/ogreena-original-logo.jpg" alt="Ogreena logo">Ogreena</a>
+    <div class="search">Private business dashboard</div>
+    <div class="top-actions"><a class="small-btn" href="../auth/">My account</a><button class="small-btn" id="signOut" type="button">Sign Out</button></div>
+  </header>
+  <main class="business-shell">
+    <section class="account-panel" id="accessPanel"><h1>Business owner access</h1><p id="accessStatus">Checking your secure business membership…</p></section>
+
+    <section class="account-panel" id="registrationPanel" hidden>
+      <div class="content-head"><div><span class="tag">Business Owner</span><h1>Register your business</h1></div></div>
+      <p>Create a private business record and request ownership verification. Registration does not create a Stripe account.</p>
+      <form id="registrationForm" class="auth-form">
+        <label>Legal or public business name<input name="business_name" minlength="2" maxlength="150" autocomplete="organization" required></label>
+        <label>Explain your authority to manage this business<textarea name="authority_description" minlength="10" maxlength="2000" required></textarea></label>
+        <label class="consent-line"><input type="checkbox" required> I confirm that I am authorized to request access for this business.</label>
+        <button class="small-btn primary" type="submit">Request Business Verification</button>
+      </form>
+      <p class="auth-status" id="registrationStatus" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="account-panel" id="dashboardPanel" hidden>
+      <div class="content-head"><div><span class="tag">Business Owner</span><h1 id="businessName">Business dashboard</h1></div><span class="status-pill" id="verificationStatus"></span></div>
+      <div class="account-grid">
+        <article class="card"><h2>Private business profile</h2><p>Your membership and business record are protected by row-level security.</p><p class="muted">Only verified members of this business can view its connected-account status.</p></article>
+        <article class="card"><h2>Payout setup</h2><p id="payoutSummary">Business verification must be approved before payout onboarding.</p><div id="connectAccountSummary" class="muted"></div><button class="small-btn primary" id="startPayoutSetup" type="button" hidden>Set Up Payouts in Sandbox</button></article>
+      </div>
+      <section class="card consent-card" id="consentPanel" hidden>
+        <h2>Sandbox onboarding consent</h2>
+        <p>This foundation is sandbox-only. Giving consent will not create a live Stripe account or enable customer payments.</p>
+        <label class="consent-line"><input id="connectConsent" type="checkbox"> I explicitly consent to Ogreena starting Stripe Connect onboarding for this business in the sandbox.</label>
+        <button class="small-btn" id="recordConsent" type="button">Record Sandbox Consent</button>
+        <p class="auth-status" id="consentStatus" role="status" aria-live="polite"></p>
+      </section>
+      <section class="card stripe-card" id="stripePanel" hidden>
+        <div class="content-head"><div><span class="tag">Stripe-secured sandbox</span><h2>Business payout onboarding</h2></div></div>
+        <p id="stripeStatus">Opening Stripe’s secure form…</p>
+        <div id="stripeNotification"></div>
+        <div id="stripeComponent"></div>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="business.js?v=1"></script>
+</body>
+</html>

@@ -81,7 +81,7 @@ document.querySelector('#signUpForm').addEventListener('submit', async event => 
   event.preventDefault();
   const form = event.currentTarget;
   const values = Object.fromEntries(new FormData(form));
-  await runFormRequest(form, 'Creating your secure customer account…', () => supabase.auth.signUp({ email: values.email, password: values.password, options: { data: { display_name: values.display_name }, emailRedirectTo: authRedirect } }), async data => {
+  await runFormRequest(form, 'Creating your secure Ogreena account…', () => supabase.auth.signUp({ email: values.email, password: values.password, options: { data: { display_name: values.display_name, requested_account_type: values.account_type }, emailRedirectTo: authRedirect } }), async data => {
     form.reset();
     if (!data.session && Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
       switchTab('signin');
@@ -168,16 +168,6 @@ document.querySelector('#requestForm').addEventListener('submit', async event =>
   event.currentTarget.reset(); await loadRequests(user.id);
 });
 
-document.querySelector('#ownerRequestForm').addEventListener('submit', async event => {
-  event.preventDefault();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  const values = Object.fromEntries(new FormData(event.currentTarget));
-  const { error } = await supabase.from('owner_access_requests').insert({ user_id: user.id, business_name: values.business_name.trim(), authority_description: values.authority_description.trim() });
-  document.querySelector('#ownerRequestStatus').textContent = error ? friendlyError(error) : 'Owner review requested. Access will remain Customer until identity and business authority are verified by an authorized administrator.';
-  if (!error) event.currentTarget.hidden = true;
-});
-
 async function loadRequests(userId) {
   const list = document.querySelector('#requestList');
   const { data, error } = await supabase.from('service_requests').select('id,service_slug,summary,status,created_at').eq('customer_id', userId).order('created_at', { ascending: false });
@@ -235,11 +225,8 @@ async function renderSession(session) {
   document.querySelector('#ownerPanel').hidden = role !== 'owner';
   document.querySelector('#ownerRequestPanel').hidden = role === 'owner';
   if (role !== 'owner') {
-    const { data: request } = await supabase.from('owner_access_requests').select('status,created_at').eq('user_id', user.id).maybeSingle();
-    if (request) {
-      document.querySelector('#ownerRequestForm').hidden = true;
-      document.querySelector('#ownerRequestStatus').textContent = `Owner review status: ${request.status}. No owner permissions have been granted.`;
-    }
+    const { data: memberships } = await supabase.from('business_memberships').select('verification_status').eq('user_id', user.id).limit(1);
+    if (memberships?.length) document.querySelector('#ownerRequestStatus').textContent = `Business verification status: ${memberships[0].verification_status}.`;
   }
   if (role === 'owner') {
     const { data } = await supabase.from('payment_settings').select('provider,payments_enabled,product_payments_enabled,service_payments_enabled').single();

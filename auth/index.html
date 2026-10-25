@@ -31,11 +31,12 @@
         <button class="small-btn primary" type="submit">Sign In</button>
       </form>
       <form id="signUpForm" class="auth-form" hidden>
+        <label>Account type<select name="account_type" required><option value="customer">Customer</option><option value="business_owner">Business Owner</option></select></label>
         <label>Name<input name="display_name" autocomplete="name" maxlength="100" required></label>
         <label>Email<input name="email" type="email" autocomplete="email" required></label>
         <label>Password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
-        <button class="small-btn primary" type="submit">Create Customer Account</button>
-        <p class="muted">A confirmation email is required before sign-in. New public registrations always receive the customer role.</p>
+        <button class="small-btn primary" type="submit">Create Ogreena Account</button>
+        <p class="muted">A confirmation email is required before sign-in. Choosing Business Owner starts a separate business-verification request; it never grants owner access by itself.</p>
       </form>
       <form id="recoveryForm" class="auth-form" hidden>
         <label>Email<input name="email" type="email" autocomplete="email" required></label>
@@ -55,12 +56,12 @@
         <article class="card"><h2>Service requests</h2><form id="requestForm" class="auth-form compact"><label>Service<input name="service_slug" required placeholder="Carpet Cleaning"></label><label>What do you need?<textarea name="summary" maxlength="500" required></textarea></label><button class="small-btn primary">Submit Request</button></form><div id="requestList"></div></article>
         <article class="card products-account"><h2>Ogreena Products</h2><p class="muted">Products are visible automatically on every customer profile.</p><div class="account-products" id="accountProducts"></div></article>
         <article class="card owner-only" id="ownerPanel" hidden><h2>Owner controls</h2><p>Payment settings are visible only to the owner role. Payments remain disabled.</p><div id="paymentState"></div></article>
-        <article class="card" id="ownerRequestPanel"><h2>Business owner access</h2><p class="muted">Register normally, then request a manual authorization review. An email address alone never grants owner access.</p><form id="ownerRequestForm" class="auth-form compact"><label>Business name<input name="business_name" value="Ogreena" minlength="2" maxlength="150" required></label><label>Explain your authority to manage the business<textarea name="authority_description" minlength="10" maxlength="2000" required></textarea></label><button class="small-btn" type="submit">Request Owner Review</button></form><p id="ownerRequestStatus" class="muted"></p></article>
+        <article class="card" id="ownerRequestPanel"><h2>Business owner account</h2><p class="muted">Each company receives a private business record and must pass an ownership review. An email address alone never grants access.</p><a class="small-btn" href="../business/">Register or open Business Dashboard</a><p id="ownerRequestStatus" class="muted"></p></article>
       </div>
     </section>
   </main>
   <div id="toast"></div>
   <script src="../vendor/supabase-2.57.4.min.js"></script>
-  <script src="owner-auth.js?v=9"></script>
+  <script src="owner-auth.js?v=10"></script>
 </body>
 </html>
