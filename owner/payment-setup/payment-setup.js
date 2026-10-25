@@ -47,7 +47,7 @@ async function openEmbeddedStripe(){
       connectInstance={create(name){const element=document.createElement(`stripe-connect-${name}`);element.setConnector(connector.connect);return element;}};
     }
     const banner=connectInstance.create('notification-banner');
-    const payoutDetails=connectInstance.create('balances');
+    const payoutDetails=connectInstance.create('account-management');
     $('#stripeNotificationBanner').replaceChildren(banner);
     $('#stripePayoutDetails').replaceChildren(payoutDetails);
     $('#connectionStatus').textContent='Stripe Account Connected';
