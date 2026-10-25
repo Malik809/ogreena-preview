@@ -140,9 +140,10 @@ signOutButton.addEventListener('click', async () => {
   if (signOutButton.disabled) return;
   signOutButton.disabled = true;
   try {
-    const { error } = await withTimeout(supabase.auth.signOut());
+    const { error } = await withTimeout(supabase.auth.signOut({ scope: 'local' }));
     if (error) throw error;
     setStatus('Signed out.', 'success');
+    location.replace('./?mode=signin');
   } catch (error) {
     setStatus(friendlyError(error), 'error');
   } finally {
