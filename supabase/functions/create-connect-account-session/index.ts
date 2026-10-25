@@ -5,7 +5,7 @@ const PLATFORM_ACCOUNT_ID = 'acct_1UUSC7IBe0SKV30I';
 
 Deno.serve(async request => {
   const headers = {
-    ...corsHeaders(request.headers.get('Origin')),
+    ...corsHeaders(request.headers.get('Origin'), { allowLocalPreview: true }),
     'Cache-Control': 'no-store',
     'Content-Type': 'application/json',
   };

@@ -158,7 +158,7 @@ document.querySelectorAll('[data-stripe-path]').forEach(button => button.addEven
 }));
 document.querySelector('[data-payment-setup]')?.addEventListener('click',()=>{
   sessionStorage.removeItem('ogreena-stripe-mode');
-  location.href='payment-setup/?sandbox=onboarding';
+  location.href='payment-setup/';
 });
 document.querySelector('[data-live-validation-checkout]')?.addEventListener('click',()=>run('Opening the owner-only $0.50 live checkout',async()=>{
   const result=await supabase.functions.invoke('create-live-validation-checkout',{body:{}});

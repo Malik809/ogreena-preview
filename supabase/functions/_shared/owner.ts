@@ -1,9 +1,19 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 
-export function corsHeaders(origin: string | null) {
+export function corsHeaders(origin: string | null, options: { allowLocalPreview?: boolean } = {}) {
   const allowed = new Set(['https://ogreena.com', 'https://www.ogreena.com']);
+  let localPreview = false;
+  if (origin && options.allowLocalPreview) {
+    try {
+      const url = new URL(origin);
+      localPreview = url.protocol === 'http:' && (url.hostname === '127.0.0.1' || url.hostname === 'localhost');
+    } catch {
+      localPreview = false;
+    }
+  }
+  const allowedOrigin = origin && (allowed.has(origin) || localPreview) ? origin : 'https://ogreena.com';
   return {
-    'Access-Control-Allow-Origin': origin && allowed.has(origin) ? origin : 'https://ogreena.com',
+    'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Vary': 'Origin',

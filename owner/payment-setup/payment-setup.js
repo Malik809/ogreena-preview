@@ -5,13 +5,9 @@ const safariSafeAuthLock=async(_name,_acquireTimeout,callback)=>callback();
 const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage,storageKey:'ogreena-auth-session',lock:safariSafeAuthLock}});
 const $=selector=>document.querySelector(selector);
 let connectInstance;
-const STRIPE_MODE_KEY='ogreena-stripe-mode';
-
-function sandboxOnboardingEnabled(){
-  const requested=new URLSearchParams(location.search).get('sandbox')==='onboarding';
-  if(requested)sessionStorage.setItem(STRIPE_MODE_KEY,'sandbox-onboarding');
-  return requested||sessionStorage.getItem(STRIPE_MODE_KEY)==='sandbox-onboarding';
-}
+const LIVE_MERCHANT_ACCOUNT='acct_1UTpIlI19b4U0AqM';
+const CONNECT_PLATFORM_ACCOUNT='acct_1UUSC7IBe0SKV30I';
+const SESSION_FUNCTION='create-connect-account-session';
 
 async function openEmbeddedStripe(){
   const panel=$('#embeddedStripe');
@@ -22,29 +18,31 @@ async function openEmbeddedStripe(){
   openButton.disabled=true;
   status.textContent='Opening Stripe’s secure payout form…';
   try{
-    const functionName=sandboxOnboardingEnabled()?'create-sandbox-onboarding-session':'create-connect-account-session';
-    const componentName=sandboxOnboardingEnabled()?'account-onboarding':'account-management';
     if(!connectInstance){
       const {loadConnectAndInitialize}=await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.3.1/+esm');
-      const result=await supabase.functions.invoke(functionName);
+      const result=await supabase.functions.invoke(SESSION_FUNCTION);
       if(result.error)throw result.error;
       const sessionData=result.data;
       if(!/^acct_[A-Za-z0-9]+$/.test(sessionData.accountId||''))throw new Error('Stripe returned an invalid connected account.');
+      if(sessionData.livemode!==true)throw new Error('Live Stripe account management is not available.');
+      if(sessionData.platformAccountId!==CONNECT_PLATFORM_ACCOUNT)throw new Error('Stripe Connect platform mismatch.');
+      if(sessionData.accountId!==LIVE_MERCHANT_ACCOUNT)throw new Error('Ogreena merchant account mismatch.');
       let firstClientSecret=sessionData.clientSecret;
       connectInstance=loadConnectAndInitialize({
         publishableKey:sessionData.publishableKey,
         fetchClientSecret:async()=>{
           if(firstClientSecret){const secret=firstClientSecret;firstClientSecret=undefined;return secret;}
-          const refresh=await supabase.functions.invoke(functionName);
+          const refresh=await supabase.functions.invoke(SESSION_FUNCTION);
           if(refresh.error)throw refresh.error;
           if(refresh.data.accountId!==sessionData.accountId)throw new Error('Stripe connected account ownership changed during this session.');
+          if(refresh.data.livemode!==true||refresh.data.platformAccountId!==CONNECT_PLATFORM_ACCOUNT)throw new Error('Stripe live session validation failed.');
           return refresh.data.clientSecret;
         },
         appearance:{overlays:'dialog',variables:{colorPrimary:'#0f6943',colorBackground:'#fffdf6',colorText:'#163e2d',borderRadius:'12px'}},
       });
     }
     const banner=connectInstance.create('notification-banner');
-    const payoutDetails=connectInstance.create(componentName);
+    const payoutDetails=connectInstance.create('account-management');
     $('#stripeNotificationBanner').replaceChildren(banner);
     $('#stripePayoutDetails').replaceChildren(payoutDetails);
     $('#connectionStatus').textContent='Stripe Account Connected';
@@ -67,10 +65,6 @@ function closeEmbeddedStripe(){
   $('#openPayoutForm').focus();
 }
 
-function returnToDashboard(){
-  sessionStorage.removeItem(STRIPE_MODE_KEY);
-}
-
 async function initialize(){
   const {data:{user},error}=await supabase.auth.getUser();
   if(error||!user){$('#ownerStatus').textContent='Sign in with an authorized owner account to continue.';return;}
@@ -87,6 +81,5 @@ async function initialize(){
   }
   $('#openPayoutForm').addEventListener('click',openEmbeddedStripe);
   $('#closePayoutForm').addEventListener('click',closeEmbeddedStripe);
-  $('#returnToDashboard').addEventListener('click',returnToDashboard);
 }
 initialize().catch(error=>{$('#ownerStatus').textContent=error.message||'Payment setup could not load.';});
