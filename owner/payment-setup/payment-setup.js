@@ -12,7 +12,7 @@ function loadStripeConnect(){
     const existing=document.querySelector('script[data-ogreena-stripe-connect]');
     if(existing){existing.addEventListener('load',()=>resolve(window.StripeConnect),{once:true});existing.addEventListener('error',()=>reject(new Error('Stripe Connect could not load.')),{once:true});return;}
     const script=document.createElement('script');
-    script.src='https://connect-js.stripe.com/v1.0/connect.js';
+    script.src='https://connect-js.stripe.com/v0.1/connect.js';
     script.async=true;script.dataset.ogreenaStripeConnect='true';
     script.addEventListener('load',()=>window.StripeConnect?.init?resolve(window.StripeConnect):reject(new Error('Stripe Connect did not initialize.')),{once:true});
     script.addEventListener('error',()=>reject(new Error('Stripe Connect could not load.')),{once:true});
