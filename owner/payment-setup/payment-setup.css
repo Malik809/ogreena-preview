@@ -1,1 +1,55 @@
-.payment-verification{background:linear-gradient(145deg,#f5f0df 0,#fbfaf4 55%,#edf5ef 100%);min-height:100vh}.verification-shell{width:min(1040px,calc(100% - 32px));margin:34px auto 72px}.back-link{display:inline-block;margin-bottom:26px;color:#174e36;font-weight:800}.eyebrow{margin:0 0 8px;color:#0f6943;font-size:.78rem;font-weight:900;letter-spacing:.14em}.verification-shell>section>h1{font-size:clamp(2.5rem,7vw,5rem);line-height:.95;margin:0;color:#163e2d}.lead{font-size:1.12rem;max-width:720px}.setup-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;list-style:none;padding:0;margin:28px 0 18px}.setup-steps li{display:flex;align-items:center;gap:12px;border:1px solid #b99a3b;border-radius:12px;background:#fffdf6;padding:16px}.setup-steps b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#0f6943;color:#fff}.setup-steps span{font-weight:800}.security-note{padding:14px 18px;border-left:4px solid #b99a3b;background:#fffdf6}.verification-card{margin-top:26px;border:1px solid #b99a3b;border-radius:18px;background:#fff;box-shadow:0 18px 48px rgba(23,78,54,.12);overflow:hidden}.verification-card-head{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:22px 26px;border-bottom:1px solid #e7dcc0;background:#fbf8ee}.verification-card-head h2{margin:0;color:#20372c}.status-pill{padding:8px 12px;border-radius:999px;background:#f0e7c9;color:#654e12;font-weight:800}.status-pill.good{background:#e3f3e9;color:#145c3d}.status-pill.attention{background:#fff0d7;color:#7c4b00}.verification-body{padding:28px}.step-kicker{font-weight:800;color:#98751d}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:22px 0}.detail-grid article,.setup-status{border:1px solid #dbe7df;border-radius:14px;padding:16px;background:#f9fcfa}.detail-grid h3{margin-top:0}.setup-status{display:grid;gap:0}.setup-status div{display:flex;justify-content:space-between;gap:20px;padding:11px 0;border-bottom:1px solid #dbe7df}.setup-status div:last-child{border-bottom:0}.verification-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.verification-actions .small-btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}.embedded-stripe{margin-top:24px;padding:18px;border:1px solid #b99a3b;border-radius:14px;background:#fffdf6}.embedded-stripe-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.embedded-stripe-head h2{margin:0;color:#163e2d}.embedded-stripe stripe-connect-notification-banner,.embedded-stripe stripe-connect-account-management{display:block;margin-top:16px}@media(max-width:720px){.verification-shell{width:min(100% - 20px,1040px);margin-top:20px}.setup-steps,.detail-grid{grid-template-columns:1fr}.verification-card-head,.embedded-stripe-head{display:block}.status-pill{display:inline-block;margin-top:12px}.verification-body{padding:20px}.verification-actions .small-btn,.embedded-stripe-head .small-btn{width:100%;margin-top:10px}}
+.payment-verification{min-height:100vh;margin:0;background:radial-gradient(circle at 85% 5%,rgba(185,154,59,.14),transparent 28%),linear-gradient(155deg,#071d15 0,#0b2b20 48%,#092219 100%);color:#f9f6e9}
+.verification-shell{width:min(650px,calc(100% - 36px));margin:0 auto;padding:22px 0 72px}
+.account-panel{margin-top:70px;padding:28px;border:1px solid rgba(216,181,78,.65);border-radius:12px;background:#fff;color:#163e2d}
+.page-brand{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:4px 0 20px;border-bottom:1px solid rgba(216,181,78,.42)}
+.page-brand .wordmark{display:flex;align-items:center;gap:11px;color:#fff;font-size:1.08rem;font-weight:900;text-decoration:none}
+.page-brand .wordmark img{width:48px;height:48px;border:2px solid #d8b54e;border-radius:50%;object-fit:cover}
+.back-link{color:#f9f6e9;font-size:1rem;font-weight:700;text-decoration:none}
+.back-link:hover,.back-link:focus{text-decoration:underline}
+.page-intro{padding-top:38px}
+.eyebrow{margin:0 0 10px;color:#d8b54e;font-size:.78rem;font-weight:900;letter-spacing:.16em}
+.verification-shell h1{margin:0;color:#fff;font-size:clamp(3rem,9vw,4.7rem);line-height:.98;letter-spacing:-.04em}
+.lead{max-width:600px;margin:22px 0 0;color:#d8ded9;font-size:1.22rem;line-height:1.7}
+.setup-steps{display:grid;gap:14px;list-style:none;margin:30px 0 26px;padding:0}
+.setup-steps li{display:grid;grid-template-columns:42px 1fr;align-items:center;min-height:84px;padding:0 22px;border:1px solid rgba(216,181,78,.72);background:rgba(5,18,13,.42)}
+.setup-steps b{color:#fff;font-size:1.25rem}
+.setup-steps span{color:#fff;font-size:1.14rem;font-weight:900}
+.privacy-copy{margin:0 0 34px;color:#c8d0cb;font-size:1.05rem;line-height:1.65}
+.verification-card{overflow:hidden;border:1px solid #d8b54e;border-radius:10px;background:#fbfaf4;color:#173d2d;box-shadow:0 24px 72px rgba(0,0,0,.34)}
+.verification-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:24px 24px 20px;border-bottom:1px solid #dfd6b8;background:#fffdf8}
+.verification-card-head h2{margin:0;color:#173d2d;font-size:1.65rem}
+.save-later{margin:20px 0 0;color:#3e5148;font-size:1rem}
+.status-pill{flex:none;padding:8px 12px;border-radius:999px;background:#f0e7c9;color:#654e12;font-weight:900}
+.status-pill.good{background:#e3f3e9;color:#145c3d}
+.status-pill.attention{background:#fff0d7;color:#7c4b00}
+.verification-body{padding:24px}
+.verification-body>div>h2{margin:0;color:#163e2d}
+.verification-body>div>p:last-child{line-height:1.55}
+.step-kicker{margin:0 0 10px;color:#98751d;font-weight:900}
+.account-type-line{margin:18px 0;padding:12px 14px;border-left:3px solid #d8b54e;background:#f3eedf;color:#364c41;font-weight:700}
+.embedded-stripe{margin:20px -8px 24px;padding:18px;border:1px solid #d8b54e;border-radius:8px;background:#fff}
+.embedded-stripe-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid #ece5cf}
+.embedded-stripe-head h2{margin:0;color:#163e2d;font-size:1.45rem}
+.embedded-stripe .eyebrow{color:#0f6943}
+.embedded-stripe stripe-connect-notification-banner,.embedded-stripe stripe-connect-account-onboarding,.embedded-stripe stripe-connect-account-management{display:block;margin-top:16px}
+.component-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:20px 0 0;padding:5px;border:1px solid #d8b54e;border-radius:9px;background:#f4efdf}
+.component-tab{min-height:46px;padding:9px 12px;border:0;border-radius:6px;background:transparent;color:#28513f;font:inherit;font-weight:900;cursor:pointer}
+.component-tab.active{background:#0f6943;color:#fff;box-shadow:0 4px 12px rgba(15,105,67,.18)}
+.stripe-component-panel{margin-top:18px;padding-top:4px}
+.stripe-component-panel h3{margin:0 0 7px;color:#163e2d;font-size:1.22rem}
+.stripe-component-panel>p{margin:0;color:#576a60;line-height:1.55}
+.setup-status{display:grid;margin-top:20px;border:1px solid #dbe7df;border-radius:8px;background:#f9fcfa}
+.setup-status div{display:flex;justify-content:space-between;gap:20px;padding:13px 15px;border-bottom:1px solid #dbe7df}
+.setup-status div:last-child{border-bottom:0}
+.setup-status strong{text-align:right}
+.bank-destination{font-weight:800}
+.verification-actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:20px}
+.verification-actions .small-btn{display:flex;align-items:center;justify-content:center;min-height:48px;padding:11px 14px;border:1px solid #176943;border-radius:7px;background:#fff;color:#145d3e;font-weight:900;text-align:center;text-decoration:none}
+.verification-actions .small-btn.primary{background:#0f6943;color:#fff}
+.verification-actions .small-btn:hover,.verification-actions .small-btn:focus{filter:brightness(.96)}
+.security-note{margin-top:20px;padding:16px;border-left:4px solid #d8b54e;background:#fff6da;color:#4c3a09;line-height:1.55}
+.secure-footer{margin:24px 0 0;color:#576a60;font-size:.92rem;line-height:1.55}
+.muted{color:#66756d}
+.verification-card code{overflow-wrap:anywhere}
+.small-btn:disabled{cursor:wait;opacity:.62}
+@media(max-width:620px){.verification-shell{width:min(100% - 24px,650px);padding-top:14px}.page-brand .wordmark span{display:none}.page-brand .wordmark img{width:44px;height:44px}.back-link{font-size:.94rem}.page-intro{padding-top:30px}.verification-shell h1{font-size:3.05rem}.lead{font-size:1.05rem;line-height:1.6}.setup-steps li{min-height:76px;padding:0 17px}.verification-card-head,.embedded-stripe-head{display:block}.status-pill{display:inline-block;margin-top:18px}.verification-card-head,.verification-body{padding:20px}.embedded-stripe{margin:18px -6px 22px;padding:14px}.embedded-stripe-head .small-btn{width:100%;margin-top:14px}.component-tabs{grid-template-columns:1fr}.setup-status div{display:grid;gap:5px}.setup-status strong{text-align:left}.privacy-copy{font-size:1rem}}

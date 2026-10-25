@@ -6,6 +6,16 @@ const $=selector=>document.querySelector(selector);
 const OGREENA_STRIPE_ACCOUNT_ID='acct_1UTpIlI19b4U0AqM';
 let connectInstance;
 
+function showStripePanel(panelName){
+  const onboarding=panelName==='onboarding';
+  $('#stripeOnboardingPanel').hidden=!onboarding;
+  $('#stripeAccountManagementPanel').hidden=onboarding;
+  $('#showStripeOnboarding').classList.toggle('active',onboarding);
+  $('#showStripeAccountManagement').classList.toggle('active',!onboarding);
+  $('#showStripeOnboarding').setAttribute('aria-selected',String(onboarding));
+  $('#showStripeAccountManagement').setAttribute('aria-selected',String(!onboarding));
+}
+
 function loadStripeConnect(){
   if(window.StripeConnect?.init)return Promise.resolve(window.StripeConnect);
   return new Promise((resolve,reject)=>{
@@ -31,13 +41,13 @@ async function authorizeOgreenaMerchant(){
   }catch(error){button.disabled=false;$('#embeddedStripe').hidden=false;$('#embeddedStripeStatus').textContent=error?.context?.body?.error||error?.message||'Unable to start Stripe authorization.';}
 }
 
-async function openEmbeddedStripe(){
+async function openEmbeddedStripe(shouldScroll=true){
   const panel=$('#embeddedStripe');
   const status=$('#embeddedStripeStatus');
   const manage=$('#manageBankAccount');
   panel.hidden=false;manage.disabled=true;status.hidden=false;
   status.textContent='Opening Stripe’s secure account-management component…';
-  panel.scrollIntoView({behavior:'smooth',block:'start'});
+  if(shouldScroll)panel.scrollIntoView({behavior:'smooth',block:'start'});
   try{
     if(!connectInstance){
       const stripeConnect=await loadStripeConnect();
@@ -45,6 +55,7 @@ async function openEmbeddedStripe(){
       if(result.error)throw result.error;
       const sessionData=result.data;
       if(sessionData.accountId!==OGREENA_STRIPE_ACCOUNT_ID)throw new Error('Stripe returned the wrong Ogreena merchant account.');
+      $('#authorizeOgreenaMerchant').hidden=true;
       let firstClientSecret=sessionData.clientSecret;
       const connector=await stripeConnect.init({
         publishableKey:sessionData.publishableKey,
@@ -60,9 +71,12 @@ async function openEmbeddedStripe(){
       connectInstance={create(name){const element=document.createElement(`stripe-connect-${name}`);element.setConnector(connector.connect);return element;}};
     }
     const banner=connectInstance.create('notification-banner');
+    const accountOnboarding=connectInstance.create('account-onboarding');
     const accountManagement=connectInstance.create('account-management');
     $('#stripeNotificationBanner').replaceChildren(banner);
+    $('#stripeAccountOnboarding').replaceChildren(accountOnboarding);
     $('#stripeAccountManagement').replaceChildren(accountManagement);
+    showStripePanel('onboarding');
     status.hidden=true;
   }catch(error){
     connectInstance=undefined;
@@ -117,18 +131,19 @@ async function initialize(){
   const params=new URLSearchParams(location.search);
   const connectResult=params.get('connect');
   const connectReason=params.get('reason');
-  if(connectResult==='connected'){
-    $('#authorizeOgreenaMerchant').hidden=true;
-    await openEmbeddedStripe();
-  }else if(connectResult==='error'||connectResult==='cancelled'){
+  if(connectResult==='error'||connectResult==='cancelled'){
     $('#embeddedStripe').hidden=false;
     $('#embeddedStripeStatus').textContent=connectReason||'Stripe authorization was not completed.';
+  }else{
+    await openEmbeddedStripe(false);
   }
 }
 
 $('#refreshStatus').addEventListener('click',()=>loadStatus().catch(error=>{$('#connectionStatus').textContent=error.message||'Status unavailable';$('#connectionStatus').className='status-pill attention';}));
 $('#authorizeOgreenaMerchant').addEventListener('click',authorizeOgreenaMerchant);
 $('#manageBankAccount').addEventListener('click',openEmbeddedStripe);
+$('#showStripeOnboarding').addEventListener('click',()=>showStripePanel('onboarding'));
+$('#showStripeAccountManagement').addEventListener('click',()=>showStripePanel('management'));
 $('#closeEmbeddedStripe').addEventListener('click',()=>{$('#embeddedStripe').hidden=true;});
 $('#closeStripeGuard').addEventListener('click',()=>{$('#stripeAccountGuard').hidden=true;});
 initialize().catch(error=>{$('#ownerStatus').textContent=error.message||'Payment setup could not load.';});
