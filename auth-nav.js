@@ -31,8 +31,7 @@ document.querySelectorAll('[data-auth-signout]').forEach(element => {
   });
 });
 
-const { data: { session } } = await supabase.auth.getSession();
-await renderAccountNavigation(session);
+supabase.auth.getSession().then(({ data: { session } }) => renderAccountNavigation(session));
 supabase.auth.onAuthStateChange((event, nextSession) => {
   if (event === 'SIGNED_OUT') {
     document.querySelectorAll('[data-auth-guest]').forEach(element => setVisible(element, true));
@@ -40,5 +39,7 @@ supabase.auth.onAuthStateChange((event, nextSession) => {
   } else if (event === 'SIGNED_IN' && nextSession?.user) {
     document.querySelectorAll('[data-auth-guest]').forEach(element => setVisible(element, false));
     document.querySelectorAll('[data-auth-user],[data-auth-profile],[data-auth-signout]').forEach(element => setVisible(element, true));
+    // Read the database role only after the auth callback returns.
+    setTimeout(() => renderAccountNavigation(nextSession), 0);
   }
 });

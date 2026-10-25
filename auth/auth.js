@@ -1,6 +1,6 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './supabase-config.js';
-
+const { createClient } = window.supabase;
+const SUPABASE_URL = 'https://mhhjzifeaofgskimvuom.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM';
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 });
@@ -192,13 +192,19 @@ async function renderSession(session) {
     setStatus('Your previous session expired. Sign in again with the existing account.', 'error');
     return;
   }
-  const [{ data: profile }, { data: roleRow }] = await Promise.all([
+  const [profileResult, roleResult] = await Promise.all([
     supabase.from('profiles').select('display_name').eq('id', user.id).single(),
     supabase.from('user_roles').select('role').eq('user_id', user.id).single()
   ]);
-  const role = roleRow?.role || 'customer';
-  const isAuthCallback = new URLSearchParams(location.search).has('code') || /access_token=|refresh_token=/.test(location.hash);
-  if (role === 'owner' && (requestedMode === 'signin' || isAuthCallback)) {
+  if (roleResult.error || !roleResult.data?.role) {
+    authPanel.hidden = false;
+    accountPanel.hidden = true;
+    setStatus('Your account is signed in, but Ogreena could not verify its access role. Please refresh once. Owner access will not be downgraded to Customer.', 'error');
+    return;
+  }
+  const profile = profileResult.data;
+  const role = roleResult.data.role;
+  if (role === 'owner') {
     location.replace('../owner/');
     return;
   }
@@ -224,17 +230,15 @@ async function renderSession(session) {
     link.className = 'small-btn primary'; link.href = '../owner/'; link.textContent = 'Open Owner Dashboard';
     link.dataset.ownerDashboard = 'true'; document.querySelector('#ownerPanel').append(link);
   }
-  if (role === 'owner' && new URLSearchParams(location.search).get('mode') === 'signin') {
-    location.replace('../owner/');
-  }
 }
 
 function escapeHTML(value = '') { const node = document.createElement('div'); node.textContent = String(value); return node.innerHTML; }
 
 supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'PASSWORD_RECOVERY') switchTab('password');
-  queueMicrotask(() => renderSession(session));
+  // Run database lookups after the auth callback has returned. Awaiting another
+  // Supabase request inside this callback can block session/role restoration.
+  setTimeout(() => renderSession(session), 0);
 });
 
-const { data: { session } } = await supabase.auth.getSession();
-await renderSession(session);
+supabase.auth.getSession().then(({ data: { session } }) => renderSession(session));
