@@ -23,7 +23,10 @@ function loadStripeConnect(){
 async function openEmbeddedStripe(){
   const panel=$('#embeddedStripe');
   const status=$('#embeddedStripeStatus');
+  const openButton=$('#openPayoutForm');
   panel.hidden=false;status.hidden=false;
+  document.body.classList.add('payout-modal-open');
+  openButton.disabled=true;
   status.textContent='Opening Stripe’s secure payout form…';
   try{
     if(!connectInstance){
@@ -59,7 +62,15 @@ async function openEmbeddedStripe(){
     $('#connectionStatus').className='status-pill attention';
     status.hidden=false;
     status.textContent=error?.context?.body?.error||error?.message||'Secure Stripe payout management is not available yet.';
+  }finally{
+    openButton.disabled=false;
   }
+}
+
+function closeEmbeddedStripe(){
+  $('#embeddedStripe').hidden=true;
+  document.body.classList.remove('payout-modal-open');
+  $('#openPayoutForm').focus();
 }
 
 async function initialize(){
@@ -72,10 +83,11 @@ async function initialize(){
   const connectResult=params.get('connect');
   const connectReason=params.get('reason');
   if(connectResult==='error'||connectResult==='cancelled'){
-    $('#embeddedStripe').hidden=false;
+    $('#connectionStatus').textContent='Action Required';
+    $('#connectionStatus').className='status-pill attention';
     $('#embeddedStripeStatus').textContent=connectReason||'Stripe authorization was not completed.';
-  }else{
-    await openEmbeddedStripe();
   }
+  $('#openPayoutForm').addEventListener('click',openEmbeddedStripe);
+  $('#closePayoutForm').addEventListener('click',closeEmbeddedStripe);
 }
 initialize().catch(error=>{$('#ownerStatus').textContent=error.message||'Payment setup could not load.';});

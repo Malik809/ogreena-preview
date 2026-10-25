@@ -25,9 +25,16 @@
 .verification-body{padding:24px}
 .verification-body>div>h2{margin:0;color:#163e2d}
 .verification-body>div>p:last-child{line-height:1.55}
+.payout-action{padding:4px 0 8px}
+.payout-action h2{margin:0;color:#163e2d;font-size:1.45rem}
+.payout-action>p:not(.eyebrow){margin:12px 0 20px;color:#576a60;line-height:1.55}
+.payout-action .small-btn{width:100%}
 .step-kicker{margin:0 0 10px;color:#98751d;font-weight:900}
 .account-type-line{margin:18px 0;padding:12px 14px;border-left:3px solid #d8b54e;background:#f3eedf;color:#364c41;font-weight:700}
-.embedded-stripe{margin:20px -8px 24px;padding:18px;border:1px solid #d8b54e;border-radius:8px;background:#fff}
+.embedded-stripe{position:fixed;inset:20px;z-index:1001;width:min(760px,calc(100% - 40px));max-height:calc(100vh - 40px);margin:auto;padding:18px;overflow:auto;border:1px solid #d8b54e;border-radius:12px;background:#fff;box-shadow:0 30px 100px rgba(0,0,0,.65)}
+.embedded-stripe[hidden]{display:none}
+.payout-modal-open{overflow:hidden}
+.payout-modal-open::before{content:"";position:fixed;inset:0;z-index:1000;background:rgba(2,15,10,.82);backdrop-filter:blur(3px)}
 .embedded-stripe-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid #ece5cf}
 .embedded-stripe-head h2{margin:0;color:#163e2d;font-size:1.45rem}
 .embedded-stripe .eyebrow{color:#0f6943}
@@ -44,12 +51,12 @@
 .setup-status strong{text-align:right}
 .bank-destination{font-weight:800}
 .verification-actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:20px}
-.verification-actions .small-btn{display:flex;align-items:center;justify-content:center;min-height:48px;padding:11px 14px;border:1px solid #176943;border-radius:7px;background:#fff;color:#145d3e;font-weight:900;text-align:center;text-decoration:none}
-.verification-actions .small-btn.primary{background:#0f6943;color:#fff}
-.verification-actions .small-btn:hover,.verification-actions .small-btn:focus{filter:brightness(.96)}
+.verification-actions .small-btn,.payout-action .small-btn,.embedded-stripe-head .small-btn{display:flex;align-items:center;justify-content:center;min-height:48px;padding:11px 14px;border:1px solid #176943;border-radius:7px;background:#fff;color:#145d3e;font:inherit;font-weight:900;text-align:center;text-decoration:none;cursor:pointer}
+.verification-actions .small-btn.primary,.payout-action .small-btn.primary{background:#0f6943;color:#fff}
+.verification-actions .small-btn:hover,.verification-actions .small-btn:focus,.payout-action .small-btn:hover,.payout-action .small-btn:focus,.embedded-stripe-head .small-btn:hover,.embedded-stripe-head .small-btn:focus{filter:brightness(.96)}
 .security-note{margin-top:20px;padding:16px;border-left:4px solid #d8b54e;background:#fff6da;color:#4c3a09;line-height:1.55}
 .secure-footer{margin:24px 0 0;color:#576a60;font-size:.92rem;line-height:1.55}
 .muted{color:#66756d}
 .verification-card code{overflow-wrap:anywhere}
 .small-btn:disabled{cursor:wait;opacity:.62}
-@media(max-width:620px){.verification-shell{width:min(100% - 24px,650px);padding-top:14px}.page-brand .wordmark span{display:none}.page-brand .wordmark img{width:44px;height:44px}.back-link{font-size:.94rem}.page-intro{padding-top:30px}.verification-shell h1{font-size:3.05rem}.lead{font-size:1.05rem;line-height:1.6}.setup-steps li{min-height:76px;padding:0 17px}.verification-card-head,.embedded-stripe-head{display:block}.status-pill{display:inline-block;margin-top:18px}.verification-card-head,.verification-body{padding:20px}.embedded-stripe{margin:18px -6px 22px;padding:14px}.embedded-stripe-head .small-btn{width:100%;margin-top:14px}.component-tabs{grid-template-columns:1fr}.setup-status div{display:grid;gap:5px}.setup-status strong{text-align:left}.privacy-copy{font-size:1rem}}
+@media(max-width:620px){.verification-shell{width:min(100% - 24px,650px);padding-top:14px}.page-brand .wordmark span{display:none}.page-brand .wordmark img{width:44px;height:44px}.back-link{font-size:.94rem}.page-intro{padding-top:30px}.verification-shell h1{font-size:3.05rem}.lead{font-size:1.05rem;line-height:1.6}.setup-steps li{min-height:76px;padding:0 17px}.verification-card-head,.embedded-stripe-head{display:block}.status-pill{display:inline-block;margin-top:18px}.verification-card-head,.verification-body{padding:20px}.embedded-stripe{inset:8px;width:calc(100% - 16px);max-height:calc(100vh - 16px);padding:14px}.embedded-stripe-head .small-btn{width:100%;margin-top:14px}.component-tabs{grid-template-columns:1fr}.setup-status div{display:grid;gap:5px}.setup-status strong{text-align:left}.privacy-copy{font-size:1rem}}

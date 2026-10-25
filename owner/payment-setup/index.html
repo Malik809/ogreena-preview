@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../../styles.css">
   <link rel="stylesheet" href="../../brand.css">
   <link rel="stylesheet" href="../owner.css">
-  <link rel="stylesheet" href="payment-setup.css?v=2">
+  <link rel="stylesheet" href="payment-setup.css?v=3">
 </head>
 <body class="payment-verification">
   <main class="verification-shell">
@@ -20,10 +20,16 @@
       <ol class="setup-steps" aria-label="Payout setup steps"><li><b>1</b><span>Verify Your Identity</span></li><li><b>2</b><span>Add Bank Account or Debit Card</span></li><li><b>3</b><span>Finish Payout Setup</span></li></ol>
       <p class="privacy-copy">Stripe securely handles identity and payout details. Ogreena never sees or stores full bank, routing, debit-card, Social Security, EIN, or identity-document information.</p>
       <section class="verification-card">
-        <div class="verification-card-head"><div><p class="eyebrow">OGREENA PAYOUT VERIFICATION</p><h2>Securely powered by Stripe</h2><p class="save-later">Save &amp; return later</p></div><span class="status-pill" id="connectionStatus">Opening secure form…</span></div>
+        <div class="verification-card-head"><div><p class="eyebrow">OGREENA PAYOUT VERIFICATION</p><h2>Securely powered by Stripe</h2><p class="save-later">Save &amp; return later</p></div><span class="status-pill good" id="connectionStatus">Secure Stripe form</span></div>
         <div class="verification-body">
-          <section class="embedded-stripe payout-only" id="embeddedStripe" aria-live="polite">
-            <div class="embedded-stripe-head"><div><p class="eyebrow">STRIPE-SECURED PAYOUT DETAILS</p><h2>Add Bank Account or Debit Card</h2></div></div>
+          <div class="payout-action">
+            <p class="eyebrow">STRIPE-SECURED PAYOUT DETAILS</p>
+            <h2>Add Bank Account or Debit Card</h2>
+            <p>Open Stripe’s secure controls to add, edit, or replace an eligible payout bank account or debit card.</p>
+            <button class="small-btn primary" id="openPayoutForm" type="button">Add or Manage Bank Account / Debit Card</button>
+          </div>
+          <section class="embedded-stripe payout-only" id="embeddedStripe" aria-live="polite" hidden>
+            <div class="embedded-stripe-head"><div><p class="eyebrow">STRIPE-SECURED PAYOUT DETAILS</p><h2>Add Bank Account or Debit Card</h2></div><button class="small-btn" id="closePayoutForm" type="button">Close</button></div>
             <p id="embeddedStripeStatus">Opening Stripe’s secure payout form…</p>
             <div id="stripeNotificationBanner"></div>
             <div id="stripePayoutDetails"></div>
@@ -34,5 +40,5 @@
       </section>
     </section>
   </main>
-  <script type="module" src="payment-setup.js?v=17"></script>
+  <script type="module" src="payment-setup.js?v=18"></script>
 </body></html>
