@@ -44,11 +44,20 @@ Deno.serve(async request => {
       },
     });
 
+    const accountManagement = accountSession.components?.account_management;
+    if (!accountManagement?.enabled) {
+      return Response.json({
+        error: 'Stripe did not enable embedded account management for this connected account configuration',
+        platformAccountId: PLATFORM_ACCOUNT_ID,
+      }, { status: 409, headers });
+    }
+
     return Response.json({
       accountId: account.id,
       clientSecret: accountSession.client_secret,
       expiresAt: accountSession.expires_at,
       livemode: accountSession.livemode,
+      accountManagementEnabled: true,
       platformAccountId: PLATFORM_ACCOUNT_ID,
       publishableKey,
     }, { headers });

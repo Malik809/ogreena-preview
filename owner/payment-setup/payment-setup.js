@@ -25,6 +25,7 @@ async function openEmbeddedStripe(){
       const sessionData=result.data;
       if(!/^acct_[A-Za-z0-9]+$/.test(sessionData.accountId||''))throw new Error('Stripe returned an invalid connected account.');
       if(sessionData.livemode!==true)throw new Error('Live Stripe account management is not available.');
+      if(sessionData.accountManagementEnabled!==true)throw new Error('Stripe did not enable bank management for this account.');
       if(sessionData.platformAccountId!==CONNECT_PLATFORM_ACCOUNT)throw new Error('Stripe Connect platform mismatch.');
       if(sessionData.accountId!==LIVE_MERCHANT_ACCOUNT)throw new Error('Ogreena merchant account mismatch.');
       let firstClientSecret=sessionData.clientSecret;
@@ -35,7 +36,7 @@ async function openEmbeddedStripe(){
           const refresh=await supabase.functions.invoke(SESSION_FUNCTION);
           if(refresh.error)throw refresh.error;
           if(refresh.data.accountId!==sessionData.accountId)throw new Error('Stripe connected account ownership changed during this session.');
-          if(refresh.data.livemode!==true||refresh.data.platformAccountId!==CONNECT_PLATFORM_ACCOUNT)throw new Error('Stripe live session validation failed.');
+          if(refresh.data.livemode!==true||refresh.data.accountManagementEnabled!==true||refresh.data.platformAccountId!==CONNECT_PLATFORM_ACCOUNT)throw new Error('Stripe live session validation failed.');
           return refresh.data.clientSecret;
         },
         appearance:{overlays:'dialog',variables:{colorPrimary:'#0f6943',colorBackground:'#fffdf6',colorText:'#163e2d',borderRadius:'12px'}},
