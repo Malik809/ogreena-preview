@@ -75,9 +75,15 @@ async function loadServices() {
 
 const priceCategoryOptions = Object.entries(window.OgreenaServiceCatalog.categoryNames)
   .map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
+const pricePageOptions = [
+  ['carpet-cleaning','Carpet Cleaning'], ['house-cleaning','House Cleaning'],
+  ['deep-cleaning','Deep Cleaning'], ['window-cleaning','Window Cleaning'],
+  ['mattress-cleaning','Mattress Cleaning'], ['upholstery-cleaning','Upholstery Cleaning'],
+  ['tile-grout-cleaning','Tile & Grout Cleaning'], ['floor-polishing','Floor Polishing']
+].map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
 
 function priceRow(item) {
-  return `<form class="editor-row price-editor" data-price-item="${escapeHtml(item.id)}"><label>Category<select name="category">${priceCategoryOptions}</select></label><label>Service name<input name="name" value="${escapeHtml(item.name)}" required maxlength="150"></label><label>Price<input name="price" type="number" min="0" step="0.01" value="${(item.price_cents / 100).toFixed(2)}" required></label><label>Pricing<select name="pricing_type"><option value="fixed" ${item.pricing_type === 'fixed' ? 'selected' : ''}>Fixed price</option><option value="per_unit" ${item.pricing_type === 'per_unit' ? 'selected' : ''}>Per unit</option></select></label><label>Unit<input name="unit_label" value="${escapeHtml(item.unit_label || '')}" placeholder="per sq. ft. or each"></label><label>Order<input name="display_order" type="number" min="0" value="${Number(item.display_order) || 0}"></label><label>Published<select name="active"><option value="true" ${item.active ? 'selected' : ''}>Yes</option><option value="false" ${!item.active ? 'selected' : ''}>No</option></select></label><div class="editor-actions"><button class="small-btn primary" type="submit">Save Price</button><button class="small-btn danger" type="button" data-remove-price>Remove</button></div></form>`;
+  return `<form class="editor-row price-editor" data-price-item="${escapeHtml(item.id)}"><label>Category<select name="category">${priceCategoryOptions}</select></label><label>Public service page<select name="service_slug">${pricePageOptions}</select></label><label>Service name<input name="name" value="${escapeHtml(item.name)}" required maxlength="150"></label><label>Price<input name="price" type="number" min="0" step="0.01" value="${(item.price_cents / 100).toFixed(2)}" required></label><label>Pricing<select name="pricing_type"><option value="fixed" ${item.pricing_type === 'fixed' ? 'selected' : ''}>Fixed price</option><option value="per_unit" ${item.pricing_type === 'per_unit' ? 'selected' : ''}>Per unit</option></select></label><label>Unit<input name="unit_label" value="${escapeHtml(item.unit_label || '')}" placeholder="per sq. ft. or each"></label><label>Order<input name="display_order" type="number" min="0" value="${Number(item.display_order) || 0}"></label><label>Published<select name="active"><option value="true" ${item.active ? 'selected' : ''}>Yes</option><option value="false" ${!item.active ? 'selected' : ''}>No</option></select></label><div class="editor-actions"><button class="small-btn primary" type="submit">Save Price</button><button class="small-btn danger" type="button" data-remove-price>Remove</button></div></form>`;
 }
 
 async function loadServicePrices() {
@@ -91,9 +97,10 @@ async function loadServicePrices() {
   $('#servicePriceList').querySelectorAll('[data-price-item]').forEach(form => {
     const item = (result.data || []).find(row => row.id === form.dataset.priceItem);
     form.querySelector('[name="category"]').value = item.category;
+    form.querySelector('[name="service_slug"]').value = item.service_slug;
     form.addEventListener('submit', event => { event.preventDefault(); run('Saving service price', async () => {
       const values = new FormData(form);
-      requireOk(await supabase.from('service_price_items').update({ category:values.get('category'), name:values.get('name').trim(), price_cents:Math.round(Number(values.get('price')) * 100), pricing_type:values.get('pricing_type'), unit_label:values.get('unit_label').trim(), display_order:Number(values.get('display_order')) || 0, active:values.get('active') === 'true', updated_at:new Date().toISOString() }).eq('id', form.dataset.priceItem));
+      requireOk(await supabase.from('service_price_items').update({ category:values.get('category'), service_slug:values.get('service_slug'), name:values.get('name').trim(), price_cents:Math.round(Number(values.get('price')) * 100), pricing_type:values.get('pricing_type'), unit_label:values.get('unit_label').trim(), display_order:Number(values.get('display_order')) || 0, active:values.get('active') === 'true', updated_at:new Date().toISOString() }).eq('id', form.dataset.priceItem));
       await loadServicePrices();
     }); });
     form.querySelector('[data-remove-price]').addEventListener('click', () => { if (confirm('Hide this price from customers? Past requests will remain intact.')) run('Removing service price', async () => { requireOk(await supabase.from('service_price_items').update({ active:false, updated_at:new Date().toISOString() }).eq('id',form.dataset.priceItem)); await loadServicePrices(); }); });
@@ -104,9 +111,11 @@ $('#newPriceItem').addEventListener('click', () => {
   const name = prompt('Service price name'); if (!name) return;
   const category = prompt('Category: carpet-cleaning, housekeeping, mattress-cleaning, upholstery-cleaning, or floor-cleaning', 'carpet-cleaning');
   if (!window.OgreenaServiceCatalog.categoryNames[category]) return setStatus('Choose a valid service-price category', true);
+  const serviceSlug = prompt('Public service page: carpet-cleaning, house-cleaning, deep-cleaning, window-cleaning, mattress-cleaning, upholstery-cleaning, tile-grout-cleaning, or floor-polishing', category === 'housekeeping' ? 'house-cleaning' : category);
+  if (!['carpet-cleaning','house-cleaning','deep-cleaning','window-cleaning','mattress-cleaning','upholstery-cleaning','tile-grout-cleaning','floor-polishing'].includes(serviceSlug)) return setStatus('Choose a valid public service page', true);
   const price = prompt('Price in dollars', '0'); if (price === null || !Number.isFinite(Number(price)) || Number(price) < 0) return;
   const id = `${category}-${name.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}-${Date.now()}`;
-  run('Adding service price', async () => { requireOk(await supabase.from('service_price_items').insert({ id, category, service_slug:category, name:name.trim(), price_cents:Math.round(Number(price) * 100), pricing_type:'fixed', unit_label:'', active:true, display_order:999 })); await loadServicePrices(); });
+  run('Adding service price', async () => { requireOk(await supabase.from('service_price_items').insert({ id, category, service_slug:serviceSlug, name:name.trim(), price_cents:Math.round(Number(price) * 100), pricing_type:'fixed', unit_label:'', active:true, display_order:999 })); await loadServicePrices(); });
 });
 
 async function addService() {

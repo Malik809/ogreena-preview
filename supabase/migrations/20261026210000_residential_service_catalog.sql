@@ -20,23 +20,28 @@ revoke all on table public.service_price_items from anon, authenticated;
 grant select on table public.service_price_items to anon, authenticated;
 grant insert, update, delete on table public.service_price_items to authenticated;
 
+drop policy if exists service_price_items_public_read_active on public.service_price_items;
 create policy service_price_items_public_read_active
 on public.service_price_items for select to anon, authenticated
 using (active);
 
+drop policy if exists service_price_items_owner_read_all on public.service_price_items;
 create policy service_price_items_owner_read_all
 on public.service_price_items for select to authenticated
 using ((select public.is_ogreena_owner()));
 
+drop policy if exists service_price_items_owner_insert on public.service_price_items;
 create policy service_price_items_owner_insert
 on public.service_price_items for insert to authenticated
 with check ((select public.is_ogreena_owner()));
 
+drop policy if exists service_price_items_owner_update on public.service_price_items;
 create policy service_price_items_owner_update
 on public.service_price_items for update to authenticated
 using ((select public.is_ogreena_owner()))
 with check ((select public.is_ogreena_owner()));
 
+drop policy if exists service_price_items_owner_delete on public.service_price_items;
 create policy service_price_items_owner_delete
 on public.service_price_items for delete to authenticated
 using ((select public.is_ogreena_owner()));

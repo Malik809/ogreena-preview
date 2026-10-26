@@ -29,8 +29,11 @@ assert.match(authHtml, /Submitting does not create an invoice|owner approval/i);
 const owner = fs.readFileSync(path.join(root, 'owner/owner.js'), 'utf8');
 assert.match(owner, /approved_quantity/);
 assert.match(owner, /service_price_items/);
+assert.match(owner, /Public service page/);
+assert.match(owner, /service_slug:values\.get\('service_slug'\)/);
 const migration = fs.readFileSync(path.join(root, 'supabase/migrations/20261026210000_residential_service_catalog.sql'), 'utf8');
 assert.match(migration, /enable row level security/);
 assert.match(migration, /service_price_items_owner_update/);
+assert.match(migration, /drop policy if exists service_price_items_owner_update/);
 
 console.log('service catalog: 36 exact prices, request-only flow, owner editing, and RLS checks PASS');
