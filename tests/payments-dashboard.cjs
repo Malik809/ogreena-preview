@@ -21,12 +21,16 @@ expect(ownerHtml, 'data-payment-view="product">Product Sales', 'product reportin
 expect(ownerHtml, 'data-payment-view="service">Service Payments', 'service reporting tab');
 expect(ownerHtml, 'Public checkout stays disabled', 'payment safety notice');
 expect(ownerHtml, '>Add Bank Account or Debit Card</button>', 'single payout action');
+expect(ownerHtml, 'Replacement-candidate Stripe account', 'replacement consent card');
+expect(ownerHtml, 'Recording consent does not create an account', 'consent safety notice');
 expect(ownerJs, "const OGREENA_LIVE_MERCHANT = 'acct_1UTpIlI19b4U0AqM'", 'merchant routing check');
 expect(ownerJs, 'product_payments_enabled', 'product payment gate');
 expect(ownerJs, 'service_payments_enabled', 'service payment gate');
 expect(ownerJs, 'live_activation_approved', 'live activation gate');
 expect(ownerJs, "supabase.functions.invoke('create-refund'", 'authorized refund integration');
 expect(ownerJs, "body:{ statusOnly:true }", 'owner payout status request');
+expect(ownerJs, "from('ogreena_replacement_connect_consents')", 'replacement consent storage');
+expect(ownerJs, "terms_version:'ogreena-replacement-live-v1'", 'versioned owner consent');
 expect(connectSession, 'external_accounts?.data.find', 'Stripe-confirmed payout destination check');
 expect(connectSession, 'informationRequired', 'Stripe requirement status');
 expect(connectSession, 'accountManagementEnabled: true', 'Stripe account-management component');
