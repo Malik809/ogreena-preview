@@ -4,6 +4,38 @@ import { corsHeaders, requireOwner } from '../_shared/owner.ts';
 
 const EXISTING_MERCHANT = 'acct_1UTpIlI19b4U0AqM';
 const CONSENT_VERSION = 'ogreena-replacement-live-v1';
+const MAX_REAUTH_AGE_SECONDS = 5 * 60;
+
+function decodeJwtPayload(request: Request) {
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const encoded = token.split('.')[1];
+  if (!encoded) throw new Error('Fresh owner authentication is required');
+  try {
+    const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return JSON.parse(atob(padded));
+  } catch {
+    throw new Error('Fresh owner authentication is required');
+  }
+}
+
+function requireFreshPasswordAuthentication(request: Request, userId: string) {
+  // requireOwner() cryptographically verifies the JWT with Supabase before this
+  // decoded payload is consulted. The AMR timestamp survives ordinary token
+  // refreshes, so a refreshed session cannot masquerade as fresh authentication.
+  const claims = decodeJwtPayload(request);
+  const now = Math.floor(Date.now() / 1000);
+  const passwordAuth = Array.isArray(claims.amr)
+    ? claims.amr.filter((entry: { method?: string; timestamp?: number }) => entry?.method === 'password')
+      .sort((a: { timestamp?: number }, b: { timestamp?: number }) => Number(b.timestamp || 0) - Number(a.timestamp || 0))[0]
+    : null;
+  const authenticatedAt = Number(passwordAuth?.timestamp || 0);
+  if (claims.sub !== userId || claims.is_anonymous === true || !claims.session_id ||
+      !authenticatedAt || authenticatedAt > now + 30 || now - authenticatedAt > MAX_REAUTH_AGE_SECONDS) {
+    throw new Error('Re-enter your Ogreena password to start secure Stripe onboarding');
+  }
+}
 
 Deno.serve(async request => {
   const headers = {
@@ -16,6 +48,7 @@ Deno.serve(async request => {
 
   try {
     const { user } = await requireOwner(request);
+    requireFreshPasswordAuthentication(request, user.id);
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -84,7 +117,13 @@ Deno.serve(async request => {
     const accountSession = await stripe.accountSessions.create({
       account:accountId,
       components:{
-        account_onboarding:{ enabled:true, features:{ external_account_collection:true } },
+        account_onboarding:{
+          enabled:true,
+          features:{
+            external_account_collection:true,
+            disable_stripe_user_authentication:true,
+          },
+        },
         notification_banner:{ enabled:true },
       },
     });

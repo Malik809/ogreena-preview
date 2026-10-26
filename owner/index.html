@@ -36,9 +36,18 @@
       <div id="replacementStripeOnboarding"></div>
     </section>
   </article>
+  <dialog id="replacementReauthDialog" class="owner-reauth-dialog" aria-labelledby="replacementReauthTitle">
+    <form id="replacementReauthForm" method="dialog" class="owner-form">
+      <h3 id="replacementReauthTitle">Confirm it’s you</h3>
+      <p>Re-enter your Ogreena password. This fresh verification is required before Ogreena can open Stripe’s secure embedded onboarding.</p>
+      <label>Ogreena account password<input id="replacementReauthPassword" type="password" autocomplete="current-password" required></label>
+      <p class="muted" id="replacementReauthStatus" role="status" aria-live="polite"></p>
+      <div class="reauth-actions"><button class="small-btn" id="cancelReplacementReauth" type="button">Cancel</button><button class="small-btn primary" type="submit">Verify and Continue</button></div>
+    </form>
+  </dialog>
   <article class="card payment-history-card">
     <div class="content-head"><div><h3>Transaction history</h3><p class="muted">Amounts and statuses come from Ogreena’s signed Stripe webhook records.</p></div><div class="payment-history-tabs" role="tablist" aria-label="Payment history type"><button class="small-btn active" type="button" role="tab" aria-selected="true" data-payment-view="product">Product Sales</button><button class="small-btn" type="button" role="tab" aria-selected="false" data-payment-view="service">Service Payments</button></div></div>
     <div id="paymentTransactions"><p class="empty-state">Loading payment activity…</p></div>
   </article>
 </section>
-</section></main><script src="../vendor/supabase-2.57.4.min.js"></script><script src="owner.js?v=19"></script></body></html>
+</section></main><script src="../vendor/supabase-2.57.4.min.js"></script><script src="owner.js?v=20"></script></body></html>

@@ -236,7 +236,7 @@ $('#recordReplacementConsent')?.addEventListener('click',()=>run('Recording repl
   }));
   await loadPayments();
 }));
-$('#startReplacementOnboarding')?.addEventListener('click',async()=>{
+async function openReplacementOnboarding(){
   const button = $('#startReplacementOnboarding');
   button.disabled = true;
   $('#replacementOnboardingPanel').hidden = false;
@@ -269,6 +269,36 @@ $('#startReplacementOnboarding')?.addEventListener('click',async()=>{
     $('#replacementOnboardingStatus').textContent = error.message || 'The secure Stripe onboarding form could not be opened.';
   } finally {
     button.disabled = false;
+  }
+}
+$('#startReplacementOnboarding')?.addEventListener('click',()=>{
+  const dialog = $('#replacementReauthDialog');
+  $('#replacementReauthPassword').value = '';
+  $('#replacementReauthStatus').textContent = '';
+  dialog.showModal();
+  $('#replacementReauthPassword').focus();
+});
+$('#cancelReplacementReauth')?.addEventListener('click',()=>$('#replacementReauthDialog').close());
+$('#replacementReauthForm')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const password = $('#replacementReauthPassword').value;
+  const status = $('#replacementReauthStatus');
+  const submit = event.currentTarget.querySelector('[type="submit"]');
+  submit.disabled = true;
+  status.textContent = 'Verifying your Ogreena account…';
+  try {
+    const { data:{ user }, error:userError } = await supabase.auth.getUser();
+    if (userError || !user?.email) throw new Error('Sign in to your authorized owner account again.');
+    const { data, error } = await supabase.auth.signInWithPassword({ email:user.email, password });
+    if (error || data.user?.id !== user.id) throw new Error('The password did not verify the authorized owner account.');
+    $('#replacementReauthPassword').value = '';
+    $('#replacementReauthDialog').close();
+    await openReplacementOnboarding();
+  } catch (error) {
+    status.textContent = error.message || 'Owner reauthentication failed.';
+  } finally {
+    $('#replacementReauthPassword').value = '';
+    submit.disabled = false;
   }
 });
 document.querySelectorAll('[data-stripe-path]').forEach(button => button.addEventListener('click', () => {
