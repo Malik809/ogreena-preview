@@ -1,0 +1,3 @@
+.service-return-row{display:flex;align-items:center;margin:0 0 12px}
+.service-return-row .small-btn{background:#fff;border-color:#b8cbbf;color:#124d35}
+@media(max-width:800px){.service-return-row{margin:0 0 10px}.service-return-row .small-btn{min-height:42px;display:inline-flex;align-items:center}}

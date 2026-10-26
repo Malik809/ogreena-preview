@@ -2,6 +2,7 @@ const { createClient } = window.supabase;
 const safariSafeAuthLock = async (_name, _acquireTimeout, callback) => callback();
 const SUPABASE_URL = 'https://mhhjzifeaofgskimvuom.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM';
+const SITE_ROOT = location.hostname.endsWith('.github.io') ? '/ogreena-preview/' : '/';
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: 'ogreena-auth-session', lock: safariSafeAuthLock }
 });
@@ -16,6 +17,7 @@ const storedSession = (() => {
 
 function setVisible(element, visible) {
   if (!element) return;
+  element.dataset.authVisible = String(visible);
   element.hidden = !visible;
   element.style.display = visible ? '' : 'none';
 }
@@ -28,6 +30,8 @@ async function renderAccountNavigation(session) {
   if (!signedIn) return;
   const { data } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
   const role = data?.role || 'customer';
+  document.querySelectorAll('[data-auth-profile]').forEach(element => { element.href = `${SITE_ROOT}customer/`; });
+  document.querySelectorAll('[data-auth-employee]').forEach(element => { element.href = `${SITE_ROOT}employee/`; });
   document.querySelectorAll('[data-auth-owner]').forEach(element => setVisible(element, role === 'owner'));
   document.querySelectorAll('[data-auth-employee]').forEach(element => setVisible(element, role === 'employee'));
 }
@@ -36,7 +40,7 @@ document.querySelectorAll('[data-auth-signout]').forEach(element => {
   element.addEventListener('click', async event => {
     event.preventDefault();
     const { error } = await supabase.auth.signOut();
-    if (!error) location.href = '/';
+    if (!error) location.href = SITE_ROOT;
   });
 });
 

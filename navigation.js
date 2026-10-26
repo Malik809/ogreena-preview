@@ -2,6 +2,13 @@
   const siteRoot = location.hostname.endsWith('.github.io') ? '/ogreena-preview/' : '/';
   const topbar = document.querySelector('.topbar');
   if (!topbar) return;
+  if (!document.querySelector('link[data-navigation-extras]')) {
+    const navigationStyles = document.createElement('link');
+    navigationStyles.rel = 'stylesheet';
+    navigationStyles.href = `${siteRoot}navigation-extras.css?v=1`;
+    navigationStyles.dataset.navigationExtras = '';
+    document.head.append(navigationStyles);
+  }
   const button = document.createElement('button');
   button.className = 'menu-toggle';
   button.type = 'button';
@@ -10,6 +17,42 @@
   button.innerHTML = '<span></span><span></span><span></span>';
   topbar.prepend(button);
 
+  const topActions = topbar.querySelector('.top-actions') || (() => {
+    const holder = document.createElement('div');
+    holder.className = 'top-actions';
+    topbar.append(holder);
+    return holder;
+  })();
+  if (!topActions.querySelector('[data-auth-guest][href*="signin"]')) {
+    const signIn = document.createElement('a');
+    signIn.className = 'small-btn hide-mobile';
+    signIn.dataset.authGuest = '';
+    signIn.href = `${siteRoot}auth/?mode=signin`;
+    signIn.textContent = 'Sign In';
+    topActions.prepend(signIn);
+  }
+  if (!topActions.querySelector('[data-auth-profile]')) {
+    const profile = document.createElement('a');
+    profile.className = 'small-btn hide-mobile';
+    profile.dataset.authProfile = '';
+    profile.href = `${siteRoot}customer/`;
+    profile.textContent = 'My Profile';
+    profile.hidden = true;
+    topActions.prepend(profile);
+  }
+  document.querySelectorAll('[data-auth-profile]').forEach(link => { link.href = `${siteRoot}customer/`; });
+  document.querySelectorAll('[data-auth-employee]').forEach(link => { link.href = `${siteRoot}employee/`; });
+
+  if (document.body.dataset.service) {
+    const serviceMain = document.querySelector('main.service-profile');
+    if (serviceMain && !serviceMain.querySelector('[data-back-ogreena]')) {
+      const returnRow = document.createElement('div');
+      returnRow.className = 'service-return-row';
+      returnRow.innerHTML = `<a class="small-btn" data-back-ogreena href="${siteRoot}">← Back to Ogreena</a>`;
+      serviceMain.prepend(returnRow);
+    }
+  }
+
   const drawer = document.createElement('aside');
   drawer.className = 'site-menu';
   drawer.setAttribute('aria-hidden', 'true');
@@ -17,9 +60,9 @@
     <div class="menu-search"><span>⌕</span><input type="search" aria-label="Search navigation" placeholder="Search services and pages…"><button type="button" aria-label="Clear navigation search" hidden>Clear</button></div>
     <nav aria-label="Ogreena navigation" class="menu-link-list">
       <a data-menu-search="home main ogreena profile" href="${siteRoot}">Home / Main Ogreena Profile</a>
-      <a class="menu-featured" data-auth-profile data-menu-search="my profile account requests appointments" href="${siteRoot}auth/" hidden>My Profile</a>
+      <a class="menu-featured" data-auth-profile data-menu-search="my profile account requests appointments" href="${siteRoot}customer/" hidden>My Profile</a>
       <a class="menu-featured" data-auth-owner data-menu-search="owner dashboard business account" href="${siteRoot}owner/" hidden>Owner Dashboard</a>
-      <a class="menu-featured" data-auth-employee data-menu-search="employee dashboard jobs schedule" href="${siteRoot}auth/" hidden>Employee Dashboard</a>
+      <a class="menu-featured" data-auth-employee data-menu-search="employee dashboard jobs schedule" href="${siteRoot}employee/" hidden>Employee Dashboard</a>
       <a data-menu-search="about us company" href="${siteRoot}#about">About Us</a>
       <a data-menu-search="residential services house cleaning carpet deep move in move out upholstery windows pressure washing" href="${siteRoot}#services">Residential Services</a>
       <a data-menu-search="commercial services cleaning janitorial facilities business" href="${siteRoot}services/commercial-cleaning/">Commercial Services</a>
@@ -52,7 +95,13 @@
   const filterLinks = () => {
     const query = search.value.trim().toLowerCase();
     let matches = 0;
-    links.forEach(link => { const visible = !query || `${link.textContent} ${link.dataset.menuSearch}`.toLowerCase().includes(query); link.hidden = !visible; if (visible) matches += 1; });
+    links.forEach(link => {
+      const searchMatch = !query || `${link.textContent} ${link.dataset.menuSearch}`.toLowerCase().includes(query);
+      const protectedLink = link.matches('[data-auth-profile],[data-auth-owner],[data-auth-employee],[data-auth-signout]');
+      const visible = searchMatch && (!protectedLink || link.dataset.authVisible === 'true');
+      link.hidden = !visible;
+      if (visible) matches += 1;
+    });
     clearSearch.hidden = !query; noResults.hidden = matches > 0;
   };
   search.addEventListener('input', filterLinks);
@@ -63,4 +112,20 @@
     topSearch.addEventListener('click', () => open(true));
     topSearch.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(true); } });
   }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const loadAccountNavigation = () => {
+      if ([...document.scripts].some(script => script.src.includes('owner-auth-nav.js'))) return;
+      const authScript = document.createElement('script');
+      authScript.src = `${siteRoot}owner-auth-nav.js?v=3`;
+      document.body.append(authScript);
+    };
+    if (window.supabase) loadAccountNavigation();
+    else {
+      const library = document.createElement('script');
+      library.src = `${siteRoot}vendor/supabase-2.57.4.min.js`;
+      library.addEventListener('load', loadAccountNavigation, { once:true });
+      document.body.append(library);
+    }
+  }, { once:true });
 }());

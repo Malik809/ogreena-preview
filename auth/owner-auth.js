@@ -126,6 +126,12 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
       location.replace('../employee/');
       return;
     }
+    const [applicationResult, employeeRequestResult] = await Promise.all([
+      supabase.from('job_applications').select('status').eq('user_id', user.id).maybeSingle(),
+      supabase.from('employee_access_requests').select('status').eq('user_id', user.id).maybeSingle()
+    ]);
+    if (applicationResult.data) { location.replace('../careers-account/?type=applicant&mode=signin'); return; }
+    if (employeeRequestResult.data) { location.replace('../careers-account/?type=employee&mode=signin'); return; }
     setStatus('Signed in.', 'success');
   });
 });
@@ -220,6 +226,20 @@ async function loadRequests(userId) {
   list.querySelectorAll('[data-pay-estimate]').forEach(button=>button.addEventListener('click',()=>startCheckout({kind:'invoice',estimateId:button.dataset.payEstimate})));
 }
 
+async function loadCustomerActivity(userId) {
+  const [appointmentsResult, messagesResult, historyResult] = await Promise.all([
+    supabase.from('appointments').select('id,starts_at,ends_at,status,request_id').eq('customer_id', userId).order('starts_at', { ascending:false }),
+    supabase.from('messages').select('id,body,created_at,sender_id,recipient_id,request_id').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending:false }).limit(25),
+    supabase.from('service_requests').select('id,service_slug,summary,status,updated_at').eq('customer_id', userId).in('status', ['completed','cancelled']).order('updated_at', { ascending:false })
+  ]);
+  const appointments = document.querySelector('#customerAppointments');
+  const messages = document.querySelector('#customerMessages');
+  const history = document.querySelector('#customerHistory');
+  appointments.innerHTML = appointmentsResult.error ? `<p class="muted">${escapeHTML(friendlyError(appointmentsResult.error))}</p>` : (appointmentsResult.data?.length ? appointmentsResult.data.map(item => `<div class="request-item"><b>${escapeHTML(new Date(item.starts_at).toLocaleString())}</b><span>${escapeHTML(item.status)}${item.ends_at ? ` · ends ${escapeHTML(new Date(item.ends_at).toLocaleString())}` : ''}</span></div>`).join('') : '<p class="muted">No appointments scheduled.</p>');
+  messages.innerHTML = messagesResult.error ? `<p class="muted">${escapeHTML(friendlyError(messagesResult.error))}</p>` : (messagesResult.data?.length ? messagesResult.data.map(item => `<div class="request-item"><b>${item.sender_id === userId ? 'Sent' : 'Received'} · ${escapeHTML(new Date(item.created_at).toLocaleString())}</b><span>${escapeHTML(item.body)}</span></div>`).join('') : '<p class="muted">No messages yet.</p>');
+  history.innerHTML = historyResult.error ? `<p class="muted">${escapeHTML(friendlyError(historyResult.error))}</p>` : (historyResult.data?.length ? historyResult.data.map(item => `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(item.service_slug.replaceAll('-',' '))} · ${escapeHTML(item.status)} · ${escapeHTML(new Date(item.updated_at).toLocaleDateString())}</span></div>`).join('') : '<p class="muted">No completed or cancelled service history yet.</p>');
+}
+
 async function startCheckout(body) {
   const idempotencyKey = crypto.randomUUID();
   const { data, error } = await supabase.functions.invoke('create-checkout-session', { body:{...body,idempotencyKey} });
@@ -265,6 +285,12 @@ async function renderSession(session) {
     location.replace('../employee/');
     return;
   }
+  const [applicationResult, employeeRequestResult] = await Promise.all([
+    supabase.from('job_applications').select('status').eq('user_id', user.id).maybeSingle(),
+    supabase.from('employee_access_requests').select('status').eq('user_id', user.id).maybeSingle()
+  ]);
+  if (applicationResult.data) { location.replace('../careers-account/?type=applicant&mode=signin'); return; }
+  if (employeeRequestResult.data) { location.replace('../careers-account/?type=employee&mode=signin'); return; }
   document.querySelector('#roleBadge').textContent = role[0].toUpperCase() + role.slice(1);
   document.querySelector('#welcomeName').textContent = profile?.display_name ? `Welcome, ${profile.display_name}` : 'My Ogreena';
   document.querySelector('#accountEmail').textContent = user.email;
@@ -279,7 +305,7 @@ async function renderSession(session) {
     document.querySelector('#paymentState').textContent = data ? `Provider: ${data.provider}; payments enabled: ${data.payments_enabled ? 'yes' : 'no'}` : 'Payment settings unavailable.';
   }
   await loadServiceCatalog();
-  await Promise.all([loadProducts(), loadRequests(user.id)]);
+  await Promise.all([loadProducts(), loadRequests(user.id), loadCustomerActivity(user.id)]);
   if (role === 'owner' && !document.querySelector('#ownerPanel [data-owner-dashboard]')) {
     const link = document.createElement('a');
     link.className = 'small-btn primary'; link.href = '../owner/'; link.textContent = 'Open Owner Dashboard';

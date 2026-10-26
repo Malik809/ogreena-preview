@@ -11,11 +11,15 @@ const { data: { user } } = await supabase.auth.getUser();
 if (!user) {
   location.replace('../auth/?mode=signin');
 } else {
-  const { data } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single();
-
-  location.replace(data?.role === 'owner' ? '../owner/' : '../auth/');
+  const [roleResult, applicationResult, employeeRequestResult] = await Promise.all([
+    supabase.from('user_roles').select('role').eq('user_id', user.id).single(),
+    supabase.from('job_applications').select('status').eq('user_id', user.id).maybeSingle(),
+    supabase.from('employee_access_requests').select('status').eq('user_id', user.id).maybeSingle()
+  ]);
+  const role = roleResult.data?.role;
+  if (role === 'owner') location.replace('../owner/');
+  else if (role === 'employee') location.replace('../employee/');
+  else if (applicationResult.data) location.replace('../careers-account/?type=applicant&mode=signin');
+  else if (employeeRequestResult.data) location.replace('../careers-account/?type=employee&mode=signin');
+  else location.replace('../auth/');
 }
