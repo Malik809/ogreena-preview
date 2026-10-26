@@ -45,13 +45,13 @@ Deno.serve(async request => {
     let created = false;
     if (!accountId) {
       const account = await stripe.v2.core.accounts.create({
-        dashboard:'express',
+        dashboard:'full',
         identity:{ country:'US' },
-        defaults:{ responsibilities:{ fees_collector:'application', losses_collector:'stripe' } },
+        defaults:{ responsibilities:{ fees_collector:'stripe', losses_collector:'stripe' } },
         configuration:{ recipient:{ capabilities:{ stripe_balance:{ stripe_transfers:{ requested:true } } } } },
         metadata:{ ogreena_replacement_candidate:'true', ogreena_existing_merchant:EXISTING_MERCHANT },
         include:['configuration.recipient','defaults','identity','requirements'],
-      }, { idempotencyKey:'ogreena-llc-replacement-candidate-v1' });
+      }, { idempotencyKey:'ogreena-llc-replacement-candidate-v3' });
       if (!account.id || account.livemode !== true || account.id === EXISTING_MERCHANT) {
         throw new Error('Stripe returned an unsafe replacement account');
       }

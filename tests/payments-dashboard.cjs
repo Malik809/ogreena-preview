@@ -37,7 +37,9 @@ expect(ownerJs, "create('account-onboarding')", 'replacement embedded onboarding
 expect(ownerJs, '@stripe/connect-js@3.3.1', 'proven Connect JS version');
 expect(replacementOnboarding, 'await requireOwner(request)', 'server owner authorization');
 expect(replacementOnboarding, "CONSENT_VERSION = 'ogreena-replacement-live-v1'", 'server consent verification');
-expect(replacementOnboarding, "idempotencyKey:'ogreena-llc-replacement-candidate-v1'", 'duplicate account prevention');
+expect(replacementOnboarding, "dashboard:'full'", 'Stripe-managed full dashboard configuration');
+expect(replacementOnboarding, "fees_collector:'stripe', losses_collector:'stripe'", 'supported Stripe-managed responsibilities');
+expect(replacementOnboarding, "idempotencyKey:'ogreena-llc-replacement-candidate-v3'", 'duplicate account prevention');
 expect(replacementOnboarding, 'account_onboarding:{ enabled:true', 'Account Session onboarding component');
 expect(replacementOnboarding, "metadata:{ ogreena_replacement_candidate:'true'", 'replacement account isolation marker');
 if (replacementOnboarding.includes("from('payment_settings')")) throw new Error('Replacement onboarding changes active payment routing');
