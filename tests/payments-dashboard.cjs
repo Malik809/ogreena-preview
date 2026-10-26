@@ -12,6 +12,8 @@ const liveValidation = read('supabase/functions/create-live-validation-checkout/
 const connectSession = read('supabase/functions/create-connect-account-session/index.ts');
 const payoutSetup = read('owner/payment-setup/payment-setup.js');
 const replacementOnboarding = read('supabase/functions/create-ogreena-replacement-onboarding/index.ts');
+const checkout = read('supabase/functions/create-checkout-session/index.ts');
+const refund = read('supabase/functions/create-refund/index.ts');
 
 function expect(source, value, label) {
   if (!source.includes(value)) throw new Error(`${label} missing: ${value}`);
@@ -44,7 +46,8 @@ expect(replacementOnboarding, "include:['configuration.merchant','defaults','ide
 expect(replacementOnboarding, "idempotencyKey:'ogreena-llc-replacement-candidate-v4'", 'fresh duplicate-account prevention key');
 expect(replacementOnboarding, "account.applied_configurations?.includes('merchant')", 'merchant configuration verification');
 if (replacementOnboarding.includes('configuration:{ recipient:')) throw new Error('Replacement onboarding still requests the incompatible recipient configuration');
-expect(replacementOnboarding, 'account_onboarding:{ enabled:true', 'Account Session onboarding component');
+expect(replacementOnboarding, 'account_onboarding:{', 'Account Session onboarding component');
+expect(replacementOnboarding, 'enabled:true', 'Account Session onboarding enabled');
 expect(replacementOnboarding, "metadata:{ ogreena_replacement_candidate:'true'", 'replacement account isolation marker');
 if (replacementOnboarding.includes("from('payment_settings')")) throw new Error('Replacement onboarding changes active payment routing');
 expect(connectSession, 'external_accounts?.data.find', 'Stripe-confirmed payout destination check');
@@ -59,6 +62,12 @@ expect(liveWebhook, "Deno.env.get('LIVE_PAYMENTS_ENABLED') === 'true'", 'server 
 expect(liveWebhook, "stripe_webhook_events", 'duplicate webhook protection');
 expect(liveWebhook, "event.type === 'charge.refunded'", 'refund event recording');
 expect(liveValidation, 'Public checkout gates must remain disabled', 'controlled test isolation');
+expect(checkout, "const NEW_MERCHANT = 'acct_1UUtHREjIGxDre3j'", 'new merchant checkout routing');
+expect(checkout, 'const requestOptions = stripeAccountId ? { stripeAccount: stripeAccountId } : {}', 'direct connected-account charge context');
+expect(checkout, 'stripe_account_id:stripeAccountId', 'transaction merchant persistence');
+expect(refund, 'stripeAccount:transaction.stripe_account_id', 'refund merchant context');
+expect(liveWebhook, "const NEW_MERCHANT = 'acct_1UUtHREjIGxDre3j'", 'connected webhook account allowlist');
+expect(liveWebhook, ".eq('stripe_account_id', stripeAccountId)", 'webhook merchant isolation');
 
 if (/data-stripe-path="test\//.test(ownerHtml)) throw new Error('Payments Dashboard still links to Stripe test mode');
 if (ownerHtml.includes('data-stripe-path=')) throw new Error('Payments Dashboard still includes full Stripe Dashboard links');
