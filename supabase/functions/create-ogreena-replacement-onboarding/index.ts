@@ -46,9 +46,11 @@ Deno.serve(async request => {
   if (request.method === 'OPTIONS') return new Response(null, { headers });
   if (request.method !== 'POST') return Response.json({ error:'Method not allowed' }, { status:405, headers });
 
+  let stage = 'owner_authentication';
   try {
     const { user } = await requireOwner(request);
     requireFreshPasswordAuthentication(request, user.id);
+    stage = 'candidate_authorization';
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -114,6 +116,7 @@ Deno.serve(async request => {
       throw new Error('The mapped Stripe account is not the authorized live replacement candidate');
     }
 
+    stage = 'stripe_account_session';
     const accountSession = await stripe.accountSessions.create({
       account:accountId,
       components:{
@@ -140,6 +143,21 @@ Deno.serve(async request => {
       created,
     }, { headers });
   } catch (error) {
-    return Response.json({ error:error instanceof Error ? error.message : 'Unable to open replacement onboarding' }, { status:403, headers });
+    const message = error instanceof Error ? error.message : 'Unable to open replacement onboarding';
+    const stripeError = error as { code?:string; type?:string; param?:string; requestId?:string };
+    console.error('replacement_onboarding_failed', {
+      stage,
+      code:stripeError?.code || null,
+      type:stripeError?.type || null,
+      param:stripeError?.param || null,
+      request_id:stripeError?.requestId || null,
+      message,
+    });
+    const status = stage === 'owner_authentication' || stage === 'candidate_authorization' ? 403
+      : stage === 'stripe_account_session' ? 502 : 500;
+    const safeError = stage === 'stripe_account_session'
+      ? `Stripe could not create the secure onboarding session${stripeError?.code ? ` (${stripeError.code})` : ''}`
+      : message;
+    return Response.json({ error:safeError, stage }, { status, headers });
   }
 });

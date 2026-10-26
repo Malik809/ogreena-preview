@@ -243,7 +243,7 @@ async function openReplacementOnboarding(){
   $('#replacementOnboardingStatus').textContent = 'Opening Stripe’s secure live onboarding form…';
   try {
     const { data, error } = await supabase.functions.invoke('create-ogreena-replacement-onboarding', { body:{} });
-    if (error) throw new Error(data?.error || error.message);
+    if (error) throw new Error(await readFunctionError(error, data, 'The secure onboarding request was rejected.'));
     if (data?.livemode !== true || data?.mode !== 'onboarding') throw new Error('The onboarding session returned an unsafe Stripe environment.');
     const { loadConnectAndInitialize } = await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.3.1/+esm');
     let initialSecret = data.clientSecret;
@@ -253,7 +253,7 @@ async function openReplacementOnboarding(){
         if (initialSecret) { const secret = initialSecret; initialSecret = undefined; return secret; }
         const refreshed = await supabase.functions.invoke('create-ogreena-replacement-onboarding', { body:{} });
         if (refreshed.error || refreshed.data?.livemode !== true || refreshed.data?.mode !== 'onboarding') {
-          throw new Error('Unable to refresh the secure Stripe onboarding session.');
+          throw new Error(await readFunctionError(refreshed.error, refreshed.data, 'Unable to refresh the secure Stripe onboarding session.'));
         }
         return refreshed.data.clientSecret;
       },
@@ -270,6 +270,17 @@ async function openReplacementOnboarding(){
   } finally {
     button.disabled = false;
   }
+}
+async function readFunctionError(error, data, fallback){
+  if (data?.error) return data.error;
+  const response = error?.context;
+  if (response?.clone) {
+    try {
+      const payload = await response.clone().json();
+      if (payload?.error) return payload.error;
+    } catch {}
+  }
+  return fallback || error?.message || 'The request could not be completed.';
 }
 $('#startReplacementOnboarding')?.addEventListener('click',()=>{
   const dialog = $('#replacementReauthDialog');
