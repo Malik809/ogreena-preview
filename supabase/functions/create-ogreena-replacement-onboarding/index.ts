@@ -127,7 +127,10 @@ Deno.serve(async request => {
             disable_stripe_user_authentication:true,
           },
         },
-        notification_banner:{ enabled:true },
+        notification_banner:{
+          enabled:true,
+          features:{ disable_stripe_user_authentication:true },
+        },
       },
     });
     await admin.from('ogreena_replacement_connect_candidates').update({
