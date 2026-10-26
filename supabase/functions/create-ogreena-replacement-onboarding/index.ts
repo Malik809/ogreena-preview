@@ -48,10 +48,10 @@ Deno.serve(async request => {
         dashboard:'full',
         identity:{ country:'US' },
         defaults:{ responsibilities:{ fees_collector:'stripe', losses_collector:'stripe' } },
-        configuration:{ recipient:{ capabilities:{ stripe_balance:{ stripe_transfers:{ requested:true } } } } },
+        configuration:{ merchant:{ capabilities:{ card_payments:{ requested:true } } } },
         metadata:{ ogreena_replacement_candidate:'true', ogreena_existing_merchant:EXISTING_MERCHANT },
-        include:['configuration.recipient','defaults','identity','requirements'],
-      }, { idempotencyKey:'ogreena-llc-replacement-candidate-v3' });
+        include:['configuration.merchant','defaults','identity','requirements'],
+      }, { idempotencyKey:'ogreena-llc-replacement-candidate-v4' });
       if (!account.id || account.livemode !== true || account.id === EXISTING_MERCHANT) {
         throw new Error('Stripe returned an unsafe replacement account');
       }
@@ -73,9 +73,11 @@ Deno.serve(async request => {
       throw new Error('Replacement-account isolation check failed');
     }
     const account = await stripe.v2.core.accounts.retrieve(accountId, {
-      include:['configuration.recipient','identity','requirements'],
+      include:['configuration.merchant','identity','requirements'],
     });
-    if (account.livemode !== true || account.id === EXISTING_MERCHANT || account.metadata?.ogreena_replacement_candidate !== 'true') {
+    if (account.livemode !== true || account.id === EXISTING_MERCHANT ||
+        !account.applied_configurations?.includes('merchant') ||
+        account.metadata?.ogreena_replacement_candidate !== 'true') {
       throw new Error('The mapped Stripe account is not the authorized live replacement candidate');
     }
 
