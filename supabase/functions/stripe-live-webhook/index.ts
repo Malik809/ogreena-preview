@@ -8,15 +8,24 @@ const ORIGINAL_MERCHANT = 'acct_1UTpIlI19b4U0AqM';
 Deno.serve(async request => {
   if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
   const secret = Deno.env.get('STRIPE_LIVE_SECRET_KEY');
-  const webhookSecret = Deno.env.get('STRIPE_LIVE_WEBHOOK_SECRET');
-  if (!secret?.startsWith('rk_live_') || !webhookSecret?.startsWith('whsec_')) return new Response('Not configured', { status: 503 });
+  const webhookSecrets = [
+    Deno.env.get('STRIPE_CONNECT_LIVE_WEBHOOK_SECRET'),
+    Deno.env.get('STRIPE_LIVE_WEBHOOK_SECRET'),
+  ].filter((value): value is string => Boolean(value?.startsWith('whsec_')));
+  if (!secret?.startsWith('rk_live_') || webhookSecrets.length === 0) return new Response('Not configured', { status: 503 });
   const stripe = new Stripe(secret, { apiVersion: '2026-08-26.dahlia' });
-  let event: Stripe.Event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(await request.text(), request.headers.get('stripe-signature') || '', webhookSecret);
-  } catch {
-    return new Response('Invalid signature', { status: 400 });
+  const payload = await request.text();
+  const signature = request.headers.get('stripe-signature') || '';
+  let event: Stripe.Event | null = null;
+  for (const webhookSecret of webhookSecrets) {
+    try {
+      event = await stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
+      break;
+    } catch {
+      // Try the next configured destination secret without exposing either value.
+    }
   }
+  if (!event) return new Response('Invalid signature', { status: 400 });
   if (!event.livemode) return new Response('Live events only', { status: 400 });
   const stripeAccountId = typeof event.account === 'string' ? event.account : null;
   if (!stripeAccountId || ![NEW_MERCHANT, ORIGINAL_MERCHANT].includes(stripeAccountId)) return new Response('Unknown connected account', { status: 400 });
