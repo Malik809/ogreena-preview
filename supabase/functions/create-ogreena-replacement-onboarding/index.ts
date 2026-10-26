@@ -124,12 +124,12 @@ Deno.serve(async request => {
           enabled:true,
           features:{
             external_account_collection:true,
-            disable_stripe_user_authentication:true,
+            disable_stripe_user_authentication:false,
           },
         },
         notification_banner:{
           enabled:true,
-          features:{ disable_stripe_user_authentication:true },
+          features:{ disable_stripe_user_authentication:false },
         },
       },
     });
