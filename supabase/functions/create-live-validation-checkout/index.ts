@@ -30,8 +30,8 @@ Deno.serve(async request => {
     if (!estimate || estimate.amount_cents !== 50 || estimate.description !== 'Owner-approved $0.50 live Stripe validation invoice') throw new Error('Approved validation invoice not found');
     if (estimate.expires_at && new Date(estimate.expires_at) <= new Date()) throw new Error('Validation invoice expired');
 
-    const secret = Deno.env.get('STRIPE_LIVE_SECRET_KEY');
-    if (!secret?.startsWith('rk_live_')) throw new Error('Restricted live Stripe key is not configured');
+    const secret = Deno.env.get('STRIPE_CONNECT_SECRET_KEY_LIVE');
+    if (!secret?.startsWith('rk_live_')) throw new Error('Restricted Connect platform live key is not configured');
     const stripe = new Stripe(secret, { apiVersion: '2026-08-26.dahlia' });
     const idempotencyKey = `ogreena-live-validation-${estimate.id}`;
     const { data: existing } = await admin.from('payment_transactions').select('stripe_checkout_session_id').eq('estimate_id', estimate.id).eq('livemode', true).maybeSingle();
@@ -52,6 +52,15 @@ Deno.serve(async request => {
     if (error) throw error;
     return Response.json({ url: session.url, sessionId: session.id }, { headers });
   } catch (error) {
+    const stripeError = error as Stripe.errors.StripeError;
+    console.error('Live validation checkout failed', JSON.stringify({
+      type: stripeError?.type || 'application_error',
+      code: stripeError?.code || null,
+      param: stripeError?.param || null,
+      statusCode: stripeError?.statusCode || 400,
+      requestId: stripeError?.requestId || null,
+      message: error instanceof Error ? error.message : 'Validation checkout failed',
+    }));
     return Response.json({ error: error instanceof Error ? error.message : 'Validation checkout failed' }, { status: 400, headers });
   }
 });
