@@ -47,7 +47,7 @@ Deno.serve(async request => {
       const account = await stripe.v2.core.accounts.create({
         dashboard:'express',
         identity:{ country:'US' },
-        defaults:{ responsibilities:{ fees_collector:'application', losses_collector:'application' } },
+        defaults:{ responsibilities:{ fees_collector:'application', losses_collector:'stripe' } },
         configuration:{ recipient:{ capabilities:{ stripe_balance:{ stripe_transfers:{ requested:true } } } } },
         metadata:{ ogreena_replacement_candidate:'true', ogreena_existing_merchant:EXISTING_MERCHANT },
         include:['configuration.recipient','defaults','identity','requirements'],
