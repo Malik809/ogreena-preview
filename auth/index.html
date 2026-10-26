@@ -53,7 +53,7 @@
       <div class="content-head"><div><span class="tag" id="roleBadge">Customer</span><h1 id="welcomeName">My Ogreena</h1></div></div>
       <div class="account-grid">
         <article class="card"><h2>Profile</h2><p id="accountEmail"></p><p class="muted">Private account data is protected by row-level security.</p></article>
-        <article class="card"><h2>Service requests</h2><form id="requestForm" class="auth-form compact"><label>Service<input name="service_slug" required placeholder="Carpet Cleaning"></label><label>What do you need?<textarea name="summary" maxlength="500" required></textarea></label><button class="small-btn primary">Submit Request</button></form><div id="requestList"></div></article>
+        <article class="card"><h2>Service requests</h2><form id="requestForm" class="auth-form compact"><label>Service<select name="service_price_item_id" id="requestService" required><option value="">Choose a service</option></select></label><label id="requestQuantityLabel" hidden>Quantity<input name="requested_quantity" id="requestQuantity" type="number" min="0.01" step="0.01" value="1"></label><p class="catalog-estimate" id="requestEstimate">Choose a service to view its published price.</p><label>What do you need?<textarea name="summary" maxlength="500" required></textarea></label><button class="small-btn primary">Request Appointment or Estimate</button><p class="muted">Submitting does not create an invoice or charge. Final scope, quantities, and charges require owner approval.</p></form><div id="requestList"></div></article>
         <article class="card products-account"><h2>Ogreena Products</h2><p class="muted">Products are visible automatically on every customer profile.</p><div class="account-products" id="accountProducts"></div></article>
         <article class="card owner-only" id="ownerPanel" hidden><h2>Owner controls</h2><p>Payment settings are visible only to the owner role. Payments remain disabled.</p><div id="paymentState"></div></article>
         <article class="card" id="ownerRequestPanel"><h2>Business owner account</h2><p class="muted">Each company receives a private business record and must pass an ownership review. An email address alone never grants access.</p><a class="small-btn" href="../business/">Register or open Business Dashboard</a><p id="ownerRequestStatus" class="muted"></p></article>
@@ -62,6 +62,7 @@
   </main>
   <div id="toast"></div>
   <script src="../vendor/supabase-2.57.4.min.js"></script>
-  <script src="owner-auth.js?v=10"></script>
+  <script src="../service-catalog.js?v=1"></script>
+  <script src="owner-auth.js?v=11"></script>
 </body>
 </html>

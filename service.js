@@ -94,15 +94,8 @@ if (item) {
   document.querySelector('#serviceTitle').textContent = item.name;
   document.querySelector('#serviceDesc').textContent = item.description;
   window.OgreenaServiceIcons.renderInto(document.querySelector('#serviceIcon'), { slug:document.body.dataset.service, name:item.name, icon:item.icon });
-  const showUnavailable = () => {
-    let toast = document.querySelector('#toast');
-    if (!toast) { toast = document.createElement('div'); toast.id = 'toast'; document.body.append(toast); }
-    toast.textContent = 'Online service requests are not available yet. Please call (510) 472-9327.';
-    toast.classList.add('show');
-    clearTimeout(showUnavailable.timer);
-    showUnavailable.timer = setTimeout(() => toast.classList.remove('show'), 4200);
-  };
-  document.querySelectorAll('[data-request],[data-unavailable]').forEach(control => control.addEventListener('click', showUnavailable));
+  const requestService = () => { location.href = `${siteRoot}auth/?mode=signin`; };
+  document.querySelectorAll('[data-request],[data-unavailable]').forEach(control => control.addEventListener('click', requestService));
 
   document.querySelector('#overview').innerHTML = `
     <article class="card profile-accent">
@@ -122,7 +115,7 @@ if (item) {
       <div><h2>Ready to discuss the work?</h2><p class="muted">Tell Ogreena what you need and confirm availability.</p></div>
       <div class="form-actions"><a class="small-btn" href="tel:+15104729327">Call ${common.phone}</a><button class="small-btn primary" type="button" data-generated-unavailable>Request service</button></div>
     </article>`;
-  document.querySelector('[data-generated-unavailable]').addEventListener('click', showUnavailable);
+  document.querySelector('[data-generated-unavailable]').addEventListener('click', requestService);
 
   document.querySelector('#coveragePanel').innerHTML = `
     <article class="card"><div class="card-title"><h2>Service areas</h2><span class="tag">Confirm availability</span></div>
@@ -131,10 +124,22 @@ if (item) {
     </article>
     <article class="card"><h2>Availability</h2><p><b>${item.availability}</b></p><p>${common.hours}</p></article>`;
 
-  document.querySelector('#pricingPanel').innerHTML = `
-    <article class="card"><h2>Pricing and estimates</h2><div class="notice">No unverified prices are published. Ogreena can review the requested work and provide a written estimate.</div>
-      <p><span class="small-btn disabled-action" aria-disabled="true">Online estimates disabled</span></p>
-    </article>`;
+  const renderPricing = (publishedItems) => {
+    const catalog = window.OgreenaServiceCatalog;
+    if (!catalog) return;
+    const categoryForPage = { 'carpet-cleaning':'carpet-cleaning', 'house-cleaning':'housekeeping', 'deep-cleaning':'housekeeping', 'upholstery-cleaning':'upholstery-cleaning', 'tile-grout-cleaning':'floor-cleaning', 'window-cleaning':'housekeeping' };
+    const category = categoryForPage[document.body.dataset.service];
+    let prices = (publishedItems || catalog.items).filter(price => price.active && price.category === category);
+    if (document.body.dataset.service === 'deep-cleaning') prices = prices.filter(price => price.service_slug === 'deep-cleaning');
+    if (document.body.dataset.service === 'window-cleaning') prices = prices.filter(price => price.service_slug === 'window-cleaning');
+    if (document.body.dataset.service === 'tile-grout-cleaning') prices = prices.filter(price => price.service_slug === 'tile-grout-cleaning');
+    document.querySelector('#pricingPanel').innerHTML = `<article class="card"><div class="card-title"><h2>Published residential prices</h2><span class="tag">Request only</span></div>${prices.length ? `<div class="price-list">${prices.map(price => `<div class="info-row"><div><b>${price.name}</b></div><strong>${catalog.priceLabel(price)}</strong></div>`).join('')}</div>` : '<div class="notice">Contact Ogreena for a written estimate for this service.</div>'}<p class="muted">Selecting a service does not create a charge or payable invoice. Final scope, quantities, and charges require owner approval.</p><p><button class="small-btn primary" type="button" data-price-request>Request appointment or estimate</button></p></article>`;
+    document.querySelector('[data-price-request]').addEventListener('click', requestService);
+  };
+  const catalogScript = document.createElement('script');
+  catalogScript.src = `${siteRoot}service-catalog.js?v=1`;
+  catalogScript.addEventListener('load', () => { renderPricing(); window.OgreenaServiceCatalog.loadPublic().then(renderPricing); });
+  document.head.append(catalogScript);
 
   document.querySelector('#contactPanel').innerHTML = `
     <article class="card"><div class="card-title"><h2>Contact Ogreena</h2><span class="tag">${item.name}</span></div>
@@ -145,7 +150,7 @@ if (item) {
       </div>
       <div class="address-block"><b>Ogreena</b><br>${common.address}<br>${common.hours}</div>
     </article>`;
-  document.querySelector('[data-contact-unavailable]').addEventListener('click', showUnavailable);
+  document.querySelector('[data-contact-unavailable]').addEventListener('click', requestService);
 
   const sidebar = document.querySelector('.service-layout aside .info-list');
   sidebar.innerHTML = `

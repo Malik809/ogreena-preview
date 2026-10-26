@@ -158,23 +158,60 @@ signOutButton.addEventListener('click', async () => {
   }
 });
 
+let servicePriceItems = window.OgreenaServiceCatalog.items;
+
+function renderServiceOptions() {
+  const select = document.querySelector('#requestService');
+  const grouped = servicePriceItems.filter(item => item.active).reduce((groups,item) => { (groups[item.category] ||= []).push(item); return groups; }, {});
+  select.innerHTML = '<option value="">Choose a service</option>' + Object.entries(window.OgreenaServiceCatalog.categoryNames).map(([category,label]) => `<optgroup label="${escapeHTML(label)}">${(grouped[category] || []).map(item => `<option value="${escapeHTML(item.id)}">${escapeHTML(item.name)} — ${escapeHTML(window.OgreenaServiceCatalog.priceLabel(item))}</option>`).join('')}</optgroup>`).join('');
+}
+
+function updateRequestEstimate() {
+  const item = servicePriceItems.find(row => row.id === document.querySelector('#requestService').value);
+  const quantityLabel = document.querySelector('#requestQuantityLabel');
+  const quantityInput = document.querySelector('#requestQuantity');
+  if (!item) { quantityLabel.hidden = true; document.querySelector('#requestEstimate').textContent = 'Choose a service to view its published price.'; return; }
+  quantityLabel.hidden = item.pricing_type !== 'per_unit';
+  quantityLabel.firstChild.textContent = item.unit_label === 'each' ? 'Quantity' : 'Estimated square feet';
+  quantityInput.required = item.pricing_type === 'per_unit';
+  const quantity = item.pricing_type === 'per_unit' ? Math.max(Number(quantityInput.value) || 0, 0) : 1;
+  const total = item.price_cents * quantity;
+  document.querySelector('#requestEstimate').textContent = item.pricing_type === 'per_unit'
+    ? `Published rate: ${window.OgreenaServiceCatalog.priceLabel(item)}. Estimated total: ${window.OgreenaServiceCatalog.money(total)}. Owner approval required.`
+    : `Published price: ${window.OgreenaServiceCatalog.priceLabel(item)}. Final scope requires owner approval.`;
+}
+
+async function loadServiceCatalog() {
+  renderServiceOptions();
+  const { data, error } = await supabase.from('service_price_items').select('id,category,service_slug,name,price_cents,pricing_type,unit_label,active,display_order').eq('active',true).order('display_order');
+  if (!error && data?.length) { servicePriceItems = data; renderServiceOptions(); }
+  updateRequestEstimate();
+}
+
+document.querySelector('#requestService').addEventListener('change', updateRequestEstimate);
+document.querySelector('#requestQuantity').addEventListener('input', updateRequestEstimate);
+
 document.querySelector('#requestForm').addEventListener('submit', async event => {
   event.preventDefault();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   const values = Object.fromEntries(new FormData(event.currentTarget));
-  const { error } = await supabase.from('service_requests').insert({ customer_id: user.id, service_slug: values.service_slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-'), summary: values.summary.trim() });
+  const item = servicePriceItems.find(row => row.id === values.service_price_item_id);
+  if (!item) return alert('Choose a published service.');
+  const requestedQuantity = item.pricing_type === 'per_unit' ? Number(values.requested_quantity) : 1;
+  if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) return alert('Enter a valid quantity.');
+  const { error } = await supabase.from('service_requests').insert({ customer_id:user.id, service_slug:item.service_slug, service_price_item_id:item.id, requested_quantity:requestedQuantity, summary:values.summary.trim() });
   if (error) return alert(friendlyError(error));
-  event.currentTarget.reset(); await loadRequests(user.id);
+  event.currentTarget.reset(); updateRequestEstimate(); await loadRequests(user.id);
 });
 
 async function loadRequests(userId) {
   const list = document.querySelector('#requestList');
-  const { data, error } = await supabase.from('service_requests').select('id,service_slug,summary,status,created_at').eq('customer_id', userId).order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('service_requests').select('id,service_slug,service_price_item_id,requested_quantity,summary,status,created_at').eq('customer_id', userId).order('created_at', { ascending: false });
   if (error) { list.textContent = friendlyError(error); return; }
   const { data: estimates } = await supabase.from('estimates').select('id,request_id,amount_cents,status').eq('customer_id', userId).eq('status','accepted');
   const payable = Object.fromEntries((estimates || []).filter(item => item.amount_cents >= 50).map(item => [item.request_id,item]));
-  list.innerHTML = data.length ? data.map(item => `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(item.service_slug)} · ${escapeHTML(item.status)}</span>${payable[item.id]?`<button class="small-btn primary" data-pay-estimate="${escapeHTML(payable[item.id].id)}">Pay approved invoice</button>`:''}</div>`).join('') : '<p class="muted">No service requests yet.</p>';
+  list.innerHTML = data.length ? data.map(item => { const catalogItem=servicePriceItems.find(price => price.id === item.service_price_item_id); return `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(catalogItem?.name || item.service_slug)} · ${escapeHTML(item.status)}</span>${payable[item.id]?`<button class="small-btn primary" data-pay-estimate="${escapeHTML(payable[item.id].id)}">Pay approved invoice</button>`:''}</div>`; }).join('') : '<p class="muted">No service requests yet.</p>';
   list.querySelectorAll('[data-pay-estimate]').forEach(button=>button.addEventListener('click',()=>startCheckout({kind:'invoice',estimateId:button.dataset.payEstimate})));
 }
 
@@ -232,6 +269,7 @@ async function renderSession(session) {
     const { data } = await supabase.from('payment_settings').select('provider,payments_enabled,product_payments_enabled,service_payments_enabled').single();
     document.querySelector('#paymentState').textContent = data ? `Provider: ${data.provider}; payments enabled: ${data.payments_enabled ? 'yes' : 'no'}` : 'Payment settings unavailable.';
   }
+  await loadServiceCatalog();
   await Promise.all([loadProducts(), loadRequests(user.id)]);
   if (role === 'owner' && !document.querySelector('#ownerPanel [data-owner-dashboard]')) {
     const link = document.createElement('a');
