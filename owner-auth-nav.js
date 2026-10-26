@@ -25,15 +25,18 @@ function setVisible(element, visible) {
 async function renderAccountNavigation(session) {
   const signedIn = Boolean(session?.user);
   document.querySelectorAll('[data-auth-guest]').forEach(element => setVisible(element, !signedIn));
-  document.querySelectorAll('[data-auth-user],[data-auth-profile],[data-auth-signout]').forEach(element => setVisible(element, signedIn));
+  document.querySelectorAll('[data-auth-user],[data-auth-signout]').forEach(element => setVisible(element, signedIn));
+  document.querySelectorAll('[data-auth-profile]').forEach(element => setVisible(element, false));
   document.querySelectorAll('[data-auth-owner],[data-auth-employee]').forEach(element => setVisible(element, false));
   if (!signedIn) return;
   const { data } = await supabase.from('user_roles').select('role').eq('user_id', session.user.id).single();
   const role = data?.role || 'customer';
-  document.querySelectorAll('[data-auth-profile]').forEach(element => { element.href = `${SITE_ROOT}customer/`; });
-  document.querySelectorAll('[data-auth-employee]').forEach(element => { element.href = `${SITE_ROOT}employee/`; });
+  document.querySelectorAll('[data-auth-profile]').forEach(element => {
+    element.href = `${SITE_ROOT}customer/`;
+    setVisible(element, role !== 'owner');
+  });
   document.querySelectorAll('[data-auth-owner]').forEach(element => setVisible(element, role === 'owner'));
-  document.querySelectorAll('[data-auth-employee]').forEach(element => setVisible(element, role === 'employee'));
+  document.querySelectorAll('[data-auth-employee]').forEach(element => setVisible(element, false));
 }
 
 document.querySelectorAll('[data-auth-signout]').forEach(element => {
@@ -55,7 +58,7 @@ supabase.auth.onAuthStateChange((event, nextSession) => {
     document.querySelectorAll('[data-auth-user],[data-auth-profile],[data-auth-owner],[data-auth-employee],[data-auth-signout]').forEach(element => setVisible(element, false));
   } else if (event === 'SIGNED_IN' && nextSession?.user) {
     document.querySelectorAll('[data-auth-guest]').forEach(element => setVisible(element, false));
-    document.querySelectorAll('[data-auth-user],[data-auth-profile],[data-auth-signout]').forEach(element => setVisible(element, true));
+    document.querySelectorAll('[data-auth-user],[data-auth-signout]').forEach(element => setVisible(element, true));
     // Read the database role only after the auth callback returns.
     setTimeout(() => renderAccountNavigation(nextSession), 0);
   }

@@ -122,7 +122,7 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
       return;
     }
     if (roleRow?.role === 'employee') {
-      setStatus('Signed in. Opening the Employee Dashboard…', 'success');
+      setStatus('Signed in. Opening your Employee Profile…', 'success');
       location.replace('../employee/');
       return;
     }
@@ -292,7 +292,7 @@ async function renderSession(session) {
   if (applicationResult.data) { location.replace('../careers-account/?type=applicant&mode=signin'); return; }
   if (employeeRequestResult.data) { location.replace('../careers-account/?type=employee&mode=signin'); return; }
   document.querySelector('#roleBadge').textContent = role[0].toUpperCase() + role.slice(1);
-  document.querySelector('#welcomeName').textContent = profile?.display_name ? `Welcome, ${profile.display_name}` : 'My Ogreena';
+  document.querySelector('#welcomeName').textContent = profile?.display_name ? `${profile.display_name} · Customer Profile` : 'Customer Profile';
   document.querySelector('#accountEmail').textContent = user.email;
   document.querySelector('#ownerPanel').hidden = role !== 'owner';
   document.querySelector('#ownerRequestPanel').hidden = role === 'owner';

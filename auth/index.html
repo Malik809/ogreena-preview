@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Ogreena Account | Sign In or Create Account</title>
+  <title>Customer Profile | Ogreena</title>
   <link rel="icon" type="image/jpeg" href="../assets/ogreena-original-logo.jpg">
   <link rel="stylesheet" href="../styles.css">
   <link rel="stylesheet" href="../brand.css">
@@ -14,7 +14,7 @@
 <body class="auth-development">
   <header class="topbar">
     <a class="wordmark" href="../"><img src="../assets/ogreena-original-logo.jpg" alt="Ogreena logo">Ogreena</a>
-    <div class="search">Secure customer account</div>
+    <div class="search">Customer Profile</div>
     <div class="top-actions"><button class="small-btn" id="signOut" hidden>Sign Out</button></div>
   </header>
   <main class="auth-shell">
@@ -50,7 +50,7 @@
     </section>
 
     <section class="account-panel" id="accountPanel" hidden>
-      <div class="content-head"><div><span class="tag" id="roleBadge">Customer</span><h1 id="welcomeName">My Ogreena</h1></div></div>
+      <div class="content-head"><div><span class="tag" id="roleBadge">Customer</span><h1 id="welcomeName">Customer Profile</h1></div></div>
       <div class="account-grid">
         <article class="card"><h2>Profile</h2><p id="accountEmail"></p><p class="muted">Private account data is protected by row-level security.</p></article>
         <article class="card"><h2>Service requests</h2><form id="requestForm" class="auth-form compact"><label>Service<select name="service_price_item_id" id="requestService" required><option value="">Choose a service</option></select></label><label id="requestQuantityLabel" hidden>Quantity<input name="requested_quantity" id="requestQuantity" type="number" min="0.01" step="0.01" value="1"></label><p class="catalog-estimate" id="requestEstimate">Choose a service to view its published price.</p><label>What do you need?<textarea name="summary" maxlength="500" required></textarea></label><button class="small-btn primary">Request Appointment or Estimate</button><p class="muted">Submitting does not create an invoice or charge. Final scope, quantities, and charges require owner approval.</p></form><div id="requestList"></div></article>

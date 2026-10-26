@@ -41,7 +41,6 @@
     topActions.prepend(profile);
   }
   document.querySelectorAll('[data-auth-profile]').forEach(link => { link.href = `${siteRoot}customer/`; });
-  document.querySelectorAll('[data-auth-employee]').forEach(link => { link.href = `${siteRoot}employee/`; });
 
   if (document.body.dataset.service) {
     const serviceMain = document.querySelector('main.service-profile');
@@ -62,7 +61,6 @@
       <a data-menu-search="home main ogreena profile" href="${siteRoot}">Home / Main Ogreena Profile</a>
       <a class="menu-featured" data-auth-profile data-menu-search="my profile account requests appointments" href="${siteRoot}customer/" hidden>My Profile</a>
       <a class="menu-featured" data-auth-owner data-menu-search="owner dashboard business account" href="${siteRoot}owner/" hidden>Owner Dashboard</a>
-      <a class="menu-featured" data-auth-employee data-menu-search="employee dashboard jobs schedule" href="${siteRoot}employee/" hidden>Employee Dashboard</a>
       <a data-menu-search="about us company" href="${siteRoot}#about">About Us</a>
       <a data-menu-search="residential services house cleaning carpet deep move in move out upholstery windows pressure washing" href="${siteRoot}#services">Residential Services</a>
       <a data-menu-search="commercial services cleaning janitorial facilities business" href="${siteRoot}services/commercial-cleaning/">Commercial Services</a>
@@ -97,7 +95,7 @@
     let matches = 0;
     links.forEach(link => {
       const searchMatch = !query || `${link.textContent} ${link.dataset.menuSearch}`.toLowerCase().includes(query);
-      const protectedLink = link.matches('[data-auth-profile],[data-auth-owner],[data-auth-employee],[data-auth-signout]');
+      const protectedLink = link.matches('[data-auth-profile],[data-auth-owner],[data-auth-signout]');
       const visible = searchMatch && (!protectedLink || link.dataset.authVisible === 'true');
       link.hidden = !visible;
       if (visible) matches += 1;
@@ -117,7 +115,7 @@
     const loadAccountNavigation = () => {
       if ([...document.scripts].some(script => script.src.includes('owner-auth-nav.js'))) return;
       const authScript = document.createElement('script');
-      authScript.src = `${siteRoot}owner-auth-nav.js?v=3`;
+      authScript.src = `${siteRoot}owner-auth-nav.js?v=4`;
       document.body.append(authScript);
     };
     if (window.supabase) loadAccountNavigation();
