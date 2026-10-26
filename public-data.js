@@ -39,6 +39,22 @@ function applyServices(services) {
   }
 }
 
+function serviceImageUrl(path) {
+  if (!path) return '';
+  if (/^https:\/\//.test(path)) return path;
+  if (path.startsWith('assets/')) return new URL(path, location.origin + (location.hostname.endsWith('.github.io') ? '/ogreena-preview/' : '/')).href;
+  return `${SUPABASE_URL}/storage/v1/object/public/service-images/${path.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+function applyServiceMedia(records) {
+  const slug = location.pathname.match(/\/services\/([^/]+)/)?.[1];
+  const media = records.find(record => record.service_slug === slug);
+  const cover = document.querySelector('.service-profile .cover');
+  if (!media || !cover) return;
+  cover.style.backgroundImage = `url('${serviceImageUrl(media.current_path)}')`;
+  cover.style.backgroundPosition = `${media.position_x ?? 50}% ${media.position_y ?? 50}%`;
+}
+
 function applyManagedContent(records) {
   records.forEach(record => {
     if (record.visible === false) return;
@@ -51,11 +67,13 @@ function applyManagedContent(records) {
   });
 }
 
-const [products, services, content] = await Promise.all([
+const [products, services, content, serviceMedia] = await Promise.all([
   supabase.from('products').select('id,name,size,price_cents,image_path,display_order,visible').order('display_order'),
   supabase.from('services').select('id,name,summary,description,display_order,visible').order('display_order'),
   supabase.from('website_content').select('content_key,content_value,visible,display_order').eq('published', true).eq('visible', true).order('display_order'),
+  supabase.from('service_profile_media').select('service_slug,current_path,position_x,position_y'),
 ]);
 if (!products.error) applyProducts(products.data || []);
 if (!services.error) applyServices(services.data || []);
 if (!content.error) applyManagedContent(content.data || []);
+if (!serviceMedia.error) applyServiceMedia(serviceMedia.data || []);

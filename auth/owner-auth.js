@@ -182,12 +182,12 @@ function updateRequestEstimate() {
   const quantityLabel = document.querySelector('#requestQuantityLabel');
   const quantityInput = document.querySelector('#requestQuantity');
   if (!item) { quantityLabel.hidden = true; document.querySelector('#requestEstimate').textContent = 'Choose a service to view its published price.'; return; }
-  quantityLabel.hidden = item.pricing_type !== 'per_unit';
+  quantityLabel.hidden = item.pricing_type === 'fixed';
   quantityLabel.firstChild.textContent = item.unit_label === 'each' ? 'Quantity' : 'Estimated square feet';
-  quantityInput.required = item.pricing_type === 'per_unit';
-  const quantity = item.pricing_type === 'per_unit' ? Math.max(Number(quantityInput.value) || 0, 0) : 1;
+  quantityInput.required = item.pricing_type !== 'fixed';
+  const quantity = item.pricing_type !== 'fixed' ? Math.max(Number(quantityInput.value) || 0, 0) : 1;
   const total = item.price_cents * quantity;
-  document.querySelector('#requestEstimate').textContent = item.pricing_type === 'per_unit'
+  document.querySelector('#requestEstimate').textContent = item.pricing_type !== 'fixed'
     ? `Published rate: ${window.OgreenaServiceCatalog.priceLabel(item)}. Estimated total: ${window.OgreenaServiceCatalog.money(total)}. Owner approval required.`
     : `Published price: ${window.OgreenaServiceCatalog.priceLabel(item)}. Final scope requires owner approval.`;
 }
@@ -209,7 +209,7 @@ document.querySelector('#requestForm').addEventListener('submit', async event =>
   const values = Object.fromEntries(new FormData(event.currentTarget));
   const item = servicePriceItems.find(row => row.id === values.service_price_item_id);
   if (!item) return alert('Choose a published service.');
-  const requestedQuantity = item.pricing_type === 'per_unit' ? Number(values.requested_quantity) : 1;
+  const requestedQuantity = item.pricing_type !== 'fixed' ? Number(values.requested_quantity) : 1;
   if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) return alert('Enter a valid quantity.');
   const { error } = await supabase.from('service_requests').insert({ customer_id:user.id, service_slug:item.service_slug, service_price_item_id:item.id, requested_quantity:requestedQuantity, summary:values.summary.trim() });
   if (error) return alert(friendlyError(error));

@@ -38,7 +38,7 @@
     ['floor-cleaning','floor-polishing','Floor Polishing',500,'per_unit','per sq. ft.']
   ].map((row, index) => ({
     id:`${row[0]}-${row[2].toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}`,
-    category:row[0], service_slug:row[1], name:row[2], price_cents:row[3], pricing_type:row[4], unit_label:row[5], active:true, display_order:index + 1
+    category:row[0], service_slug:row[1], name:row[2], description:'', price_cents:row[3], pricing_type:row[4], unit_label:row[5], active:true, display_order:index + 1
   }));
 
   const categoryNames = {
@@ -52,7 +52,7 @@
   const priceLabel = item => `${money(item.price_cents)}${item.unit_label ? ` ${item.unit_label}` : ''}`;
   const loadPublic = async () => {
     try {
-      const response = await fetch('https://mhhjzifeaofgskimvuom.supabase.co/rest/v1/service_price_items?select=id,category,service_slug,name,price_cents,pricing_type,unit_label,active,display_order&active=eq.true&order=display_order.asc', {
+      const response = await fetch('https://mhhjzifeaofgskimvuom.supabase.co/rest/v1/service_price_items?select=id,category,service_slug,name,description,price_cents,pricing_type,unit_label,active,display_order&active=eq.true&order=display_order.asc', {
         headers: { apikey:'sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM' }
       });
       if (!response.ok) return items;

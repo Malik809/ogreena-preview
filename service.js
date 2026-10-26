@@ -139,19 +139,12 @@ if (item) {
   const renderPricing = (publishedItems) => {
     const catalog = window.OgreenaServiceCatalog;
     if (!catalog) return;
-    const categoryForPage = { 'carpet-cleaning':'carpet-cleaning', 'house-cleaning':'housekeeping', 'deep-cleaning':'housekeeping', 'mattress-cleaning':'mattress-cleaning', 'upholstery-cleaning':'upholstery-cleaning', 'tile-grout-cleaning':'floor-cleaning', 'floor-polishing':'floor-cleaning', 'window-cleaning':'housekeeping' };
-    const category = categoryForPage[document.body.dataset.service];
-    let prices = (publishedItems || catalog.items).filter(price => price.active && price.category === category);
-    if (document.body.dataset.service === 'deep-cleaning') prices = prices.filter(price => price.service_slug === 'deep-cleaning');
-    if (document.body.dataset.service === 'house-cleaning') prices = prices.filter(price => price.service_slug === 'house-cleaning');
-    if (document.body.dataset.service === 'window-cleaning') prices = prices.filter(price => price.service_slug === 'window-cleaning');
-    if (document.body.dataset.service === 'tile-grout-cleaning') prices = prices.filter(price => price.service_slug === 'tile-grout-cleaning');
-    if (document.body.dataset.service === 'floor-polishing') prices = prices.filter(price => price.service_slug === 'floor-polishing');
-    document.querySelector('#pricingPanel').innerHTML = `<article class="card"><div class="card-title"><h2>${prices.length ? 'Published residential prices' : 'Pricing and estimates'}</h2><span class="tag">Request only</span></div>${prices.length ? `<div class="price-list">${prices.map(price => `<div class="info-row"><div><b>${price.name}</b></div><strong>${catalog.priceLabel(price)}</strong></div>`).join('')}</div>` : '<div class="notice">No approved fixed price is published for this service.</div>'}<p class="muted">Selecting a service does not create a charge or payable invoice. Final scope, quantities, and charges require owner approval.</p><p><button class="small-btn primary" type="button" data-price-request>${prices.length ? 'Request appointment or estimate' : 'Request an Estimate'}</button></p></article>`;
+    const prices = (publishedItems || catalog.items).filter(price => price.active && price.service_slug === document.body.dataset.service);
+    document.querySelector('#pricingPanel').innerHTML = `<article class="card"><div class="card-title"><h2>${prices.length ? 'Published residential prices' : 'Pricing and estimates'}</h2><span class="tag">Request only</span></div>${prices.length ? `<div class="price-list">${prices.map(price => `<div class="info-row"><div><b>${price.name}</b>${price.description ? `<small>${price.description}</small>` : ''}</div><strong>${catalog.priceLabel(price)}</strong></div>`).join('')}</div>` : '<div class="notice">No approved fixed price is published for this service.</div>'}<p class="muted">Selecting a service does not create a charge or payable invoice. Final scope, quantities, and charges require owner approval.</p><p><button class="small-btn primary" type="button" data-price-request>${prices.length ? 'Request appointment or estimate' : 'Request an Estimate'}</button></p></article>`;
     document.querySelector('[data-price-request]').addEventListener('click', requestService);
   };
   const catalogScript = document.createElement('script');
-  catalogScript.src = `${siteRoot}service-catalog.js?v=1`;
+  catalogScript.src = `${siteRoot}service-catalog.js?v=2`;
   catalogScript.addEventListener('load', () => { renderPricing(); window.OgreenaServiceCatalog.loadPublic().then(renderPricing); });
   document.head.append(catalogScript);
 

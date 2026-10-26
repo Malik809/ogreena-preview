@@ -70,20 +70,28 @@ async function loadServices() {
     form.querySelector('[data-publish-service]').addEventListener('click', () => run('Publishing service', async () => { requireOk(await supabase.rpc('publish_service', { service_id:form.dataset.service })); await loadServices(); }));
     form.querySelector('[data-remove-service]').addEventListener('click', () => { if (confirm('Remove this service from the managed catalog? Existing customer requests are preserved.')) run('Removing service', async () => { requireOk(await supabase.from('services').delete().eq('id', form.dataset.service)); await loadServices(); }); });
   });
-  await loadServicePrices();
 }
 
-const priceCategoryOptions = Object.entries(window.OgreenaServiceCatalog.categoryNames)
-  .map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
-const pricePageOptions = [
+const serviceProfileOptions = [
   ['carpet-cleaning','Carpet Cleaning'], ['house-cleaning','House Cleaning'],
   ['deep-cleaning','Deep Cleaning'], ['window-cleaning','Window Cleaning'],
   ['mattress-cleaning','Mattress Cleaning'], ['upholstery-cleaning','Upholstery Cleaning'],
-  ['tile-grout-cleaning','Tile & Grout Cleaning'], ['floor-polishing','Floor Polishing']
-].map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
+  ['tile-grout-cleaning','Tile & Grout Cleaning'], ['floor-polishing','Floor Polishing'],
+  ['move-in-move-out-cleaning','Move-In / Move-Out Cleaning'], ['pressure-washing','Pressure Washing'],
+  ['commercial-cleaning','Commercial Cleaning'], ['janitorial-services','Janitorial Services'],
+  ['facilities-maintenance','Facilities Maintenance'], ['electrical-services','Electrical Services']
+];
+const pricePageOptions = serviceProfileOptions.map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
+const serviceLabel = slug => serviceProfileOptions.find(([value]) => value === slug)?.[1] || slug.replaceAll('-', ' ');
+const priceCategoryForSlug = slug => ({
+  'carpet-cleaning':'carpet-cleaning', 'house-cleaning':'housekeeping', 'deep-cleaning':'housekeeping',
+  'window-cleaning':'housekeeping', 'mattress-cleaning':'mattress-cleaning',
+  'upholstery-cleaning':'upholstery-cleaning', 'tile-grout-cleaning':'floor-cleaning',
+  'floor-polishing':'floor-cleaning'
+}[slug] || 'housekeeping');
 
 function priceRow(item) {
-  return `<form class="editor-row price-editor" data-price-item="${escapeHtml(item.id)}"><label>Category<select name="category">${priceCategoryOptions}</select></label><label>Public service page<select name="service_slug">${pricePageOptions}</select></label><label>Service name<input name="name" value="${escapeHtml(item.name)}" required maxlength="150"></label><label>Price<input name="price" type="number" min="0" step="0.01" value="${(item.price_cents / 100).toFixed(2)}" required></label><label>Pricing<select name="pricing_type"><option value="fixed" ${item.pricing_type === 'fixed' ? 'selected' : ''}>Fixed price</option><option value="per_unit" ${item.pricing_type === 'per_unit' ? 'selected' : ''}>Per unit</option></select></label><label>Unit<input name="unit_label" value="${escapeHtml(item.unit_label || '')}" placeholder="per sq. ft. or each"></label><label>Order<input name="display_order" type="number" min="0" value="${Number(item.display_order) || 0}"></label><label>Published<select name="active"><option value="true" ${item.active ? 'selected' : ''}>Yes</option><option value="false" ${!item.active ? 'selected' : ''}>No</option></select></label><div class="editor-actions"><button class="small-btn primary" type="submit">Save Price</button><button class="small-btn danger" type="button" data-remove-price>Remove</button></div></form>`;
+  return `<form class="editor-row price-editor" data-price-item="${escapeHtml(item.id)}"><label>Service profile<select name="service_slug">${pricePageOptions}</select></label><label>Service name<input name="name" value="${escapeHtml(item.name)}" required maxlength="150"></label><label>Price<input name="price" type="number" min="0" step="0.01" value="${(item.price_cents / 100).toFixed(2)}" required></label><label>Rate type<select name="pricing_type"><option value="fixed" ${item.pricing_type === 'fixed' ? 'selected' : ''}>Fixed price</option><option value="hourly" ${item.pricing_type === 'hourly' ? 'selected' : ''}>Hourly rate</option><option value="per_square_foot" ${item.pricing_type === 'per_square_foot' ? 'selected' : ''}>Per square foot</option><option value="per_unit" ${item.pricing_type === 'per_unit' ? 'selected' : ''}>Per item / unit</option></select></label><label>Unit label<input name="unit_label" value="${escapeHtml(item.unit_label || '')}" placeholder="per hour, per sq. ft., or each"></label><label>Order<input name="display_order" type="number" min="0" value="${Number(item.display_order) || 0}"></label><label>Published<select name="active"><option value="true" ${item.active ? 'selected' : ''}>Yes</option><option value="false" ${!item.active ? 'selected' : ''}>No</option></select></label><label class="wide">Description<textarea name="description" maxlength="500" rows="2">${escapeHtml(item.description || '')}</textarea></label><div class="wide editor-actions"><button class="small-btn primary" type="submit">Save Price</button><button class="small-btn danger" type="button" data-delete-price>Delete Price</button></div></form>`;
 }
 
 async function loadServicePrices() {
@@ -92,31 +100,74 @@ async function loadServicePrices() {
     $('#servicePriceList').innerHTML = '<p class="empty-state">The residential price catalog migration has not been applied yet.</p>';
     return;
   }
-  const grouped = (result.data || []).reduce((groups,item) => { (groups[item.category] ||= []).push(item); return groups; }, {});
-  $('#servicePriceList').innerHTML = Object.entries(window.OgreenaServiceCatalog.categoryNames).map(([category,label]) => `<section class="catalog-category"><h3>${escapeHtml(label)}</h3>${(grouped[category] || []).map(priceRow).join('') || '<p class="empty-state">No prices in this category.</p>'}</section>`).join('');
+  const grouped = (result.data || []).reduce((groups,item) => { (groups[item.service_slug] ||= []).push(item); return groups; }, {});
+  $('#servicePriceList').innerHTML = serviceProfileOptions.map(([slug,label]) => `<section class="catalog-category"><h3>${escapeHtml(label)}</h3>${(grouped[slug] || []).map(priceRow).join('') || '<p class="empty-state">No prices assigned to this service.</p>'}</section>`).join('');
   $('#servicePriceList').querySelectorAll('[data-price-item]').forEach(form => {
     const item = (result.data || []).find(row => row.id === form.dataset.priceItem);
-    form.querySelector('[name="category"]').value = item.category;
     form.querySelector('[name="service_slug"]').value = item.service_slug;
     form.addEventListener('submit', event => { event.preventDefault(); run('Saving service price', async () => {
       const values = new FormData(form);
-      requireOk(await supabase.from('service_price_items').update({ category:values.get('category'), service_slug:values.get('service_slug'), name:values.get('name').trim(), price_cents:Math.round(Number(values.get('price')) * 100), pricing_type:values.get('pricing_type'), unit_label:values.get('unit_label').trim(), display_order:Number(values.get('display_order')) || 0, active:values.get('active') === 'true', updated_at:new Date().toISOString() }).eq('id', form.dataset.priceItem));
+      const pricingType=values.get('pricing_type');
+      const defaultUnit=pricingType==='hourly'?'per hour':pricingType==='per_square_foot'?'per sq. ft.':'';
+      requireOk(await supabase.from('service_price_items').update({ category:priceCategoryForSlug(values.get('service_slug')), service_slug:values.get('service_slug'), name:values.get('name').trim(), description:values.get('description').trim(), price_cents:Math.round(Number(values.get('price')) * 100), pricing_type:pricingType, unit_label:values.get('unit_label').trim() || defaultUnit, display_order:Number(values.get('display_order')) || 0, active:values.get('active') === 'true', updated_at:new Date().toISOString() }).eq('id', form.dataset.priceItem));
       await loadServicePrices();
     }); });
-    form.querySelector('[data-remove-price]').addEventListener('click', () => { if (confirm('Hide this price from customers? Past requests will remain intact.')) run('Removing service price', async () => { requireOk(await supabase.from('service_price_items').update({ active:false, updated_at:new Date().toISOString() }).eq('id',form.dataset.priceItem)); await loadServicePrices(); }); });
+    form.querySelector('[data-delete-price]').addEventListener('click', () => { if (confirm(`Permanently delete “${item.name}”? Existing requests remain, but this price cannot be restored.`)) run('Deleting service price', async () => { requireOk(await supabase.from('service_price_items').delete().eq('id',form.dataset.priceItem)); await loadServicePrices(); }); });
   });
 }
 
 $('#newPriceItem').addEventListener('click', () => {
   const name = prompt('Service price name'); if (!name) return;
-  const category = prompt('Category: carpet-cleaning, housekeeping, mattress-cleaning, upholstery-cleaning, or floor-cleaning', 'carpet-cleaning');
-  if (!window.OgreenaServiceCatalog.categoryNames[category]) return setStatus('Choose a valid service-price category', true);
-  const serviceSlug = prompt('Public service page: carpet-cleaning, house-cleaning, deep-cleaning, window-cleaning, mattress-cleaning, upholstery-cleaning, tile-grout-cleaning, or floor-polishing', category === 'housekeeping' ? 'house-cleaning' : category);
-  if (!['carpet-cleaning','house-cleaning','deep-cleaning','window-cleaning','mattress-cleaning','upholstery-cleaning','tile-grout-cleaning','floor-polishing'].includes(serviceSlug)) return setStatus('Choose a valid public service page', true);
+  const serviceSlug = prompt(`Public service page:\n${serviceProfileOptions.map(([slug])=>slug).join('\n')}`, 'carpet-cleaning');
+  if (!serviceProfileOptions.some(([slug]) => slug === serviceSlug)) return setStatus('Choose a valid public service page', true);
   const price = prompt('Price in dollars', '0'); if (price === null || !Number.isFinite(Number(price)) || Number(price) < 0) return;
-  const id = `${category}-${name.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}-${Date.now()}`;
-  run('Adding service price', async () => { requireOk(await supabase.from('service_price_items').insert({ id, category, service_slug:serviceSlug, name:name.trim(), price_cents:Math.round(Number(price) * 100), pricing_type:'fixed', unit_label:'', active:true, display_order:999 })); await loadServicePrices(); });
+  const id = `${serviceSlug}-${name.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}-${Date.now()}`;
+  run('Adding service price', async () => { requireOk(await supabase.from('service_price_items').insert({ id, category:priceCategoryForSlug(serviceSlug), service_slug:serviceSlug, name:name.trim(), description:'', price_cents:Math.round(Number(price) * 100), pricing_type:'fixed', unit_label:'', active:false, display_order:999 })); await loadServicePrices(); });
 });
+
+const SERVICE_IMAGE_BUCKET = 'service-images';
+const allowedServiceImageTypes = new Set(['image/jpeg','image/png','image/webp']);
+function serviceImageUrl(path) {
+  if (!path) return '';
+  if (/^https:\/\//.test(path)) return path;
+  if (path.startsWith('assets/')) return `../${path}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/${SERVICE_IMAGE_BUCKET}/${path.split('/').map(encodeURIComponent).join('/')}`;
+}
+function pictureRow(item) {
+  const previewPath=item.draft_path || item.current_path;
+  const x=item.draft_position_x ?? item.position_x ?? 50;
+  const y=item.draft_position_y ?? item.position_y ?? 50;
+  return `<article class="picture-editor-card" data-picture-service="${escapeHtml(item.service_slug)}"><div class="picture-preview" role="img" aria-label="${escapeHtml(serviceLabel(item.service_slug))} cover preview" style="background-image:url('${escapeHtml(serviceImageUrl(previewPath))}');background-position:${x}% ${y}%"></div><div><h3>${escapeHtml(serviceLabel(item.service_slug))}</h3><p class="muted">${item.draft_path ? 'Draft picture — not published' : 'Published picture'}</p></div><label>Replacement image<input type="file" data-picture-file accept="image/jpeg,image/png,image/webp"></label><label>Horizontal position <output data-x-output>${x}%</output><input type="range" data-picture-x min="0" max="100" value="${x}"></label><label>Vertical position <output data-y-output>${y}%</output><input type="range" data-picture-y min="0" max="100" value="${y}"></label><div class="editor-actions"><button class="small-btn" type="button" data-save-picture>Save Draft</button><button class="small-btn primary" type="button" data-publish-picture ${item.draft_path?'':'disabled'}>Publish Picture</button><button class="small-btn" type="button" data-restore-picture ${item.previous_path?'':'disabled'}>Restore Previous</button></div></article>`;
+}
+async function loadServicePictures() {
+  const data=requireOk(await supabase.from('service_profile_media').select('*').order('service_slug')) || [];
+  $('#servicePictureList').innerHTML=data.map(pictureRow).join('') || '<p class="empty-state">Service-picture controls are not configured yet.</p>';
+  $('#servicePictureList').querySelectorAll('[data-picture-service]').forEach(card => {
+    const slug=card.dataset.pictureService;
+    const preview=card.querySelector('.picture-preview');
+    const x=card.querySelector('[data-picture-x]'), y=card.querySelector('[data-picture-y]');
+    const updatePreview=()=>{preview.style.backgroundPosition=`${x.value}% ${y.value}%`;card.querySelector('[data-x-output]').textContent=`${x.value}%`;card.querySelector('[data-y-output]').textContent=`${y.value}%`;};
+    x.addEventListener('input',updatePreview); y.addEventListener('input',updatePreview);
+    let uploadedDraftPath=null;
+    card.querySelector('[data-picture-file]').addEventListener('change',event=>{
+      const file=event.target.files?.[0]; if(!file)return;
+      if(!allowedServiceImageTypes.has(file.type)){event.target.value='';return setStatus('Use a JPEG, PNG, or WebP image',true);}
+      if(file.size>5*1024*1024){event.target.value='';return setStatus('Service pictures must be 5 MB or smaller',true);}
+      URL.revokeObjectURL(card.dataset.previewObjectUrl || '');
+      const objectUrl=URL.createObjectURL(file); card.dataset.previewObjectUrl=objectUrl; preview.style.backgroundImage=`url('${objectUrl}')`; setStatus('Picture preview ready. Save Draft when the crop looks right.');
+    });
+    card.querySelector('[data-save-picture]').addEventListener('click',()=>run('Saving picture draft',async()=>{
+      const file=card.querySelector('[data-picture-file]').files?.[0];
+      if(file){const extension={ 'image/jpeg':'jpg','image/png':'png','image/webp':'webp' }[file.type];uploadedDraftPath=`${slug}/${Date.now()}-${crypto.randomUUID()}.${extension}`;requireOk(await supabase.storage.from(SERVICE_IMAGE_BUCKET).upload(uploadedDraftPath,file,{cacheControl:'3600',contentType:file.type,upsert:false}));}
+      const changes={draft_position_x:Number(x.value),draft_position_y:Number(y.value),updated_by:currentUserId,updated_at:new Date().toISOString()};
+      if(uploadedDraftPath)changes.draft_path=uploadedDraftPath;
+      requireOk(await supabase.from('service_profile_media').update(changes).eq('service_slug',slug));
+      await loadServicePictures();
+    }));
+    card.querySelector('[data-publish-picture]').addEventListener('click',()=>{if(confirm(`Publish this replacement picture for ${serviceLabel(slug)}?`))run('Publishing service picture',async()=>{requireOk(await supabase.rpc('publish_service_picture',{target_slug:slug}));await loadServicePictures();});});
+    card.querySelector('[data-restore-picture]').addEventListener('click',()=>{if(confirm(`Restore the previous ${serviceLabel(slug)} picture?`))run('Restoring previous service picture',async()=>{requireOk(await supabase.rpc('restore_service_picture',{target_slug:slug}));await loadServicePictures();});});
+  });
+}
 
 async function addService() {
   const name = prompt('Service name'); if (!name) return;
@@ -153,7 +204,7 @@ async function loadOperations() {
   if (operationView === 'requests') {
     const [requestsResult, rolesResult, profilesResult, pricesResult] = await Promise.all([supabase.from('service_requests').select('*').order('created_at', { ascending:false }), supabase.from('user_roles').select('*').eq('role','employee'), supabase.from('profiles').select('*'), supabase.from('service_price_items').select('*')]);
     const data = requireOk(requestsResult) || [], employees = requireOk(rolesResult) || [], profiles = requireOk(profilesResult) || [], prices = requireOk(pricesResult) || []; const names = Object.fromEntries(profiles.map(profile => [profile.id, profile.display_name || 'Employee'])); const priceById=Object.fromEntries(prices.map(item=>[item.id,item]));
-    target.innerHTML = table(['Customer','Service / details','Preferred date','Notification','Status / employee','Actions'], data.map(row => { const price=priceById[row.service_price_item_id]; const quantity=Number(row.approved_quantity || row.requested_quantity || 1); const suggested=price ? price.price_cents * quantity : 0; return `<tr><td><b>${escapeHtml(row.customer_name || row.summary)}</b><br>${escapeHtml(row.customer_phone || '—')}<br>${escapeHtml(row.customer_email || 'Account customer')}<br>${escapeHtml(row.service_address || '—')}</td><td><b>${escapeHtml(price?.name || row.service_slug.replaceAll('-',' '))}</b><br>${price ? `${escapeHtml(window.OgreenaServiceCatalog.priceLabel(price))}${price.pricing_type==='per_unit'?` · requested ${escapeHtml(row.requested_quantity || '—')} · approved ${escapeHtml(row.approved_quantity || 'pending')}`:''}<br>`:''}${escapeHtml(row.details || row.summary)}</td><td>${escapeHtml(row.preferred_date || '—')}</td><td><span class="tag">${escapeHtml(row.notification_status || 'not required')}</span>${row.notification_status === 'failed' ? '<br><small>Email queued for retry</small>' : ''}</td><td><select data-status-table="service_requests" data-id="${row.id}">${['submitted','reviewing','estimate_ready','scheduled','in_progress','completed','cancelled'].map(status => `<option ${row.status===status?'selected':''}>${status}</option>`).join('')}</select><select data-request-assignment data-id="${row.id}"><option value="">Unassigned</option>${employees.map(employee => `<option value="${employee.user_id}" ${row.assigned_employee_id===employee.user_id?'selected':''}>${escapeHtml(names[employee.user_id])}</option>`).join('')}</select></td><td>${price?.pricing_type==='per_unit'?`<button class="small-btn" data-approve-quantity="${row.id}" data-requested="${row.requested_quantity || 1}">Approve Quantity</button> `:''}<button class="small-btn" data-respond-request="${row.id}">Respond</button> <button class="small-btn" data-create-estimate="${row.id}" data-customer="${row.customer_id || ''}" data-suggested="${(suggested/100).toFixed(2)}">Create Estimate</button> <button class="small-btn" data-schedule-request="${row.id}" data-customer="${row.customer_id || ''}" data-employee="${row.assigned_employee_id || ''}">Schedule</button></td></tr>`; }));
+    target.innerHTML = table(['Customer','Service / details','Preferred date','Notification','Status / employee','Actions'], data.map(row => { const price=priceById[row.service_price_item_id]; const quantity=Number(row.approved_quantity || row.requested_quantity || 1); const suggested=price ? price.price_cents * quantity : 0; const quantityBased=price && price.pricing_type!=='fixed'; return `<tr><td><b>${escapeHtml(row.customer_name || row.summary)}</b><br>${escapeHtml(row.customer_phone || '—')}<br>${escapeHtml(row.customer_email || 'Account customer')}<br>${escapeHtml(row.service_address || '—')}</td><td><b>${escapeHtml(price?.name || row.service_slug.replaceAll('-',' '))}</b><br>${price ? `${escapeHtml(window.OgreenaServiceCatalog.priceLabel(price))}${quantityBased?` · requested ${escapeHtml(row.requested_quantity || '—')} · approved ${escapeHtml(row.approved_quantity || 'pending')}`:''}<br>`:''}${escapeHtml(row.details || row.summary)}</td><td>${escapeHtml(row.preferred_date || '—')}</td><td><span class="tag">${escapeHtml(row.notification_status || 'not required')}</span>${row.notification_status === 'failed' ? '<br><small>Email queued for retry</small>' : ''}</td><td><select data-status-table="service_requests" data-id="${row.id}">${['submitted','reviewing','estimate_ready','scheduled','in_progress','completed','cancelled'].map(status => `<option ${row.status===status?'selected':''}>${status}</option>`).join('')}</select><select data-request-assignment data-id="${row.id}"><option value="">Unassigned</option>${employees.map(employee => `<option value="${employee.user_id}" ${row.assigned_employee_id===employee.user_id?'selected':''}>${escapeHtml(names[employee.user_id])}</option>`).join('')}</select></td><td>${quantityBased?`<button class="small-btn" data-approve-quantity="${row.id}" data-requested="${row.requested_quantity || 1}">Approve Quantity</button> `:''}<button class="small-btn" data-respond-request="${row.id}">Respond</button> <button class="small-btn" data-create-estimate="${row.id}" data-customer="${row.customer_id || ''}" data-suggested="${(suggested/100).toFixed(2)}">Create Estimate</button> <button class="small-btn" data-schedule-request="${row.id}" data-customer="${row.customer_id || ''}" data-employee="${row.assigned_employee_id || ''}">Schedule</button></td></tr>`; }));
   } else if (operationView === 'businesses') {
     const data = requireOk(await supabase.from('business_registration_requests').select('id,business_id,authority_description,status,created_at,businesses!inner(display_name)').order('created_at', { ascending:false })) || [];
     target.innerHTML = table(['Business','Authority statement','Requested','Status','Action'], data.map(row => `<tr><td><b>${escapeHtml(row.businesses?.display_name || 'Business')}</b></td><td>${escapeHtml(row.authority_description)}</td><td>${escapeHtml(new Date(row.created_at).toLocaleDateString())}</td><td>${escapeHtml(row.status)}</td><td>${row.status === 'pending' ? `<button class="small-btn primary" data-review-business="${row.id}" data-decision="approved">Approve</button> <button class="small-btn danger" data-review-business="${row.id}" data-decision="rejected">Reject</button>` : 'Reviewed'}</td></tr>`));
@@ -410,7 +461,7 @@ async function initialize() {
   denied.hidden = true; dashboard.hidden = false;
   const [roles, requests, appointments, messages] = await Promise.all([supabase.from('user_roles').select('role'), count('service_requests'), count('appointments'), count('messages')]);
   const roleRows = roles.data || []; $('#customerCount').textContent = roleRows.filter(row => row.role === 'customer').length; $('#employeeCount').textContent = roleRows.filter(row => row.role === 'employee').length; $('#requestCount').textContent = requests; $('#appointmentCount').textContent = appointments; $('#messageCount').textContent = messages;
-  await Promise.all([loadBusiness(), loadProducts(), loadServices(), loadContent(), loadOperations(), loadPayments()]);
+  await Promise.all([loadBusiness(), loadProducts(), loadServices(), loadServicePrices(), loadServicePictures(), loadContent(), loadOperations(), loadPayments()]);
   setStatus('All owner controls loaded');
 }
 
