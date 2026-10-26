@@ -77,12 +77,13 @@ const serviceProfileOptions = [
   ['deep-cleaning','Deep Cleaning'], ['window-cleaning','Window Cleaning'],
   ['mattress-cleaning','Mattress Cleaning'], ['upholstery-cleaning','Upholstery Cleaning'],
   ['tile-grout-cleaning','Tile & Grout Cleaning'], ['floor-polishing','Floor Polishing'],
-  ['move-in-move-out-cleaning','Move-In / Move-Out Cleaning'], ['pressure-washing','Pressure Washing'],
+  ['move-in-move-out-cleaning','Move-In / Move-Out'], ['pressure-washing','Pressure Washing'],
   ['commercial-cleaning','Commercial Cleaning'], ['janitorial-services','Janitorial Services'],
   ['facilities-maintenance','Facilities Maintenance'], ['electrical-services','Electrical Services']
 ];
 const pricePageOptions = serviceProfileOptions.map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
 const serviceLabel = slug => serviceProfileOptions.find(([value]) => value === slug)?.[1] || slug.replaceAll('-', ' ');
+let selectedWebsiteService = 'carpet-cleaning';
 const priceCategoryForSlug = slug => ({
   'carpet-cleaning':'carpet-cleaning', 'house-cleaning':'housekeeping', 'deep-cleaning':'housekeeping',
   'window-cleaning':'housekeeping', 'mattress-cleaning':'mattress-cleaning',
@@ -91,7 +92,7 @@ const priceCategoryForSlug = slug => ({
 }[slug] || 'housekeeping');
 
 function priceRow(item) {
-  return `<form class="editor-row price-editor" data-price-item="${escapeHtml(item.id)}"><label>Service profile<select name="service_slug">${pricePageOptions}</select></label><label>Service name<input name="name" value="${escapeHtml(item.name)}" required maxlength="150"></label><label>Price<input name="price" type="number" min="0" step="0.01" value="${(item.price_cents / 100).toFixed(2)}" required></label><label>Rate type<select name="pricing_type"><option value="fixed" ${item.pricing_type === 'fixed' ? 'selected' : ''}>Fixed price</option><option value="hourly" ${item.pricing_type === 'hourly' ? 'selected' : ''}>Hourly rate</option><option value="per_square_foot" ${item.pricing_type === 'per_square_foot' ? 'selected' : ''}>Per square foot</option><option value="per_unit" ${item.pricing_type === 'per_unit' ? 'selected' : ''}>Per item / unit</option></select></label><label>Unit label<input name="unit_label" value="${escapeHtml(item.unit_label || '')}" placeholder="per hour, per sq. ft., or each"></label><label>Order<input name="display_order" type="number" min="0" value="${Number(item.display_order) || 0}"></label><label>Published<select name="active"><option value="true" ${item.active ? 'selected' : ''}>Yes</option><option value="false" ${!item.active ? 'selected' : ''}>No</option></select></label><label class="wide">Description<textarea name="description" maxlength="500" rows="2">${escapeHtml(item.description || '')}</textarea></label><div class="wide editor-actions"><button class="small-btn primary" type="submit">Save Price</button><button class="small-btn danger" type="button" data-delete-price>Delete Price</button></div></form>`;
+  return `<form class="editor-row price-editor" data-price-item="${escapeHtml(item.id)}"><div class="wide price-assignment"><strong>${escapeHtml(item.name)}</strong><span class="tag">Assigned to ${escapeHtml(serviceLabel(item.service_slug))}</span></div><label>Service name<input name="name" value="${escapeHtml(item.name)}" required maxlength="150"></label><label>Price<input name="price" type="number" min="0" step="0.01" value="${(item.price_cents / 100).toFixed(2)}" required></label><label>Rate type<select name="pricing_type"><option value="fixed" ${item.pricing_type === 'fixed' ? 'selected' : ''}>Fixed price</option><option value="hourly" ${item.pricing_type === 'hourly' ? 'selected' : ''}>Hourly rate</option><option value="per_square_foot" ${item.pricing_type === 'per_square_foot' ? 'selected' : ''}>Per square foot</option><option value="per_unit" ${item.pricing_type === 'per_unit' ? 'selected' : ''}>Per item / unit</option></select></label><label>Unit label<input name="unit_label" value="${escapeHtml(item.unit_label || '')}" placeholder="per hour, per sq. ft., or each"></label><label>Order<input name="display_order" type="number" min="0" value="${Number(item.display_order) || 0}"></label><label>Published<select name="active"><option value="true" ${item.active ? 'selected' : ''}>Yes</option><option value="false" ${!item.active ? 'selected' : ''}>No</option></select></label><label class="wide">Description<textarea name="description" maxlength="500" rows="2">${escapeHtml(item.description || '')}</textarea></label><details class="wide price-advanced"><summary>Move to another service page</summary><label>Public service page<select name="service_slug">${pricePageOptions}</select></label></details><div class="wide editor-actions"><button class="small-btn primary" type="submit">Save Price</button><button class="small-btn danger" type="button" data-delete-price>Delete Price</button></div></form>`;
 }
 
 async function loadServicePrices() {
@@ -100,8 +101,8 @@ async function loadServicePrices() {
     $('#servicePriceList').innerHTML = '<p class="empty-state">The residential price catalog migration has not been applied yet.</p>';
     return;
   }
-  const grouped = (result.data || []).reduce((groups,item) => { (groups[item.service_slug] ||= []).push(item); return groups; }, {});
-  $('#servicePriceList').innerHTML = serviceProfileOptions.map(([slug,label]) => `<section class="catalog-category"><h3>${escapeHtml(label)}</h3>${(grouped[slug] || []).map(priceRow).join('') || '<p class="empty-state">No prices assigned to this service.</p>'}</section>`).join('');
+  const selectedItems=(result.data || []).filter(item => item.service_slug === selectedWebsiteService);
+  $('#servicePriceList').innerHTML = `<section class="catalog-category"><h3>${escapeHtml(serviceLabel(selectedWebsiteService))} Prices</h3>${selectedItems.map(priceRow).join('') || '<p class="empty-state">No prices assigned to this service. Use Add Price to create one.</p>'}</section>`;
   $('#servicePriceList').querySelectorAll('[data-price-item]').forEach(form => {
     const item = (result.data || []).find(row => row.id === form.dataset.priceItem);
     form.querySelector('[name="service_slug"]').value = item.service_slug;
@@ -118,8 +119,7 @@ async function loadServicePrices() {
 
 $('#newPriceItem').addEventListener('click', () => {
   const name = prompt('Service price name'); if (!name) return;
-  const serviceSlug = prompt(`Public service page:\n${serviceProfileOptions.map(([slug])=>slug).join('\n')}`, 'carpet-cleaning');
-  if (!serviceProfileOptions.some(([slug]) => slug === serviceSlug)) return setStatus('Choose a valid public service page', true);
+  const serviceSlug = selectedWebsiteService;
   const price = prompt('Price in dollars', '0'); if (price === null || !Number.isFinite(Number(price)) || Number(price) < 0) return;
   const id = `${serviceSlug}-${name.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}-${Date.now()}`;
   run('Adding service price', async () => { requireOk(await supabase.from('service_price_items').insert({ id, category:priceCategoryForSlug(serviceSlug), service_slug:serviceSlug, name:name.trim(), description:'', price_cents:Math.round(Number(price) * 100), pricing_type:'fixed', unit_label:'', active:false, display_order:999 })); await loadServicePrices(); });
@@ -137,11 +137,12 @@ function pictureRow(item) {
   const previewPath=item.draft_path || item.current_path;
   const x=item.draft_position_x ?? item.position_x ?? 50;
   const y=item.draft_position_y ?? item.position_y ?? 50;
-  return `<article class="picture-editor-card" data-picture-service="${escapeHtml(item.service_slug)}"><div class="picture-preview" role="img" aria-label="${escapeHtml(serviceLabel(item.service_slug))} cover preview" style="background-image:url('${escapeHtml(serviceImageUrl(previewPath))}');background-position:${x}% ${y}%"></div><div><h3>${escapeHtml(serviceLabel(item.service_slug))}</h3><p class="muted">${item.draft_path ? 'Draft picture — not published' : 'Published picture'}</p></div><label>Replacement image<input type="file" data-picture-file accept="image/jpeg,image/png,image/webp"></label><label>Horizontal position <output data-x-output>${x}%</output><input type="range" data-picture-x min="0" max="100" value="${x}"></label><label>Vertical position <output data-y-output>${y}%</output><input type="range" data-picture-y min="0" max="100" value="${y}"></label><div class="editor-actions"><button class="small-btn" type="button" data-save-picture>Save Draft</button><button class="small-btn primary" type="button" data-publish-picture ${item.draft_path?'':'disabled'}>Publish Picture</button><button class="small-btn" type="button" data-restore-picture ${item.previous_path?'':'disabled'}>Restore Previous</button></div></article>`;
+  return `<article class="picture-editor-card" data-picture-service="${escapeHtml(item.service_slug)}"><div><h3>${escapeHtml(serviceLabel(item.service_slug))}</h3><p class="muted">Large service-page cover picture · ${item.draft_path ? 'Draft not published' : 'Currently published'}</p></div><div class="picture-preview" role="img" aria-label="${escapeHtml(serviceLabel(item.service_slug))} cover preview" style="background-image:url('${escapeHtml(serviceImageUrl(previewPath))}');background-position:${x}% ${y}%"></div><input class="visually-hidden" type="file" data-picture-file accept="image/jpeg,image/png,image/webp"><button class="small-btn picture-change-button" type="button" data-change-picture>Change Cover Picture</button><p class="muted" data-picture-selection>No replacement selected. The current picture will stay unchanged.</p><label>Horizontal position <output data-x-output>${x}%</output><input type="range" data-picture-x min="0" max="100" value="${x}"></label><label>Vertical position <output data-y-output>${y}%</output><input type="range" data-picture-y min="0" max="100" value="${y}"></label><div class="editor-actions"><button class="small-btn" type="button" data-save-picture>Save Draft</button><button class="small-btn primary" type="button" data-publish-picture ${item.draft_path?'':'disabled'}>Publish Picture</button><button class="small-btn" type="button" data-restore-picture ${item.previous_path?'':'disabled'}>Restore Previous</button></div></article>`;
 }
 async function loadServicePictures() {
   const data=requireOk(await supabase.from('service_profile_media').select('*').order('service_slug')) || [];
-  $('#servicePictureList').innerHTML=data.map(pictureRow).join('') || '<p class="empty-state">Service-picture controls are not configured yet.</p>';
+  const selected=data.find(item => item.service_slug === selectedWebsiteService);
+  $('#servicePictureList').innerHTML=selected ? pictureRow(selected) : '<p class="empty-state">Picture controls are not configured for this service yet.</p>';
   $('#servicePictureList').querySelectorAll('[data-picture-service]').forEach(card => {
     const slug=card.dataset.pictureService;
     const preview=card.querySelector('.picture-preview');
@@ -149,12 +150,14 @@ async function loadServicePictures() {
     const updatePreview=()=>{preview.style.backgroundPosition=`${x.value}% ${y.value}%`;card.querySelector('[data-x-output]').textContent=`${x.value}%`;card.querySelector('[data-y-output]').textContent=`${y.value}%`;};
     x.addEventListener('input',updatePreview); y.addEventListener('input',updatePreview);
     let uploadedDraftPath=null;
-    card.querySelector('[data-picture-file]').addEventListener('change',event=>{
+    const fileInput=card.querySelector('[data-picture-file]');
+    card.querySelector('[data-change-picture]').addEventListener('click',()=>fileInput.click());
+    fileInput.addEventListener('change',event=>{
       const file=event.target.files?.[0]; if(!file)return;
       if(!allowedServiceImageTypes.has(file.type)){event.target.value='';return setStatus('Use a JPEG, PNG, or WebP image',true);}
       if(file.size>5*1024*1024){event.target.value='';return setStatus('Service pictures must be 5 MB or smaller',true);}
       URL.revokeObjectURL(card.dataset.previewObjectUrl || '');
-      const objectUrl=URL.createObjectURL(file); card.dataset.previewObjectUrl=objectUrl; preview.style.backgroundImage=`url('${objectUrl}')`; setStatus('Picture preview ready. Save Draft when the crop looks right.');
+      const objectUrl=URL.createObjectURL(file); card.dataset.previewObjectUrl=objectUrl; preview.style.backgroundImage=`url('${objectUrl}')`; card.querySelector('[data-picture-selection]').textContent=`Previewing ${file.name}. Adjust the crop, then Save Draft.`; setStatus('Picture preview ready. Save Draft when the crop looks right.');
     });
     card.querySelector('[data-save-picture]').addEventListener('click',()=>run('Saving picture draft',async()=>{
       const file=card.querySelector('[data-picture-file]').files?.[0];
@@ -168,6 +171,17 @@ async function loadServicePictures() {
     card.querySelector('[data-restore-picture]').addEventListener('click',()=>{if(confirm(`Restore the previous ${serviceLabel(slug)} picture?`))run('Restoring previous service picture',async()=>{requireOk(await supabase.rpc('restore_service_picture',{target_slug:slug}));await loadServicePictures();});});
   });
 }
+
+const websiteServiceSelector=$('#websiteServiceSelector');
+websiteServiceSelector.innerHTML=pricePageOptions;
+websiteServiceSelector.value=selectedWebsiteService;
+websiteServiceSelector.addEventListener('change',()=>{selectedWebsiteService=websiteServiceSelector.value;loadServicePrices();loadServicePictures();});
+document.querySelectorAll('[data-website-editor-tab]').forEach(button=>button.addEventListener('click',()=>{
+  const view=button.dataset.websiteEditorTab;
+  document.querySelectorAll('[data-website-editor-tab]').forEach(tab=>{const active=tab===button;tab.classList.toggle('active',active);tab.setAttribute('aria-selected',String(active));});
+  document.querySelectorAll('[data-website-editor-view]').forEach(panel=>{panel.hidden=panel.dataset.websiteEditorView!==view;});
+  websiteServiceSelector.closest('label').hidden=view==='content';
+}));
 
 async function addService() {
   const name = prompt('Service name'); if (!name) return;

@@ -13,11 +13,20 @@ const migration = read('supabase/migrations/20261026234500_owner_service_picture
 
 assert.match(ownerPage, /Edit Service Prices/);
 assert.match(ownerPage, /Edit Service Pictures/);
+assert.match(ownerPage, /websiteServiceSelector/);
+assert.match(ownerPage, /data-website-editor-tab="prices"/);
+assert.match(ownerPage, /data-website-editor-tab="pictures"/);
+assert.match(ownerPage, /owner\.js\?v=24/);
 assert.match(owner, /service_profile_media/);
 assert.match(owner, /image\/jpeg/);
 assert.match(owner, /5\*1024\*1024/);
 assert.match(owner, /publish_service_picture/);
 assert.match(owner, /restore_service_picture/);
+assert.match(owner, /Change Cover Picture/);
+assert.match(owner, /Assigned to/);
+assert.match(owner, /selectedWebsiteService/);
+assert.match(owner, /Move-In \/ Move-Out/);
+assert.match(owner, /item\.service_slug === selectedWebsiteService/);
 assert.match(owner, /data-delete-price/);
 assert.match(owner, /hourly/);
 assert.match(owner, /per_square_foot/);
