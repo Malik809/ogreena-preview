@@ -83,7 +83,7 @@ values
 ('upholstery-cleaning-sectional-couch-5-seats','upholstery-cleaning','upholstery-cleaning','Sectional Couch (5 seats)',30000,'fixed','',33),
 ('upholstery-cleaning-sectional-couch-6-seats','upholstery-cleaning','upholstery-cleaning','Sectional Couch (6 seats)',35000,'fixed','',34),
 ('floor-cleaning-tile-and-grout','floor-cleaning','tile-grout-cleaning','Tile and Grout',500,'per_unit','per sq. ft.',35),
-('floor-cleaning-floor-polishing','floor-cleaning','floor-cleaning','Floor Polishing',500,'per_unit','per sq. ft.',36)
+('floor-cleaning-floor-polishing','floor-cleaning','floor-polishing','Floor Polishing',500,'per_unit','per sq. ft.',36)
 on conflict (id) do update set
   category=excluded.category, service_slug=excluded.service_slug, name=excluded.name,
   price_cents=excluded.price_cents, pricing_type=excluded.pricing_type,

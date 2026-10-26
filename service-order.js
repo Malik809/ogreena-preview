@@ -11,6 +11,8 @@
     { slug:'tile-grout-cleaning', name:'Tile & Grout Cleaning', icon:'▤', summary:'Tile surfaces and grout lines' },
     { slug:'upholstery-cleaning', name:'Upholstery Cleaning', icon:'▰', summary:'Sofas, chairs and fabric care' },
     { slug:'window-cleaning', name:'Window Cleaning', icon:'▣', summary:'Interior and exterior glass care' },
+    { slug:'mattress-cleaning', name:'Mattress Cleaning', icon:'▱', summary:'Twin, full, queen and king mattress care' },
+    { slug:'floor-polishing', name:'Floor Polishing', icon:'◇', summary:'Residential floor polishing by square foot' },
     { slug:'pressure-washing', name:'Pressure Washing', icon:'≈', summary:'Exterior hard-surface cleaning' }
   ];
   const defaults = services.map(service => service.slug);

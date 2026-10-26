@@ -74,6 +74,18 @@ const serviceData = {
     handles: ['Interior glass cleaning', 'Exterior glass cleaning where safely accessible', 'Reachable frames and sills', 'Window care within move-in, move-out or deep cleaning', 'Home and business requests'],
     jobs: ['Homes and apartments', 'Rental turnovers', 'Storefronts and offices', 'Targeted or whole-property requests after review']
   },
+  'mattress-cleaning': {
+    name: 'Mattress Cleaning', icon: '▱', availability: 'Residential', cover: 'upholstery-cleaning',
+    description: 'Mattress cleaning for twin, full, queen and king beds, with the final scope confirmed before service.',
+    handles: ['Twin, full, queen and king mattresses', 'Surface and condition review', 'Residential mattress-care requests', 'Coordination with upholstery or room cleaning'],
+    jobs: ['Single mattresses', 'Whole-home mattress cleaning', 'Move-related cleaning', 'Residential refresh requests']
+  },
+  'floor-polishing': {
+    name: 'Floor Polishing', icon: '◇', availability: 'Residential and commercial', cover: 'tile-grout-cleaning',
+    description: 'Floor polishing priced by approved square footage, with material and condition reviewed before the final estimate.',
+    handles: ['Suitable hard-floor surfaces', 'Square-footage-based estimates', 'Condition and material review', 'Coordination with tile and grout cleaning'],
+    jobs: ['Homes and apartments', 'Rental-unit turnovers', 'Commercial floors', 'Targeted floor-care projects']
+  },
   'pressure-washing': {
     name: 'Pressure Washing', icon: '≈', availability: 'Residential and commercial',
     description: 'Exterior surface cleaning for property entries, walkways and suitable hard surfaces after the material, access and drainage needs are reviewed.',
@@ -88,7 +100,7 @@ const siteRoot = location.hostname.endsWith('.github.io') ? '/ogreena-preview/' 
 
 if (item) {
   const cover = document.querySelector('.service-profile .cover');
-  cover.style.backgroundImage = `url('${siteRoot}assets/service-covers/${document.body.dataset.service}.jpg')`;
+  cover.style.backgroundImage = `url('${siteRoot}assets/service-covers/${item.cover || document.body.dataset.service}.jpg')`;
   cover.setAttribute('role', 'img');
   cover.setAttribute('aria-label', `${item.name} demonstration cover image`);
   document.querySelector('#serviceTitle').textContent = item.name;
@@ -127,13 +139,15 @@ if (item) {
   const renderPricing = (publishedItems) => {
     const catalog = window.OgreenaServiceCatalog;
     if (!catalog) return;
-    const categoryForPage = { 'carpet-cleaning':'carpet-cleaning', 'house-cleaning':'housekeeping', 'deep-cleaning':'housekeeping', 'upholstery-cleaning':'upholstery-cleaning', 'tile-grout-cleaning':'floor-cleaning', 'window-cleaning':'housekeeping' };
+    const categoryForPage = { 'carpet-cleaning':'carpet-cleaning', 'house-cleaning':'housekeeping', 'deep-cleaning':'housekeeping', 'mattress-cleaning':'mattress-cleaning', 'upholstery-cleaning':'upholstery-cleaning', 'tile-grout-cleaning':'floor-cleaning', 'floor-polishing':'floor-cleaning', 'window-cleaning':'housekeeping' };
     const category = categoryForPage[document.body.dataset.service];
     let prices = (publishedItems || catalog.items).filter(price => price.active && price.category === category);
     if (document.body.dataset.service === 'deep-cleaning') prices = prices.filter(price => price.service_slug === 'deep-cleaning');
+    if (document.body.dataset.service === 'house-cleaning') prices = prices.filter(price => price.service_slug === 'house-cleaning');
     if (document.body.dataset.service === 'window-cleaning') prices = prices.filter(price => price.service_slug === 'window-cleaning');
     if (document.body.dataset.service === 'tile-grout-cleaning') prices = prices.filter(price => price.service_slug === 'tile-grout-cleaning');
-    document.querySelector('#pricingPanel').innerHTML = `<article class="card"><div class="card-title"><h2>Published residential prices</h2><span class="tag">Request only</span></div>${prices.length ? `<div class="price-list">${prices.map(price => `<div class="info-row"><div><b>${price.name}</b></div><strong>${catalog.priceLabel(price)}</strong></div>`).join('')}</div>` : '<div class="notice">Contact Ogreena for a written estimate for this service.</div>'}<p class="muted">Selecting a service does not create a charge or payable invoice. Final scope, quantities, and charges require owner approval.</p><p><button class="small-btn primary" type="button" data-price-request>Request appointment or estimate</button></p></article>`;
+    if (document.body.dataset.service === 'floor-polishing') prices = prices.filter(price => price.service_slug === 'floor-polishing');
+    document.querySelector('#pricingPanel').innerHTML = `<article class="card"><div class="card-title"><h2>${prices.length ? 'Published residential prices' : 'Pricing and estimates'}</h2><span class="tag">Request only</span></div>${prices.length ? `<div class="price-list">${prices.map(price => `<div class="info-row"><div><b>${price.name}</b></div><strong>${catalog.priceLabel(price)}</strong></div>`).join('')}</div>` : '<div class="notice">No approved fixed price is published for this service.</div>'}<p class="muted">Selecting a service does not create a charge or payable invoice. Final scope, quantities, and charges require owner approval.</p><p><button class="small-btn primary" type="button" data-price-request>${prices.length ? 'Request appointment or estimate' : 'Request an Estimate'}</button></p></article>`;
     document.querySelector('[data-price-request]').addEventListener('click', requestService);
   };
   const catalogScript = document.createElement('script');

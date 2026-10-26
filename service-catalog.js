@@ -35,7 +35,7 @@
     ['upholstery-cleaning','upholstery-cleaning','Sectional Couch (5 seats)',30000,'fixed',''],
     ['upholstery-cleaning','upholstery-cleaning','Sectional Couch (6 seats)',35000,'fixed',''],
     ['floor-cleaning','tile-grout-cleaning','Tile and Grout',500,'per_unit','per sq. ft.'],
-    ['floor-cleaning','floor-cleaning','Floor Polishing',500,'per_unit','per sq. ft.']
+    ['floor-cleaning','floor-polishing','Floor Polishing',500,'per_unit','per sq. ft.']
   ].map((row, index) => ({
     id:`${row[0]}-${row[2].toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}`,
     category:row[0], service_slug:row[1], name:row[2], price_cents:row[3], pricing_type:row[4], unit_label:row[5], active:true, display_order:index + 1
