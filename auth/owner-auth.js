@@ -121,6 +121,11 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
       location.replace('../owner/');
       return;
     }
+    if (roleRow?.role === 'employee') {
+      setStatus('Signed in. Opening the Employee Dashboard…', 'success');
+      location.replace('../employee/');
+      return;
+    }
     setStatus('Signed in.', 'success');
   });
 });
@@ -254,6 +259,10 @@ async function renderSession(session) {
   if (role === 'owner') {
     window.sessionStorage.setItem(OWNER_SESSION_HANDOFF_KEY, JSON.stringify({ access_token:session.access_token, refresh_token:session.refresh_token }));
     location.replace('../owner/');
+    return;
+  }
+  if (role === 'employee') {
+    location.replace('../employee/');
     return;
   }
   document.querySelector('#roleBadge').textContent = role[0].toUpperCase() + role.slice(1);

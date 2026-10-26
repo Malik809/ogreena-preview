@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Employee &amp; Applicant Access | Ogreena</title>
+  <link rel="icon" href="../assets/ogreena-original-logo.jpg">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../brand.css">
+  <link rel="stylesheet" href="../auth/auth.css">
+  <link rel="stylesheet" href="careers-account.css?v=1">
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="../"><img src="../assets/ogreena-original-logo.jpg" alt="Ogreena logo">Ogreena</a>
+    <div class="search">Employee &amp; applicant access</div>
+    <a class="small-btn" href="../hiring-application/">Careers</a>
+  </header>
+  <main class="auth-shell">
+    <section class="auth-card" id="authCard">
+      <span class="tag" id="pathBadge">Careers</span>
+      <h1 id="authTitle">Ogreena Careers Account</h1>
+      <p id="authIntro">Sign in or create your secure Ogreena account.</p>
+      <div class="auth-tabs"><button type="button" data-mode="signin">Sign In</button><button type="button" data-mode="signup">Sign Up</button></div>
+      <form id="signInForm" class="auth-form">
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8"></label>
+        <button class="small-btn primary">Sign In</button>
+      </form>
+      <form id="signUpForm" class="auth-form" hidden>
+        <label>Name<input name="display_name" autocomplete="name" required maxlength="100"></label>
+        <label>Phone<input name="phone" type="tel" autocomplete="tel" required maxlength="40"></label>
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" autocomplete="new-password" required minlength="8"></label>
+        <button class="small-btn primary">Create Account</button>
+        <p class="muted">Email verification is required. Signing up never grants employee access automatically.</p>
+      </form>
+      <p id="careerStatus" class="auth-status" role="status" aria-live="polite"></p>
+    </section>
+    <section id="careerPanel" class="account-panel" hidden>
+      <div class="content-head"><div><span class="tag" id="accountType">Pending review</span><h1 id="panelTitle">Career access</h1></div><button class="small-btn" id="signOut">Sign Out</button></div>
+      <div class="account-grid">
+        <article class="card" id="employeeRequestCard">
+          <h2>Existing employee confirmation</h2>
+          <p class="muted">This request does not grant access. Ogreena’s owner must confirm that you are already employed.</p>
+          <form id="employeeRequestForm" class="auth-form"><label>Phone<input name="phone" type="tel" autocomplete="tel" required></label><button class="small-btn primary">Request Employee Access</button></form>
+          <p id="employeeRequestStatus"></p>
+        </article>
+        <article class="card" id="applicationCard">
+          <h2>Employment application</h2>
+          <form id="applicationForm" class="auth-form">
+            <label>Full name<input name="full_name" autocomplete="name" required></label>
+            <label>Phone<input name="phone" type="tel" autocomplete="tel" required></label>
+            <label>Position of interest<input name="position" required maxlength="120"></label>
+            <label>Availability<textarea name="availability" required maxlength="1000"></textarea></label>
+            <label>Relevant experience<textarea name="experience" required minlength="10" maxlength="4000"></textarea></label>
+            <button class="small-btn primary">Submit Application</button>
+          </form>
+          <p id="applicationStatus"></p>
+        </article>
+      </div>
+    </section>
+  </main>
+  <script src="../vendor/supabase-2.57.4.min.js"></script>
+  <script src="careers-account.js?v=1"></script>
+</body>
+</html>

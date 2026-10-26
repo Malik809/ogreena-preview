@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const root=path.resolve(__dirname,'..');const read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const careers=read('hiring-application/index.html'),account=read('careers-account/careers-account.js'),employee=read('employee/employee.js'),owner=read('owner/owner.js'),auth=read('auth/owner-auth.js'),migration=read('supabase/migrations/20261026225237_employee_access_and_applications.sql');
+for(const label of ['Existing Employee Sign Up','Employee Sign In','Apply for a Job','Applicant Sign In'])assert.match(careers,new RegExp(label));
+assert.match(account,/requested_account_type:pathType==='employee'\?'existing_employee':'job_applicant'/);
+assert.match(account,/phone:values\.phone/);
+assert.match(read('careers-account/careers-account.css'),/\[hidden\]\{display:none!important\}/);
+assert.doesNotMatch(account,/user_roles.*insert|role:'employee'/);
+assert.match(migration,/Neither path grants employee access until the verified Ogreena owner approves/);
+assert.match(migration,/assigned_employee_id = \(select auth\.uid\(\)\)/);
+assert.match(migration,/employee_id = \(select auth\.uid\(\)\)/);
+assert.match(migration,/revoke all on function public\.review_employee_access/);
+assert.match(owner,/review_employee_access/);assert.match(owner,/review_job_application/);assert.match(employee,/update_employee_job_status/);
+assert.match(auth,/role(?:Row\?\.)?\.role === 'employee'|role === 'employee'/);
+assert.match(read('auth/auth.css'),/@media\(max-width:720px\)/);
+console.log('employee system: separate paths, owner approval, assignment isolation, and mobile layout checks PASS');
