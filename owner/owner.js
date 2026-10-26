@@ -12,6 +12,7 @@ let currentUserId = null;
 let paymentView = 'product';
 let paymentRows = [];
 let paymentSettings = null;
+let replacementConnectInstance = null;
 const OWNER_SESSION_HANDOFF_KEY = 'ogreena-owner-session-handoff';
 
 function setStatus(message, error = false) { const node = $('#globalStatus'); node.textContent = message; node.classList.toggle('error', error); }
@@ -216,6 +217,8 @@ async function loadPayments() {
   const consented = Boolean(replacementConsent?.consented_at && !replacementConsent?.revoked_at);
   const consentCard = document.querySelector('.replacement-consent-card');
   consentCard.dataset.consented = String(consented);
+  $('#startReplacementOnboarding').hidden = !consented;
+  $('#startReplacementOnboarding').textContent = replacementCandidate ? 'Continue Embedded Onboarding' : 'Create Account & Start Embedded Onboarding';
   $('#replacementConsentStatus').textContent = replacementCandidate
     ? `Owner consent recorded. Replacement candidate status: ${replacementCandidate.status.replaceAll('_',' ')}.`
     : (consented ? 'Owner consent recorded. No replacement Stripe account has been created.' : 'Owner consent has not been recorded. No replacement Stripe account can be created.');
@@ -233,6 +236,41 @@ $('#recordReplacementConsent')?.addEventListener('click',()=>run('Recording repl
   }));
   await loadPayments();
 }));
+$('#startReplacementOnboarding')?.addEventListener('click',async()=>{
+  const button = $('#startReplacementOnboarding');
+  button.disabled = true;
+  $('#replacementOnboardingPanel').hidden = false;
+  $('#replacementOnboardingStatus').textContent = 'Opening Stripe’s secure live onboarding form…';
+  try {
+    const { data, error } = await supabase.functions.invoke('create-ogreena-replacement-onboarding', { body:{} });
+    if (error) throw new Error(data?.error || error.message);
+    if (data?.livemode !== true || data?.mode !== 'onboarding') throw new Error('The onboarding session returned an unsafe Stripe environment.');
+    const { loadConnectAndInitialize } = await import('https://cdn.jsdelivr.net/npm/@stripe/connect-js@3.3.1/+esm');
+    let initialSecret = data.clientSecret;
+    replacementConnectInstance = loadConnectAndInitialize({
+      publishableKey:data.publishableKey,
+      fetchClientSecret:async()=>{
+        if (initialSecret) { const secret = initialSecret; initialSecret = undefined; return secret; }
+        const refreshed = await supabase.functions.invoke('create-ogreena-replacement-onboarding', { body:{} });
+        if (refreshed.error || refreshed.data?.livemode !== true || refreshed.data?.mode !== 'onboarding') {
+          throw new Error('Unable to refresh the secure Stripe onboarding session.');
+        }
+        return refreshed.data.clientSecret;
+      },
+      appearance:{ overlays:'dialog', variables:{ colorPrimary:'#0f6943', colorBackground:'#fffdf6', colorText:'#163e2d', borderRadius:'12px' } },
+    });
+    const banner = replacementConnectInstance.create('notification-banner');
+    const onboarding = replacementConnectInstance.create('account-onboarding');
+    $('#replacementStripeNotification').replaceChildren(banner);
+    $('#replacementStripeOnboarding').replaceChildren(onboarding);
+    $('#replacementOnboardingStatus').textContent = 'Stripe-secured business verification and payout setup';
+    await loadPayments();
+  } catch (error) {
+    $('#replacementOnboardingStatus').textContent = error.message || 'The secure Stripe onboarding form could not be opened.';
+  } finally {
+    button.disabled = false;
+  }
+});
 document.querySelectorAll('[data-stripe-path]').forEach(button => button.addEventListener('click', () => {
   // Stripe Dashboard is the secure hosted interface for the business's direct account.
   // Do not hardcode an account ID: Stripe selects the authenticated Ogreena account.

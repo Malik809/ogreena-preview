@@ -11,6 +11,7 @@ const liveWebhook = read('supabase/functions/stripe-live-webhook/index.ts');
 const liveValidation = read('supabase/functions/create-live-validation-checkout/index.ts');
 const connectSession = read('supabase/functions/create-connect-account-session/index.ts');
 const payoutSetup = read('owner/payment-setup/payment-setup.js');
+const replacementOnboarding = read('supabase/functions/create-ogreena-replacement-onboarding/index.ts');
 
 function expect(source, value, label) {
   if (!source.includes(value)) throw new Error(`${label} missing: ${value}`);
@@ -31,6 +32,15 @@ expect(ownerJs, "supabase.functions.invoke('create-refund'", 'authorized refund 
 expect(ownerJs, "body:{ statusOnly:true }", 'owner payout status request');
 expect(ownerJs, "from('ogreena_replacement_connect_consents')", 'replacement consent storage');
 expect(ownerJs, "terms_version:'ogreena-replacement-live-v1'", 'versioned owner consent');
+expect(ownerHtml, 'id="startReplacementOnboarding"', 'consent-gated onboarding action');
+expect(ownerJs, "create('account-onboarding')", 'replacement embedded onboarding');
+expect(ownerJs, '@stripe/connect-js@3.3.1', 'proven Connect JS version');
+expect(replacementOnboarding, 'await requireOwner(request)', 'server owner authorization');
+expect(replacementOnboarding, "CONSENT_VERSION = 'ogreena-replacement-live-v1'", 'server consent verification');
+expect(replacementOnboarding, "idempotencyKey:'ogreena-llc-replacement-candidate-v1'", 'duplicate account prevention');
+expect(replacementOnboarding, 'account_onboarding:{ enabled:true', 'Account Session onboarding component');
+expect(replacementOnboarding, "metadata:{ ogreena_replacement_candidate:'true'", 'replacement account isolation marker');
+if (replacementOnboarding.includes("from('payment_settings')")) throw new Error('Replacement onboarding changes active payment routing');
 expect(connectSession, 'external_accounts?.data.find', 'Stripe-confirmed payout destination check');
 expect(connectSession, 'informationRequired', 'Stripe requirement status');
 expect(connectSession, 'accountManagementEnabled: true', 'Stripe account-management component');
