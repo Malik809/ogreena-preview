@@ -16,7 +16,7 @@ assert.match(ownerPage, /Edit Service Pictures/);
 assert.match(ownerPage, /websiteServiceSelector/);
 assert.match(ownerPage, /data-website-editor-tab="prices"/);
 assert.match(ownerPage, /data-website-editor-tab="pictures"/);
-assert.match(ownerPage, /owner\.js\?v=25/);
+assert.match(ownerPage, /owner\.js\?v=29/);
 assert.match(owner, /service_profile_media/);
 assert.match(owner, /image\/jpeg/);
 assert.match(owner, /5\*1024\*1024/);
@@ -48,7 +48,7 @@ const servicePages = fs.readdirSync(path.join(root, 'services'))
 assert.equal(servicePages.length, 14);
 for (const file of servicePages) {
   const html = read(file);
-  assert.match(html, /service\.js\?v=21/);
+  assert.match(html, /service\.js\?v=22/);
   assert.match(html, /public-data\.js\?v=2/);
 }
 

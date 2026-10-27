@@ -32,7 +32,7 @@ Deno.serve(async request => {
       return Response.json({ url:session.url, sessionId:session.id, testMode:environment.testMode }, { headers });
     }
     const kind = String(body.kind || '') as PaymentKind;
-    let amount = 0, name = '', productId: string | null = null, requestId: string | null = null, estimateId: string | null = null, orderId: string | null = null;
+    let amount = 0, name = '', productId: string | null = null, requestId: string | null = null, estimateId: string | null = null, orderId: string | null = null, serviceSlug = '', servicePriceItemId = '';
     if (kind === 'product') {
       if (!settings.product_payments_enabled) throw new Error('Product checkout is unavailable');
       const { data: product } = await admin.from('products').select('id,name,size,price_cents,visible').eq('id', String(body.productId)).single();
@@ -44,12 +44,17 @@ Deno.serve(async request => {
       if (itemError) throw itemError;
     } else if (kind === 'invoice') {
       if (!settings.service_payments_enabled) throw new Error('Invoice checkout is unavailable');
-      const { data: estimate } = await admin.from('estimates').select('id,request_id,customer_id,amount_cents,description,status,expires_at,stripe_account_id,tax_treatment,tax_confirmed_at,tax_confirmed_by').eq('id', String(body.estimateId)).eq('customer_id', user.id).eq('status','accepted').single();
+      const { data: estimate } = await admin.from('estimates').select('id,request_id,customer_id,amount_cents,description,status,expires_at,stripe_account_id,tax_treatment,tax_confirmed_at,tax_confirmed_by,service_price_item_id,service_slug,catalog_item_name,catalog_unit_price_cents,catalog_pricing_type,catalog_unit_label,quantity,catalog_price_locked').eq('id', String(body.estimateId)).eq('customer_id', user.id).eq('status','accepted').single();
       if (!estimate?.amount_cents || estimate.amount_cents < 50) throw new Error('Approved invoice not found');
       if (estimate.expires_at && new Date(estimate.expires_at).getTime() <= Date.now()) throw new Error('This approved invoice has expired');
       if (estimate.tax_treatment !== 'service_only_nontaxable' || !estimate.tax_confirmed_at || !estimate.tax_confirmed_by) throw new Error('This invoice is blocked pending owner-confirmed tax treatment');
+      if (estimate.catalog_price_locked) {
+        if (!estimate.service_slug || !estimate.catalog_item_name || !estimate.catalog_unit_price_cents || !estimate.catalog_pricing_type || !estimate.quantity) throw new Error('This invoice is blocked because it does not contain a verified service-price snapshot');
+        const snapshotAmount = Math.round(Number(estimate.catalog_unit_price_cents) * Number(estimate.quantity));
+        if (snapshotAmount !== estimate.amount_cents) throw new Error('Invoice price verification failed');
+      }
       if (!environment.testMode && estimate.stripe_account_id && estimate.stripe_account_id !== NEW_MERCHANT) throw new Error('Invoice merchant mismatch');
-      estimateId = estimate.id; requestId = estimate.request_id; amount = estimate.amount_cents; name = `Approved Ogreena invoice — ${estimate.description || estimate.id}`;
+      estimateId = estimate.id; requestId = estimate.request_id; amount = estimate.amount_cents; serviceSlug = estimate.service_slug || ''; servicePriceItemId = estimate.service_price_item_id || ''; name = `Approved Ogreena invoice — ${estimate.catalog_item_name || estimate.description || estimate.id}`;
       await admin.from('estimates').update({ stripe_account_id:stripeAccountId }).eq('id', estimate.id).is('stripe_account_id', null);
     } else throw new Error('Unsupported payment type');
     const session = await stripe.checkout.sessions.create({
@@ -57,7 +62,7 @@ Deno.serve(async request => {
       line_items:[{ price_data:{ currency:'usd', product_data:{ name }, unit_amount:amount }, quantity:1 }],
       success_url:'https://ogreena.com/auth/?checkout=success&session_id={CHECKOUT_SESSION_ID}', cancel_url:'https://ogreena.com/auth/?checkout=cancelled',
       integration_identifier:'ogreena_qvmtzxpk',
-      metadata:{ customer_id:user.id, payment_kind:kind, product_id:productId || '', service_request_id:requestId || '', estimate_id:estimateId || '', order_id:orderId || '', stripe_account_id:stripeAccountId || '', tax_treatment:kind==='invoice'?'service_only_nontaxable':'' },
+      metadata:{ customer_id:user.id, payment_kind:kind, product_id:productId || '', service_request_id:requestId || '', estimate_id:estimateId || '', order_id:orderId || '', stripe_account_id:stripeAccountId || '', tax_treatment:kind==='invoice'?'service_only_nontaxable':'', service_slug:serviceSlug, service_price_item_id:servicePriceItemId },
     }, { idempotencyKey, ...requestOptions });
     const { error: transactionError } = await admin.from('payment_transactions').insert({ customer_id:user.id, order_id:orderId, service_request_id:requestId, estimate_id:estimateId, payment_kind:kind, stripe_checkout_session_id:session.id, stripe_account_id:stripeAccountId, amount_cents:amount, currency:'usd', status:'pending', idempotency_key:idempotencyKey, livemode:!environment.testMode });
     if (transactionError) throw transactionError;
