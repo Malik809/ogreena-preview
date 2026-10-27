@@ -32,6 +32,14 @@ document.querySelectorAll('[data-operation]').forEach(button => button.addEventL
   loadOperations();
 }));
 
+function applyOwnerRoute() {
+  if (location.hash !== '#operations:messages') return;
+  document.querySelectorAll('[data-owner-tab]').forEach(button => button.classList.toggle('active', button.dataset.ownerTab === 'operations'));
+  document.querySelectorAll('.owner-panel').forEach(panel => panel.classList.toggle('active', panel.id === 'owner-operations'));
+  operationView = 'messages';
+  document.querySelectorAll('[data-operation]').forEach(button => button.classList.toggle('active', button.dataset.operation === 'messages'));
+}
+
 function productRow(product) {
   const draft = product.draft_data || {};
   return `<form class="editor-row" data-product="${escapeHtml(product.id)}"><label>Name<input name="name" value="${escapeHtml(draft.name ?? product.name)}" required></label><label>Size<input name="size" value="${escapeHtml(draft.size ?? product.size)}" required></label><label>Price<input name="price" type="number" min="0" step="0.01" value="${((draft.price_cents ?? product.price_cents) / 100).toFixed(2)}" required></label><label>Order<input name="order" type="number" min="1" value="${Number(product.display_order) || 1}" required></label><label class="wide">Photo path<input name="image_path" value="${escapeHtml(draft.image_path ?? product.image_path)}" required></label><label>Available<select name="visible"><option value="true" ${(draft.visible ?? product.visible) ? 'selected':''}>Yes</option><option value="false" ${!(draft.visible ?? product.visible) ? 'selected':''}>No</option></select></label><label class="wide">Description<textarea name="description" rows="2">${escapeHtml(draft.description ?? product.description ?? '')}</textarea></label><div class="wide editor-actions"><button class="small-btn" type="submit">Save Draft</button><button class="small-btn primary" type="button" data-publish-product>Publish</button><button class="small-btn danger" type="button" data-remove-product>Remove</button><span class="muted">${draft.name !== undefined ? 'Draft saved' : 'Published'}</span></div></form>`;
@@ -502,8 +510,9 @@ async function initialize() {
   if (role?.role !== 'owner') { authStatus.textContent = 'This account is not authorized as an owner. Owner access is never granted from an email address alone.'; return; }
   currentUserId = session.user.id;
   denied.hidden = true; dashboard.hidden = false;
-  const [roles, requests, appointments, messages] = await Promise.all([supabase.from('user_roles').select('role'), count('service_requests'), count('appointments'), count('messages')]);
-  const roleRows = roles.data || []; $('#customerCount').textContent = roleRows.filter(row => row.role === 'customer').length; $('#employeeCount').textContent = roleRows.filter(row => row.role === 'employee').length; $('#requestCount').textContent = requests; $('#appointmentCount').textContent = appointments; $('#messageCount').textContent = messages;
+  applyOwnerRoute();
+  const [roles, requests, appointments, messages] = await Promise.all([supabase.from('user_roles').select('role'), count('service_requests'), count('appointments'), supabase.from('messages').select('sender_id,read_at').not('conversation_id','is',null)]);
+  const roleRows = roles.data || [], unreadMessages=(messages.data||[]).filter(row=>row.sender_id!==currentUserId&&!row.read_at).length; $('#customerCount').textContent = roleRows.filter(row => row.role === 'customer').length; $('#employeeCount').textContent = roleRows.filter(row => row.role === 'employee').length; $('#requestCount').textContent = requests; $('#appointmentCount').textContent = appointments; $('#messageCount').textContent = unreadMessages;
   await Promise.all([loadBusiness(), loadProducts(), loadServices(), loadServicePrices(), loadServicePictures(), loadContent(), loadOperations(), loadPayments()]);
   setStatus('All owner controls loaded');
 }
