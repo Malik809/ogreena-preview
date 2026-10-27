@@ -18,3 +18,8 @@ function showTab(name){document.querySelectorAll('.tab').forEach(x=>x.classList.
 document.querySelectorAll('[data-unavailable]').forEach(button => button.addEventListener('click', () => {
   location.href='messages/?service=general-inquiry';
 }));
+document.querySelectorAll('[data-unavailable]').forEach(button=>{
+  const title=button.querySelector('b'),detail=button.querySelector('span');
+  if(title)title.textContent='Message Ogreena';
+  if(detail)detail.textContent='Chat directly with our team';
+});

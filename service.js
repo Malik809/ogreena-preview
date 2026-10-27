@@ -107,7 +107,15 @@ if (item) {
   document.querySelector('#serviceDesc').textContent = item.description;
   window.OgreenaServiceIcons.renderInto(document.querySelector('#serviceIcon'), { slug:document.body.dataset.service, name:item.name, icon:item.icon });
   const requestService = () => { location.href = `${siteRoot}messages/?service=${encodeURIComponent(document.body.dataset.service)}`; };
-  document.querySelectorAll('[data-request],[data-unavailable]').forEach(control => control.addEventListener('click', requestService));
+  document.querySelectorAll('[data-request],[data-unavailable]').forEach(control => {
+    control.addEventListener('click', requestService);
+    const title=control.querySelector('b');
+    const detail=control.querySelector('span');
+    if(title){title.textContent='Message Ogreena';if(detail)detail.textContent='Chat directly with our team';}
+    else control.textContent='Message Ogreena';
+    control.removeAttribute('aria-disabled');
+    control.classList.remove('disabled-action');
+  });
 
   document.querySelector('#overview').innerHTML = `
     <article class="card profile-accent">
