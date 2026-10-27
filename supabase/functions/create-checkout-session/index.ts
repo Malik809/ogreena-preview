@@ -4,7 +4,7 @@ import { corsHeaders } from './owner.ts';
 import { stripeEnvironment } from './stripe-mode.ts';
 
 const NEW_MERCHANT = 'acct_1UUtHREjIGxDre3j';
-type PaymentKind = 'product' | 'service_deposit' | 'service_full' | 'invoice';
+type PaymentKind = 'product' | 'invoice';
 
 Deno.serve(async request => {
   const headers = { ...corsHeaders(request.headers.get('Origin')), 'Content-Type': 'application/json' };
@@ -42,17 +42,12 @@ Deno.serve(async request => {
       if (error) throw error; orderId = order.id;
       const { error: itemError } = await admin.from('order_items').insert({ order_id:orderId, product_id:productId, quantity:1, unit_price_cents:amount });
       if (itemError) throw itemError;
-    } else if (kind === 'service_deposit' || kind === 'service_full') {
-      if (!settings.service_payments_enabled) throw new Error('Service checkout is unavailable');
-      const { data: service } = await admin.from('service_requests').select('id,customer_id,summary,deposit_amount_cents,full_payment_amount_cents').eq('id', String(body.serviceRequestId)).eq('customer_id', user.id).single();
-      if (!service) throw new Error('Service request not found');
-      requestId = service.id; amount = kind === 'service_deposit' ? service.deposit_amount_cents : service.full_payment_amount_cents;
-      if (!amount || amount < 50) throw new Error('The owner has not approved an amount for this payment');
-      name = kind === 'service_deposit' ? `Deposit — ${service.summary}` : `Service payment — ${service.summary}`;
     } else if (kind === 'invoice') {
       if (!settings.service_payments_enabled) throw new Error('Invoice checkout is unavailable');
-      const { data: estimate } = await admin.from('estimates').select('id,request_id,customer_id,amount_cents,description,status,stripe_account_id').eq('id', String(body.estimateId)).eq('customer_id', user.id).eq('status','accepted').single();
+      const { data: estimate } = await admin.from('estimates').select('id,request_id,customer_id,amount_cents,description,status,expires_at,stripe_account_id,tax_treatment,tax_confirmed_at,tax_confirmed_by').eq('id', String(body.estimateId)).eq('customer_id', user.id).eq('status','accepted').single();
       if (!estimate?.amount_cents || estimate.amount_cents < 50) throw new Error('Approved invoice not found');
+      if (estimate.expires_at && new Date(estimate.expires_at).getTime() <= Date.now()) throw new Error('This approved invoice has expired');
+      if (estimate.tax_treatment !== 'service_only_nontaxable' || !estimate.tax_confirmed_at || !estimate.tax_confirmed_by) throw new Error('This invoice is blocked pending owner-confirmed tax treatment');
       if (!environment.testMode && estimate.stripe_account_id && estimate.stripe_account_id !== NEW_MERCHANT) throw new Error('Invoice merchant mismatch');
       estimateId = estimate.id; requestId = estimate.request_id; amount = estimate.amount_cents; name = `Approved Ogreena invoice — ${estimate.description || estimate.id}`;
       await admin.from('estimates').update({ stripe_account_id:stripeAccountId }).eq('id', estimate.id).is('stripe_account_id', null);
@@ -62,7 +57,7 @@ Deno.serve(async request => {
       line_items:[{ price_data:{ currency:'usd', product_data:{ name }, unit_amount:amount }, quantity:1 }],
       success_url:'https://ogreena.com/auth/?checkout=success&session_id={CHECKOUT_SESSION_ID}', cancel_url:'https://ogreena.com/auth/?checkout=cancelled',
       integration_identifier:'ogreena_qvmtzxpk',
-      metadata:{ customer_id:user.id, payment_kind:kind, product_id:productId || '', service_request_id:requestId || '', estimate_id:estimateId || '', order_id:orderId || '', stripe_account_id:stripeAccountId || '' },
+      metadata:{ customer_id:user.id, payment_kind:kind, product_id:productId || '', service_request_id:requestId || '', estimate_id:estimateId || '', order_id:orderId || '', stripe_account_id:stripeAccountId || '', tax_treatment:kind==='invoice'?'service_only_nontaxable':'' },
     }, { idempotencyKey, ...requestOptions });
     const { error: transactionError } = await admin.from('payment_transactions').insert({ customer_id:user.id, order_id:orderId, service_request_id:requestId, estimate_id:estimateId, payment_kind:kind, stripe_checkout_session_id:session.id, stripe_account_id:stripeAccountId, amount_cents:amount, currency:'usd', status:'pending', idempotency_key:idempotencyKey, livemode:!environment.testMode });
     if (transactionError) throw transactionError;

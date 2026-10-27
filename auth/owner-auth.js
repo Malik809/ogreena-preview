@@ -223,8 +223,8 @@ async function loadRequests(userId) {
   const list = document.querySelector('#requestList');
   const { data, error } = await supabase.from('service_requests').select('id,service_slug,service_price_item_id,requested_quantity,summary,status,created_at').eq('customer_id', userId).order('created_at', { ascending: false });
   if (error) { list.textContent = friendlyError(error); return; }
-  const { data: estimates } = await supabase.from('estimates').select('id,request_id,amount_cents,status').eq('customer_id', userId).eq('status','accepted');
-  const payable = Object.fromEntries((estimates || []).filter(item => item.amount_cents >= 50).map(item => [item.request_id,item]));
+  const { data: estimates } = await supabase.from('estimates').select('id,request_id,amount_cents,status,tax_treatment,tax_confirmed_at').eq('customer_id', userId).eq('status','accepted');
+  const payable = Object.fromEntries((estimates || []).filter(item => item.amount_cents >= 50 && item.tax_treatment === 'service_only_nontaxable' && item.tax_confirmed_at).map(item => [item.request_id,item]));
   list.innerHTML = data.length ? data.map(item => { const catalogItem=servicePriceItems.find(price => price.id === item.service_price_item_id); return `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(catalogItem?.name || item.service_slug)} · ${escapeHTML(item.status)}</span>${payable[item.id]?`<button class="small-btn primary" data-pay-estimate="${escapeHTML(payable[item.id].id)}">Pay approved invoice</button>`:''}</div>`; }).join('') : '<p class="muted">No service requests yet.</p>';
   list.querySelectorAll('[data-pay-estimate]').forEach(button=>button.addEventListener('click',()=>startCheckout({kind:'invoice',estimateId:button.dataset.payEstimate})));
 }
