@@ -8,6 +8,7 @@ const expansion=read('supabase/migrations/20261027004412_expand_private_messenge
 const service=read('service.js');
 const customer=read('messages/messenger.js');
 const owner=read('owner/owner.js');
+const ownerPage=read('owner/index.html');
 const page=read('messages/index.html');
 const css=read('messages/messenger.css');
 
@@ -43,6 +44,10 @@ assert.match(customer,/messenger_guest_identities/);
 assert.match(owner,/applyOwnerRoute/);
 assert.match(owner,/#operations:messages/);
 assert.match(owner,/unreadMessages/);
+assert.match(ownerPage,/data-owner-messenger/);
+assert.match(ownerPage,/ownerMessengerUnread/);
+assert.match(owner,/openOwnerMessenger/);
+assert.match(owner,/setOwnerUnreadCount/);
 assert.match(css,/@media\(max-width:760px\)/);
 assert.doesNotMatch(customer,/service_role|secret key/i);
 console.log('private messenger: customer, verified guest, assigned employee, owner, photos, realtime, unread, and mobile checks PASS');

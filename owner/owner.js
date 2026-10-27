@@ -20,11 +20,14 @@ function setStatus(message, error = false) { const node = $('#globalStatus'); no
 async function run(label, action) { setStatus(`${label}…`); try { const value = await action(); setStatus(`${label} complete`); return value; } catch (error) { setStatus(error.message || `${label} failed`, true); throw error; } }
 function requireOk(result) { if (result.error) throw result.error; return result.data; }
 async function count(table) { const result = await supabase.from(table).select('*', { count:'exact', head:true }); return result.error ? 0 : (result.count || 0); }
+function setOwnerUnreadCount(count) { $('#messageCount').textContent=count; const badge=$('#ownerMessengerUnread'); badge.textContent=count; badge.hidden=count===0; }
 
 document.querySelector('#signOut').addEventListener('click', async () => { await supabase.auth.signOut(); location.href = '../auth/?mode=signin'; });
 document.querySelectorAll('[data-owner-tab]').forEach(button => button.addEventListener('click', () => {
   document.querySelectorAll('[data-owner-tab]').forEach(item => item.classList.toggle('active', item === button));
+  $('[data-owner-messenger]').classList.remove('active');
   document.querySelectorAll('.owner-panel').forEach(panel => panel.classList.toggle('active', panel.id === `owner-${button.dataset.ownerTab}`));
+  if (location.hash === '#operations:messages') history.replaceState(null, '', `${location.pathname}${location.search}`);
 }));
 document.querySelectorAll('[data-operation]').forEach(button => button.addEventListener('click', () => {
   operationView = button.dataset.operation;
@@ -32,12 +35,21 @@ document.querySelectorAll('[data-operation]').forEach(button => button.addEventL
   loadOperations();
 }));
 
-function applyOwnerRoute() {
-  if (location.hash !== '#operations:messages') return;
-  document.querySelectorAll('[data-owner-tab]').forEach(button => button.classList.toggle('active', button.dataset.ownerTab === 'operations'));
+function openOwnerMessenger({ updateHash = true, load = true } = {}) {
+  document.querySelectorAll('[data-owner-tab]').forEach(button => button.classList.remove('active'));
+  $('[data-owner-messenger]').classList.add('active');
   document.querySelectorAll('.owner-panel').forEach(panel => panel.classList.toggle('active', panel.id === 'owner-operations'));
   operationView = 'messages';
   document.querySelectorAll('[data-operation]').forEach(button => button.classList.toggle('active', button.dataset.operation === 'messages'));
+  if (updateHash && location.hash !== '#operations:messages') history.replaceState(null, '', '#operations:messages');
+  if (load && currentUserId) loadOperations();
+}
+
+$('[data-owner-messenger]').addEventListener('click', () => openOwnerMessenger());
+
+function applyOwnerRoute() {
+  if (location.hash !== '#operations:messages') return;
+  openOwnerMessenger({ updateHash:false, load:false });
 }
 
 function productRow(product) {
@@ -272,8 +284,8 @@ async function loadOperations() {
       assignment.innerHTML+=' <select data-conversation-assignment="'+conversation.id+'"><option value="">Owner only</option>'+messengerEmployees.map(employee=>'<option value="'+employee.id+'" '+(conversation.assigned_employee_id===employee.id?'selected':'')+'>'+escapeHtml(employee.name)+'</option>').join('')+'</select>';
       thread.querySelector('.owner-thread-summary')?.append(assignment);
     });
-    const unreadIds=messages.filter(row=>row.sender_id!==currentUserId&&!row.read_at).map(row=>row.id);if(unreadIds.length)requireOk(await supabase.from('messages').update({read_at:new Date().toISOString()}).in('id',unreadIds));
-    if(!ownerMessageChannel)ownerMessageChannel=supabase.channel('owner-service-messenger').on('postgres_changes',{event:'*',schema:'public',table:'messages'},()=>{if(operationView==='messages')loadOperations();}).on('postgres_changes',{event:'*',schema:'public',table:'service_conversations'},()=>{if(operationView==='messages')loadOperations();}).subscribe();
+    const unreadIds=messages.filter(row=>row.sender_id!==currentUserId&&!row.read_at).map(row=>row.id);if(unreadIds.length){requireOk(await supabase.from('messages').update({read_at:new Date().toISOString()}).in('id',unreadIds));setOwnerUnreadCount(0);}
+    if(!ownerMessageChannel)ownerMessageChannel=supabase.channel('owner-service-messenger').on('postgres_changes',{event:'*',schema:'public',table:'messages'},async()=>{const unreadResult=await supabase.from('messages').select('id',{count:'exact',head:true}).neq('sender_id',currentUserId).is('read_at',null);if(!unreadResult.error)setOwnerUnreadCount(unreadResult.count||0);if(operationView==='messages')loadOperations();}).on('postgres_changes',{event:'*',schema:'public',table:'service_conversations'},()=>{if(operationView==='messages')loadOperations();}).subscribe();
   } else {
     const [rolesResult, profilesResult, employeesResult] = await Promise.all([supabase.from('user_roles').select('*'), supabase.from('profiles').select('*'), supabase.from('employee_profiles').select('*')]);
     const roles = requireOk(rolesResult) || [], profiles = requireOk(profilesResult) || [], employees = requireOk(employeesResult) || [];
@@ -512,7 +524,7 @@ async function initialize() {
   denied.hidden = true; dashboard.hidden = false;
   applyOwnerRoute();
   const [roles, requests, appointments, messages] = await Promise.all([supabase.from('user_roles').select('role'), count('service_requests'), count('appointments'), supabase.from('messages').select('sender_id,read_at').not('conversation_id','is',null)]);
-  const roleRows = roles.data || [], unreadMessages=(messages.data||[]).filter(row=>row.sender_id!==currentUserId&&!row.read_at).length; $('#customerCount').textContent = roleRows.filter(row => row.role === 'customer').length; $('#employeeCount').textContent = roleRows.filter(row => row.role === 'employee').length; $('#requestCount').textContent = requests; $('#appointmentCount').textContent = appointments; $('#messageCount').textContent = unreadMessages;
+  const roleRows = roles.data || [], unreadMessages=(messages.data||[]).filter(row=>row.sender_id!==currentUserId&&!row.read_at).length; $('#customerCount').textContent = roleRows.filter(row => row.role === 'customer').length; $('#employeeCount').textContent = roleRows.filter(row => row.role === 'employee').length; $('#requestCount').textContent = requests; $('#appointmentCount').textContent = appointments; setOwnerUnreadCount(unreadMessages);
   await Promise.all([loadBusiness(), loadProducts(), loadServices(), loadServicePrices(), loadServicePictures(), loadContent(), loadOperations(), loadPayments()]);
   setStatus('All owner controls loaded');
 }
