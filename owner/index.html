@@ -18,7 +18,7 @@
     <article class="card"><h3>Payment controls</h3><dl id="paymentDetails" class="status-list"><div><dt>Product checkout</dt><dd>Loading…</dd></div><div><dt>Service checkout</dt><dd>Loading…</dd></div><div><dt>Public charging</dt><dd>Disabled</dd></div></dl></article>
   </div>
   <div class="payment-grid payment-tools">
-    <article class="card"><h3>Payout account</h3><p id="paymentState">Loading secure live account status…</p><dl class="status-list"><div><dt>Destination</dt><dd id="dashboardPayoutDestination">Checking…</dd></div><div><dt>Requirements</dt><dd id="dashboardPayoutRequirements">Checking…</dd></div></dl><button class="small-btn primary" data-payment-setup>Add Bank Account or Debit Card</button></article>
+    <article class="card"><h3>Payout account</h3><p id="paymentState">Loading secure live account status…</p><dl class="status-list"><div><dt>Destination</dt><dd id="dashboardPayoutDestination">Checking…</dd></div><div><dt>Requirements</dt><dd id="dashboardPayoutRequirements">Checking…</dd></div><div><dt>Automatic schedule</dt><dd id="dashboardPayoutSchedule">Checking Stripe…</dd></div><div><dt>Next payout</dt><dd id="dashboardNextPayout">Available funds are paid on Stripe’s schedule.</dd></div></dl><button class="small-btn primary" data-enable-daily-payouts type="button">Enable Daily Automatic Payouts</button><button class="small-btn" data-payment-setup>Add Bank Account or Debit Card</button></article>
     <article class="card"><h3>Controlled live validation</h3><p>Owner-only $0.50 checkout for the separately authorized payment-and-refund test. This does not enable public checkout.</p><button class="small-btn primary" data-live-validation-checkout>Open $0.50 Test Checkout</button></article>
   </div>
   <article class="card replacement-consent-card">
@@ -50,4 +50,4 @@
     <div id="paymentTransactions"><p class="empty-state">Loading payment activity…</p></div>
   </article>
 </section>
-</section></main><script src="../vendor/supabase-2.57.4.min.js"></script><script src="../service-catalog.js?v=2"></script><script src="owner.js?v=29"></script></body></html>
+</section></main><script src="../vendor/supabase-2.57.4.min.js"></script><script src="../service-catalog.js?v=2"></script><script src="owner.js?v=30"></script></body></html>

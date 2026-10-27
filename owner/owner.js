@@ -378,11 +378,12 @@ document.querySelectorAll('[data-payment-view]').forEach(button => button.addEve
 }));
 
 async function loadPayments() {
-  const [settingsResult, transactionResult, statusResult, payoutStatusResult, replacementConsentResult, replacementCandidateResult] = await Promise.all([
+  const [settingsResult, transactionResult, statusResult, payoutStatusResult, payoutScheduleResult, replacementConsentResult, replacementCandidateResult] = await Promise.all([
     supabase.from('payment_settings').select('provider,payments_enabled,product_payments_enabled,service_payments_enabled,live_activation_approved,stripe_account_id').single(),
     supabase.from('payment_transactions').select('id,payment_kind,amount_cents,refunded_amount_cents,status,currency,stripe_checkout_session_id,stripe_payment_intent_id,order_id,service_request_id,estimate_id,livemode,created_at').order('created_at', { ascending:false }).limit(200),
     supabase.functions.invoke('payment-status'),
     supabase.functions.invoke('create-connect-account-session', { body:{ statusOnly:true } }),
+    supabase.functions.invoke('manage-payout-schedule', { body:{} }),
     supabase.from('ogreena_replacement_connect_consents').select('consented_at,revoked_at').eq('id', true).maybeSingle(),
     supabase.from('ogreena_replacement_connect_candidates').select('status').eq('id', true).maybeSingle()
   ]);
@@ -410,6 +411,17 @@ async function loadPayments() {
   $('#dashboardPayoutRequirements').textContent = payoutStatus?.pastDue
     ? 'Past due'
     : (payoutStatus?.informationRequired ? 'Information required' : (payoutStatus ? 'Current' : 'Check in Stripe'));
+  const payoutSchedule = payoutScheduleResult.data;
+  const payoutScheduleMatches = payoutSchedule?.accountId === 'acct_1UUtHREjIGxDre3j' && payoutSchedule?.livemode === true;
+  $('#dashboardPayoutSchedule').textContent = payoutScheduleMatches
+    ? (payoutSchedule.dailyEnabled ? 'Daily automatic payouts enabled' : `${payoutSchedule.updatedSchedule?.interval || 'Unknown'} schedule`)
+    : 'Check in Stripe';
+  const nextPayout = payoutScheduleMatches ? payoutSchedule.nextAutomaticPayout : null;
+  $('#dashboardNextPayout').textContent = nextPayout
+    ? `${money(nextPayout.amount)} ${String(nextPayout.currency || '').toUpperCase()} · expected ${new Date(nextPayout.arrivalDate * 1000).toLocaleDateString()}`
+    : 'No pending automatic payout; eligible available funds follow Stripe’s schedule.';
+  const dailyButton = document.querySelector('[data-enable-daily-payouts]');
+  dailyButton.hidden = Boolean(payoutScheduleMatches && payoutSchedule.dailyEnabled);
   const allPublicGatesOpen = Boolean(paymentSettings?.payments_enabled && paymentSettings?.product_payments_enabled && paymentSettings?.service_payments_enabled && paymentSettings?.live_activation_approved);
   $('#paymentDetails').innerHTML = `<div><dt>Product checkout</dt><dd>${paymentSettings?.product_payments_enabled ? 'Configured' : 'Disabled'}</dd></div><div><dt>Service checkout</dt><dd>${paymentSettings?.service_payments_enabled ? 'Configured' : 'Disabled'}</dd></div><div><dt>Signed payment backend</dt><dd>${statusResult.data?.configured ? 'Connected' : 'Check required'}</dd></div><div><dt>Public charging</dt><dd>${allPublicGatesOpen ? 'Enabled' : 'Disabled'}</dd></div>`;
   const replacementConsent = replacementConsentResult.data;
@@ -424,6 +436,14 @@ async function loadPayments() {
     : (consented ? 'Owner consent recorded. No replacement Stripe account has been created.' : 'Owner consent has not been recorded. No replacement Stripe account can be created.');
   renderPaymentTransactions();
 }
+document.querySelector('[data-enable-daily-payouts]')?.addEventListener('click', () => run('Enabling daily automatic payouts', async () => {
+  const result = await supabase.functions.invoke('manage-payout-schedule', { body:{ action:'enable_daily' } });
+  const data = requireOk(result);
+  if (data.accountId !== 'acct_1UUtHREjIGxDre3j' || data.livemode !== true || data.dailyEnabled !== true) {
+    throw new Error('Stripe did not verify daily automatic payouts for Ogreena.');
+  }
+  await loadPayments();
+}));
 $('#recordReplacementConsent')?.addEventListener('click',()=>run('Recording replacement-account consent',async()=>{
   if (!$('#replacementConsent').checked) throw new Error('Check the consent box before continuing.');
   const { data:{ user }, error:userError } = await supabase.auth.getUser();

@@ -14,6 +14,7 @@ const payoutSetup = read('owner/payment-setup/payment-setup.js');
 const replacementOnboarding = read('supabase/functions/create-ogreena-replacement-onboarding/index.ts');
 const checkout = read('supabase/functions/create-checkout-session/index.ts');
 const refund = read('supabase/functions/create-refund/index.ts');
+const payoutSchedule = read('supabase/functions/manage-payout-schedule/index.ts');
 
 function expect(source, value, label) {
   if (!source.includes(value)) throw new Error(`${label} missing: ${value}`);
@@ -24,6 +25,9 @@ expect(ownerHtml, 'data-payment-view="product">Product Sales', 'product reportin
 expect(ownerHtml, 'data-payment-view="service">Service Payments', 'service reporting tab');
 expect(ownerHtml, 'Public checkout stays disabled', 'payment safety notice');
 expect(ownerHtml, '>Add Bank Account or Debit Card</button>', 'single payout action');
+expect(ownerHtml, 'data-enable-daily-payouts', 'daily automatic payout action');
+expect(ownerHtml, 'id="dashboardPayoutSchedule"', 'payout schedule status');
+expect(ownerHtml, 'id="dashboardNextPayout"', 'next payout status');
 expect(ownerHtml, 'Replacement-candidate Stripe account', 'replacement consent card');
 expect(ownerHtml, 'Recording consent does not create an account', 'consent safety notice');
 expect(ownerJs, "const OGREENA_LIVE_MERCHANT = 'acct_1UTpIlI19b4U0AqM'", 'merchant routing check');
@@ -66,6 +70,11 @@ expect(checkout, "const NEW_MERCHANT = 'acct_1UUtHREjIGxDre3j'", 'new merchant c
 expect(checkout, 'const requestOptions = stripeAccountId ? { stripeAccount: stripeAccountId } : {}', 'direct connected-account charge context');
 expect(checkout, 'stripe_account_id:stripeAccountId', 'transaction merchant persistence');
 expect(refund, 'stripeAccount:transaction.stripe_account_id', 'refund merchant context');
+expect(payoutSchedule, "const MERCHANT_ACCOUNT_ID = 'acct_1UUtHREjIGxDre3j'", 'payout schedule account isolation');
+expect(payoutSchedule, 'await requireOwner(request)', 'owner-only payout schedule access');
+expect(payoutSchedule, "schedule: { interval: 'daily' }", 'daily automatic payout setting');
+expect(payoutSchedule, "body.action === 'enable_daily'", 'explicit payout schedule mutation');
+if (payoutSchedule.includes('stripe.payouts.create')) throw new Error('Payout schedule function must not create a manual payout');
 expect(liveWebhook, "const NEW_MERCHANT = 'acct_1UUtHREjIGxDre3j'", 'connected webhook account allowlist');
 expect(liveWebhook, ".eq('stripe_account_id', stripeAccountId)", 'webhook merchant isolation');
 
