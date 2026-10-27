@@ -75,6 +75,8 @@ function switchTab(name) {
 
 document.querySelectorAll('[data-auth-tab]').forEach(button => button.addEventListener('click', () => switchTab(button.dataset.authTab)));
 const requestedMode = new URLSearchParams(location.search).get('mode');
+const requestedNext = new URLSearchParams(location.search).get('next');
+const safeNext = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '';
 if (['signin', 'signup', 'recovery'].includes(requestedMode)) switchTab(requestedMode);
 
 document.querySelector('#signUpForm').addEventListener('submit', async event => {
@@ -132,6 +134,7 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
     ]);
     if (applicationResult.data) { location.replace('../careers-account/?type=applicant&mode=signin'); return; }
     if (employeeRequestResult.data) { location.replace('../careers-account/?type=employee&mode=signin'); return; }
+    if (safeNext) { location.replace(safeNext); return; }
     setStatus('Signed in.', 'success');
   });
 });
@@ -229,14 +232,15 @@ async function loadRequests(userId) {
 async function loadCustomerActivity(userId) {
   const [appointmentsResult, messagesResult, historyResult] = await Promise.all([
     supabase.from('appointments').select('id,starts_at,ends_at,status,request_id').eq('customer_id', userId).order('starts_at', { ascending:false }),
-    supabase.from('messages').select('id,body,created_at,sender_id,recipient_id,request_id').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending:false }).limit(25),
+    supabase.from('messages').select('id,body,created_at,sender_id,recipient_id,request_id,conversation_id,read_at').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending:false }).limit(25),
     supabase.from('service_requests').select('id,service_slug,summary,status,updated_at').eq('customer_id', userId).in('status', ['completed','cancelled']).order('updated_at', { ascending:false })
   ]);
   const appointments = document.querySelector('#customerAppointments');
   const messages = document.querySelector('#customerMessages');
   const history = document.querySelector('#customerHistory');
   appointments.innerHTML = appointmentsResult.error ? `<p class="muted">${escapeHTML(friendlyError(appointmentsResult.error))}</p>` : (appointmentsResult.data?.length ? appointmentsResult.data.map(item => `<div class="request-item"><b>${escapeHTML(new Date(item.starts_at).toLocaleString())}</b><span>${escapeHTML(item.status)}${item.ends_at ? ` · ends ${escapeHTML(new Date(item.ends_at).toLocaleString())}` : ''}</span></div>`).join('') : '<p class="muted">No appointments scheduled.</p>');
-  messages.innerHTML = messagesResult.error ? `<p class="muted">${escapeHTML(friendlyError(messagesResult.error))}</p>` : (messagesResult.data?.length ? messagesResult.data.map(item => `<div class="request-item"><b>${item.sender_id === userId ? 'Sent' : 'Received'} · ${escapeHTML(new Date(item.created_at).toLocaleString())}</b><span>${escapeHTML(item.body)}</span></div>`).join('') : '<p class="muted">No messages yet.</p>');
+  const unreadCount=(messagesResult.data||[]).filter(item=>item.recipient_id===userId&&!item.read_at).length;
+  messages.innerHTML = `<p><a class="small-btn primary" href="../messages/">Open Ogreena Messenger${unreadCount?` · ${unreadCount} new`:''}</a></p>`+(messagesResult.error ? `<p class="muted">${escapeHTML(friendlyError(messagesResult.error))}</p>` : (messagesResult.data?.length ? messagesResult.data.slice(0,3).map(item => `<div class="request-item"><b>${item.sender_id === userId ? 'Sent' : 'Received'} · ${escapeHTML(new Date(item.created_at).toLocaleString())}</b><span>${escapeHTML(item.body)}</span></div>`).join('') : '<p class="muted">No messages yet.</p>'));
   history.innerHTML = historyResult.error ? `<p class="muted">${escapeHTML(friendlyError(historyResult.error))}</p>` : (historyResult.data?.length ? historyResult.data.map(item => `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(item.service_slug.replaceAll('-',' '))} · ${escapeHTML(item.status)} · ${escapeHTML(new Date(item.updated_at).toLocaleDateString())}</span></div>`).join('') : '<p class="muted">No completed or cancelled service history yet.</p>');
 }
 

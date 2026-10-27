@@ -106,7 +106,7 @@ if (item) {
   document.querySelector('#serviceTitle').textContent = item.name;
   document.querySelector('#serviceDesc').textContent = item.description;
   window.OgreenaServiceIcons.renderInto(document.querySelector('#serviceIcon'), { slug:document.body.dataset.service, name:item.name, icon:item.icon });
-  const requestService = () => { location.href = `${siteRoot}auth/?mode=signin`; };
+  const requestService = () => { location.href = `${siteRoot}messages/?service=${encodeURIComponent(document.body.dataset.service)}`; };
   document.querySelectorAll('[data-request],[data-unavailable]').forEach(control => control.addEventListener('click', requestService));
 
   document.querySelector('#overview').innerHTML = `

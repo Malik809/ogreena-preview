@@ -16,9 +16,5 @@ window.addEventListener('storage', event => { if (event.key === 'ogreenaDemoServ
 renderServices();
 function showTab(name){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===name));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));document.querySelector(`#panel-${name}`).classList.add('active');location.hash=name}document.querySelectorAll('[data-tab]').forEach(x=>x.addEventListener('click',()=>showTab(x.dataset.tab)));document.querySelector('[data-mobile-services]').addEventListener('click',e=>{e.preventDefault();showTab('services');scrollTo({top:0,behavior:'smooth'})});if(location.hash&&document.querySelector(`#panel-${location.hash.slice(1)}`))showTab(location.hash.slice(1));
 document.querySelectorAll('[data-unavailable]').forEach(button => button.addEventListener('click', () => {
-  const toast = document.querySelector('#toast');
-  toast.textContent = 'Online service requests are not available yet. Please call (510) 472-9327.';
-  toast.classList.add('show');
-  clearTimeout(window.ogreenaNoticeTimer);
-  window.ogreenaNoticeTimer = setTimeout(() => toast.classList.remove('show'), 4200);
+  location.href='messages/?service=general-inquiry';
 }));
