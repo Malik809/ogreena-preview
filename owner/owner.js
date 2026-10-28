@@ -358,7 +358,9 @@ async function loadProductShipping() {
   const result = await supabase.from('website_content').select('content_value,draft_value').eq('content_key', SHIPPING_CONTENT_KEY).maybeSingle();
   if (result.error) throw result.error;
   const settings = result.data?.draft_value || result.data?.content_value || {};
-  form.elements.flat_rate_dollars.value = Number.isInteger(settings.flat_rate_cents) ? (settings.flat_rate_cents / 100).toFixed(2) : '';
+  const categoryRates = settings.category_rates_cents || {};
+  form.elements.spray_bottle_rate_dollars.value = Number.isInteger(categoryRates.spray_bottle) ? (categoryRates.spray_bottle / 100).toFixed(2) : '4.00';
+  form.elements.gallon_rate_dollars.value = Number.isInteger(categoryRates.gallon) ? (categoryRates.gallon / 100).toFixed(2) : '8.00';
   form.elements.origin_zip.value = settings.origin_zip || '';
   form.elements.email_provider.value = settings.email_provider || '';
   form.elements.sender_email.value = settings.sender_email || '';
@@ -371,9 +373,10 @@ async function loadProductShipping() {
   $('#productShippingStatus').textContent = settings.owner_approved === true ? 'Owner-approved shipping configuration saved.' : 'Draft only — product charging remains disabled.';
 }
 $('#productShippingForm')?.addEventListener('submit', event => { event.preventDefault(); run('Saving shipping draft', async () => {
-  const form = event.currentTarget; const values = new FormData(form); const rate = values.get('flat_rate_dollars');
-  const payload = { mode:'flat_rate', coverage:'us_50_states_dc', includes_alaska_hawaii:true, flat_rate_cents:rate === '' ? null : Math.round(Number(rate) * 100), origin_zip:String(values.get('origin_zip') || '').trim() || null, carriers:['carrier_usps','carrier_ups','carrier_fedex'].filter(name => values.get(name)).map(name => ({carrier_usps:'USPS',carrier_ups:'UPS',carrier_fedex:'FedEx'})[name]), po_boxes:values.get('po_boxes'), territories:values.get('territories'), packages:String(values.get('packages') || '').trim(), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null, production_email_enabled:false, owner_approved:false, updated_at:new Date().toISOString() };
-  if (payload.flat_rate_cents !== null && (!Number.isInteger(payload.flat_rate_cents) || payload.flat_rate_cents < 0)) throw new Error('Enter a valid non-negative flat shipping amount');
+  const form = event.currentTarget; const values = new FormData(form);
+  const categoryRates = { spray_bottle:Math.round(Number(values.get('spray_bottle_rate_dollars')) * 100), gallon:Math.round(Number(values.get('gallon_rate_dollars')) * 100) };
+  const payload = { mode:'category_flat_rate', coverage:'us_50_states_dc', includes_alaska_hawaii:true, category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carriers:['carrier_usps','carrier_ups','carrier_fedex'].filter(name => values.get(name)).map(name => ({carrier_usps:'USPS',carrier_ups:'UPS',carrier_fedex:'FedEx'})[name]), po_boxes:values.get('po_boxes'), territories:values.get('territories'), packages:String(values.get('packages') || '').trim(), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null, production_email_enabled:false, owner_approved:false, updated_at:new Date().toISOString() };
+  if (Object.values(categoryRates).some(rate => !Number.isInteger(rate) || rate < 0)) throw new Error('Enter valid non-negative shipping amounts');
   if (payload.origin_zip && !/^\d{5}(-\d{4})?$/.test(payload.origin_zip)) throw new Error('Enter a valid U.S. ZIP code');
   const existing = await supabase.from('website_content').select('content_key').eq('content_key', SHIPPING_CONTENT_KEY).maybeSingle(); if (existing.error) throw existing.error;
   const saved = existing.data ? await supabase.from('website_content').update({ draft_value:payload }).eq('content_key', SHIPPING_CONTENT_KEY) : await supabase.from('website_content').insert({ content_key:SHIPPING_CONTENT_KEY, content_value:{}, draft_value:payload, published:false, visible:false, display_order:9999 });

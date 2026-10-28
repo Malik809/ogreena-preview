@@ -25,7 +25,8 @@
     <div class="content-head"><div><span class="tag">Inactive preparation</span><h3>Nationwide product shipping</h3><p class="muted">Flat-rate shipping is prepared for the 50 states and Washington, D.C. Alaska and Hawaii are included. Product checkout remains blocked until the rate, fulfillment details, sender, permit, and tax setup are approved.</p></div></div>
     <form id="productShippingForm" class="owner-form">
       <label>Coverage<input name="coverage" value="50 states + Washington, D.C. (Alaska and Hawaii included)" readonly></label>
-      <label>Flat shipping price<input name="flat_rate_dollars" type="number" min="0" step="0.01" placeholder="Owner approval required"></label>
+      <label>Spray-bottle shipping<input name="spray_bottle_rate_dollars" type="number" min="0" step="0.01" value="4.00"></label>
+      <label>Gallon-product shipping<input name="gallon_rate_dollars" type="number" min="0" step="0.01" value="8.00"></label>
       <label>Fulfillment origin ZIP<input name="origin_zip" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="Required before activation"></label>
       <label>Order email provider<input name="email_provider" placeholder="Future verified provider"></label>
       <label>Verified sender email<input name="sender_email" type="email" placeholder="Required before production emails"></label>

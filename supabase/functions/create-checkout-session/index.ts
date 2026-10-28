@@ -33,17 +33,20 @@ Deno.serve(async request => {
     }
     const kind = String(body.kind || '') as PaymentKind;
     let amount = 0, name = '', productId: string | null = null, requestId: string | null = null, estimateId: string | null = null, orderId: string | null = null, serviceSlug = '', servicePriceItemId = '';
-    let productShipping: { flat_rate_cents:number; origin_zip:string; carriers:string[] } | null = null;
+    let productShipping: { rate_cents:number; category:string; origin_zip:string; carriers:string[] } | null = null;
     if (kind === 'product') {
       if (!settings.product_payments_enabled) throw new Error('Product checkout is unavailable');
       const { data: shippingRecord, error: shippingError } = await admin.from('website_content').select('content_value').eq('content_key','product-shipping-settings').eq('published',true).single();
       if (shippingError) throw new Error('Product shipping is not approved');
       const shipping = shippingRecord?.content_value || {};
-      if (shipping.mode !== 'flat_rate' || shipping.coverage !== 'us_50_states_dc' || shipping.owner_approved !== true || !Number.isInteger(shipping.flat_rate_cents) || shipping.flat_rate_cents < 0 || !/^\d{5}(-\d{4})?$/.test(shipping.origin_zip || '')) throw new Error('Product shipping is not approved');
+      if (shipping.mode !== 'category_flat_rate' || shipping.coverage !== 'us_50_states_dc' || shipping.rates_approved !== true || shipping.owner_approved !== true || !/^\d{5}(-\d{4})?$/.test(shipping.origin_zip || '')) throw new Error('Product shipping is not approved');
       if (!Array.isArray(shipping.carriers) || !shipping.carriers.length || !shipping.packages) throw new Error('Product fulfillment details are incomplete');
-      productShipping = { flat_rate_cents:shipping.flat_rate_cents, origin_zip:shipping.origin_zip, carriers:shipping.carriers };
-      const { data: product } = await admin.from('products').select('id,name,size,price_cents,visible').eq('id', String(body.productId)).single();
+      const { data: product } = await admin.from('products').select('id,name,size,price_cents,visible,shipping_category').eq('id', String(body.productId)).single();
       if (!product?.visible) throw new Error('Product is unavailable');
+      const shippingCategory = String(product.shipping_category || '');
+      const shippingRate = shipping.category_rates_cents?.[shippingCategory];
+      if (!['spray_bottle','gallon'].includes(shippingCategory) || !Number.isInteger(shippingRate) || shippingRate < 0) throw new Error('This product does not have an approved shipping category');
+      productShipping = { rate_cents:shippingRate, category:shippingCategory, origin_zip:shipping.origin_zip, carriers:shipping.carriers };
       productId = product.id; amount = product.price_cents; name = `${product.name} — ${product.size}`;
       const { data: order, error } = await admin.from('orders').insert({ customer_id:user.id, status:'pending', total_cents:amount, stripe_account_id:stripeAccountId }).select('id').single();
       if (error) throw error; orderId = order.id;
@@ -67,10 +70,10 @@ Deno.serve(async request => {
     const session = await stripe.checkout.sessions.create({
       mode:'payment', customer_email:user.email,
       line_items:[{ price_data:{ currency:'usd', product_data:{ name }, unit_amount:amount }, quantity:1 }],
-      ...(kind === 'product' ? { shipping_address_collection:{ allowed_countries:['US'] }, shipping_options:[{ shipping_rate_data:{ type:'fixed_amount', fixed_amount:{ amount:productShipping!.flat_rate_cents, currency:'usd' }, display_name:'Flat-rate shipping' } }], phone_number_collection:{ enabled:true } } : {}),
+      ...(kind === 'product' ? { shipping_address_collection:{ allowed_countries:['US'] }, shipping_options:[{ shipping_rate_data:{ type:'fixed_amount', fixed_amount:{ amount:productShipping!.rate_cents, currency:'usd' }, display_name:productShipping!.category === 'gallon' ? 'Gallon-product shipping' : 'Spray-bottle shipping' } }], phone_number_collection:{ enabled:true } } : {}),
       success_url:'https://ogreena.com/auth/?checkout=success&session_id={CHECKOUT_SESSION_ID}', cancel_url:'https://ogreena.com/auth/?checkout=cancelled',
       integration_identifier:'ogreena_qvmtzxpk',
-      metadata:{ customer_id:user.id, payment_kind:kind, product_id:productId || '', service_request_id:requestId || '', estimate_id:estimateId || '', order_id:orderId || '', stripe_account_id:stripeAccountId || '', tax_treatment:kind==='invoice'?'service_only_nontaxable':'', service_slug:serviceSlug, service_price_item_id:servicePriceItemId, shipping_mode:kind==='product'?'flat_rate':'', fulfillment_origin_zip:productShipping?.origin_zip || '', carrier_comparison:productShipping?.carriers.join(',') || '' },
+      metadata:{ customer_id:user.id, payment_kind:kind, product_id:productId || '', service_request_id:requestId || '', estimate_id:estimateId || '', order_id:orderId || '', stripe_account_id:stripeAccountId || '', tax_treatment:kind==='invoice'?'service_only_nontaxable':'', service_slug:serviceSlug, service_price_item_id:servicePriceItemId, shipping_mode:kind==='product'?'category_flat_rate':'', shipping_category:productShipping?.category || '', shipping_rate_cents:String(productShipping?.rate_cents ?? ''), fulfillment_origin_zip:productShipping?.origin_zip || '', carrier_comparison:productShipping?.carriers.join(',') || '' },
     }, { idempotencyKey, ...requestOptions });
     const { error: transactionError } = await admin.from('payment_transactions').insert({ customer_id:user.id, order_id:orderId, service_request_id:requestId, estimate_id:estimateId, payment_kind:kind, stripe_checkout_session_id:session.id, stripe_account_id:stripeAccountId, amount_cents:amount, currency:'usd', status:'pending', idempotency_key:idempotencyKey, livemode:!environment.testMode });
     if (transactionError) throw transactionError;
