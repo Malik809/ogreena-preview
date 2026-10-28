@@ -6,7 +6,7 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persist
 const $=selector=>document.querySelector(selector);
 let connectInstance;
 let stripeLoadTimer;
-const LIVE_MERCHANT_ACCOUNT='acct_1UTpIlI19b4U0AqM';
+const LIVE_MERCHANT_ACCOUNT='acct_1UUtHREjIGxDre3j';
 const CONNECT_PLATFORM_ACCOUNT='acct_1UUSC7IBe0SKV30I';
 const SESSION_FUNCTION='create-connect-account-session';
 

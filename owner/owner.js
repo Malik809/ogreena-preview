@@ -2,7 +2,7 @@ const { createClient } = window.supabase;
 const safariSafeAuthLock = async (_name, _acquireTimeout, callback) => callback();
 const SUPABASE_URL = 'https://mhhjzifeaofgskimvuom.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM';
-const OGREENA_LIVE_MERCHANT = 'acct_1UTpIlI19b4U0AqM';
+const OGREENA_LIVE_MERCHANT = 'acct_1UUtHREjIGxDre3j';
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: 'ogreena-auth-session', lock: safariSafeAuthLock } });
 const $ = selector => document.querySelector(selector);
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[char]));
@@ -390,9 +390,10 @@ function referenceCell(row) {
 }
 function renderPaymentTransactions() {
   const rows = paymentRows.filter(row => paymentGroup(row) === paymentView);
-  $('#paymentTransactions').innerHTML = table(['Date','Type','Amount','Refunded','Status','Stripe reference','Action'], rows.map(row => {
+  $('#paymentTransactions').innerHTML = table(['Date','Environment','Type','Amount','Refunded','Status','Stripe reference','Action'], rows.map(row => {
     const refundable = paymentSettings?.live_activation_approved && ['paid','partially_refunded'].includes(row.status);
-    return `<tr><td>${escapeHtml(new Date(row.created_at).toLocaleString())}</td><td>${escapeHtml(row.payment_kind.replaceAll('_',' '))}</td><td>${money(row.amount_cents)}</td><td>${money(row.refunded_amount_cents)}</td><td><span class="status-pill ${escapeHtml(row.status)}">${escapeHtml(row.status.replaceAll('_',' '))}</span></td><td>${referenceCell(row)}</td><td>${refundable ? `<button class="small-btn" data-refund="${row.id}" data-amount="${Number(row.amount_cents || 0) - Number(row.refunded_amount_cents || 0)}">Refund</button>` : 'Locked pending validation'}</td></tr>`;
+    const environmentLabel = row.livemode === true ? 'LIVE' : 'TEST';
+    return `<tr><td>${escapeHtml(new Date(row.created_at).toLocaleString())}</td><td><span class="status-pill">${environmentLabel}</span></td><td>${escapeHtml(row.payment_kind.replaceAll('_',' '))}</td><td>${money(row.amount_cents)}</td><td>${money(row.refunded_amount_cents)}</td><td><span class="status-pill ${escapeHtml(row.status)}">${escapeHtml(row.status.replaceAll('_',' '))}</span></td><td>${referenceCell(row)}</td><td>${refundable && row.livemode === true ? `<button class="small-btn" data-refund="${row.id}" data-amount="${Number(row.amount_cents || 0) - Number(row.refunded_amount_cents || 0)}">Refund</button>` : 'Locked pending validation'}</td></tr>`;
   }));
   $('#paymentTransactions').querySelectorAll('[data-refund]').forEach(button => button.addEventListener('click', () => {
     if (!confirm(`Issue a live refund of ${money(button.dataset.amount)}? This moves real money and cannot be undone.`)) return;
@@ -420,14 +421,16 @@ async function loadPayments() {
   paymentSettings = settingsResult.data;
   paymentRows = transactionResult.data || [];
   await loadProductShipping();
-  const productRows = paymentRows.filter(row => paymentGroup(row) === 'product');
-  const serviceRows = paymentRows.filter(row => paymentGroup(row) === 'service');
-  const refunded = paymentRows.reduce((sum,row) => sum + Number(row.refunded_amount_cents || 0), 0);
+  const livePaymentRows = paymentRows.filter(row => row.livemode === true);
+  const productRows = livePaymentRows.filter(row => paymentGroup(row) === 'product');
+  const serviceRows = livePaymentRows.filter(row => paymentGroup(row) === 'service');
+  const refunded = livePaymentRows.reduce((sum,row) => sum + Number(row.refunded_amount_cents || 0), 0);
   $('#productSales').textContent = money(paymentTotal(productRows));
   $('#serviceSales').textContent = money(paymentTotal(serviceRows));
   $('#refundedTotal').textContent = money(refunded);
-  $('#productSalesMeta').textContent = `${productRows.length} transaction${productRows.length === 1 ? '' : 's'} recorded; refunds deducted.`;
-  $('#serviceSalesMeta').textContent = `${serviceRows.length} transaction${serviceRows.length === 1 ? '' : 's'} recorded; refunds deducted.`;
+  const testTransactionCount = paymentRows.length - livePaymentRows.length;
+  $('#productSalesMeta').textContent = `${productRows.length} LIVE transaction${productRows.length === 1 ? '' : 's'} recorded; refunds deducted.${testTransactionCount ? ` ${testTransactionCount} test transaction${testTransactionCount === 1 ? '' : 's'} excluded.` : ''}`;
+  $('#serviceSalesMeta').textContent = `${serviceRows.length} LIVE transaction${serviceRows.length === 1 ? '' : 's'} recorded; refunds deducted.`;
   const merchantMatches = paymentSettings?.stripe_account_id === OGREENA_LIVE_MERCHANT;
   const stripePayoutMatches = payoutStatusResult.data?.accountId === OGREENA_LIVE_MERCHANT && payoutStatusResult.data?.livemode === true;
   const payoutStatus = stripePayoutMatches ? payoutStatusResult.data?.payoutStatus : null;
