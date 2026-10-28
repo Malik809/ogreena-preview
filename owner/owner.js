@@ -352,6 +352,34 @@ async function loadOperations() {
 async function loadBusiness() { const data = requireOk(await supabase.from('business_settings').select('*').eq('id', true).single()); if (!data) return; for (const key of ['business_name','phone','service_area','contact_email']) $('#businessForm').elements[key].value = data[key] || ''; }
 $('#businessForm').addEventListener('submit', event => { event.preventDefault(); run('Saving business settings', async () => { const values = Object.fromEntries(new FormData(event.currentTarget)); requireOk(await supabase.from('business_settings').update({ ...values, updated_at:new Date().toISOString() }).eq('id', true)); }); });
 
+const SHIPPING_CONTENT_KEY = 'product-shipping-settings';
+async function loadProductShipping() {
+  const form = $('#productShippingForm'); if (!form) return;
+  const result = await supabase.from('website_content').select('content_value,draft_value').eq('content_key', SHIPPING_CONTENT_KEY).maybeSingle();
+  if (result.error) throw result.error;
+  const settings = result.data?.draft_value || result.data?.content_value || {};
+  form.elements.flat_rate_dollars.value = Number.isInteger(settings.flat_rate_cents) ? (settings.flat_rate_cents / 100).toFixed(2) : '';
+  form.elements.origin_zip.value = settings.origin_zip || '';
+  form.elements.email_provider.value = settings.email_provider || '';
+  form.elements.sender_email.value = settings.sender_email || '';
+  form.elements.po_boxes.value = settings.po_boxes || 'pending';
+  form.elements.territories.value = settings.territories || 'pending';
+  form.elements.carrier_usps.checked = (settings.carriers || ['USPS','UPS','FedEx']).includes('USPS');
+  form.elements.carrier_ups.checked = (settings.carriers || ['USPS','UPS','FedEx']).includes('UPS');
+  form.elements.carrier_fedex.checked = (settings.carriers || ['USPS','UPS','FedEx']).includes('FedEx');
+  form.elements.packages.value = settings.packages || '';
+  $('#productShippingStatus').textContent = settings.owner_approved === true ? 'Owner-approved shipping configuration saved.' : 'Draft only — product charging remains disabled.';
+}
+$('#productShippingForm')?.addEventListener('submit', event => { event.preventDefault(); run('Saving shipping draft', async () => {
+  const form = event.currentTarget; const values = new FormData(form); const rate = values.get('flat_rate_dollars');
+  const payload = { mode:'flat_rate', coverage:'us_50_states_dc', includes_alaska_hawaii:true, flat_rate_cents:rate === '' ? null : Math.round(Number(rate) * 100), origin_zip:String(values.get('origin_zip') || '').trim() || null, carriers:['carrier_usps','carrier_ups','carrier_fedex'].filter(name => values.get(name)).map(name => ({carrier_usps:'USPS',carrier_ups:'UPS',carrier_fedex:'FedEx'})[name]), po_boxes:values.get('po_boxes'), territories:values.get('territories'), packages:String(values.get('packages') || '').trim(), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null, production_email_enabled:false, owner_approved:false, updated_at:new Date().toISOString() };
+  if (payload.flat_rate_cents !== null && (!Number.isInteger(payload.flat_rate_cents) || payload.flat_rate_cents < 0)) throw new Error('Enter a valid non-negative flat shipping amount');
+  if (payload.origin_zip && !/^\d{5}(-\d{4})?$/.test(payload.origin_zip)) throw new Error('Enter a valid U.S. ZIP code');
+  const existing = await supabase.from('website_content').select('content_key').eq('content_key', SHIPPING_CONTENT_KEY).maybeSingle(); if (existing.error) throw existing.error;
+  const saved = existing.data ? await supabase.from('website_content').update({ draft_value:payload }).eq('content_key', SHIPPING_CONTENT_KEY) : await supabase.from('website_content').insert({ content_key:SHIPPING_CONTENT_KEY, content_value:{}, draft_value:payload, published:false, visible:false, display_order:9999 });
+  requireOk(saved); await loadProductShipping();
+}); });
+
 const servicePaymentKinds = new Set(['service_deposit','service_full','invoice']);
 const completedPaymentStatuses = new Set(['paid','refunded','partially_refunded']);
 function paymentGroup(row) { return row.payment_kind === 'product' ? 'product' : (servicePaymentKinds.has(row.payment_kind) ? 'service' : 'other'); }
@@ -391,6 +419,7 @@ async function loadPayments() {
   if (transactionResult.error) throw transactionResult.error;
   paymentSettings = settingsResult.data;
   paymentRows = transactionResult.data || [];
+  await loadProductShipping();
   const productRows = paymentRows.filter(row => paymentGroup(row) === 'product');
   const serviceRows = paymentRows.filter(row => paymentGroup(row) === 'service');
   const refunded = paymentRows.reduce((sum,row) => sum + Number(row.refunded_amount_cents || 0), 0);

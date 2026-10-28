@@ -21,6 +21,21 @@
     <article class="card"><h3>Payout account</h3><p id="paymentState">Loading secure live account status…</p><dl class="status-list"><div><dt>Destination</dt><dd id="dashboardPayoutDestination">Checking…</dd></div><div><dt>Requirements</dt><dd id="dashboardPayoutRequirements">Checking…</dd></div><div><dt>Automatic schedule</dt><dd id="dashboardPayoutSchedule">Checking Stripe…</dd></div><div><dt>Next payout</dt><dd id="dashboardNextPayout">Available funds are paid on Stripe’s schedule.</dd></div></dl><button class="small-btn primary" data-enable-daily-payouts type="button">Enable Daily Automatic Payouts</button><button class="small-btn" data-payment-setup>Add Bank Account or Debit Card</button></article>
     <article class="card"><h3>Controlled live validation</h3><p>Owner-only $0.50 checkout for the separately authorized payment-and-refund test. This does not enable public checkout.</p><button class="small-btn primary" data-live-validation-checkout>Open $0.50 Test Checkout</button></article>
   </div>
+  <article class="card product-shipping-card">
+    <div class="content-head"><div><span class="tag">Inactive preparation</span><h3>Nationwide product shipping</h3><p class="muted">Flat-rate shipping is prepared for the 50 states and Washington, D.C. Alaska and Hawaii are included. Product checkout remains blocked until the rate, fulfillment details, sender, permit, and tax setup are approved.</p></div></div>
+    <form id="productShippingForm" class="owner-form">
+      <label>Coverage<input name="coverage" value="50 states + Washington, D.C. (Alaska and Hawaii included)" readonly></label>
+      <label>Flat shipping price<input name="flat_rate_dollars" type="number" min="0" step="0.01" placeholder="Owner approval required"></label>
+      <label>Fulfillment origin ZIP<input name="origin_zip" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="Required before activation"></label>
+      <label>Order email provider<input name="email_provider" placeholder="Future verified provider"></label>
+      <label>Verified sender email<input name="sender_email" type="email" placeholder="Required before production emails"></label>
+      <label>P.O. boxes<select name="po_boxes"><option value="pending">Pending owner approval</option><option value="supported">Supported</option><option value="not_supported">Not supported</option></select></label>
+      <label>U.S. territories<select name="territories"><option value="pending">Pending owner approval</option><option value="supported">Supported</option><option value="not_supported">Not supported</option></select></label>
+      <fieldset class="wide"><legend>Carrier comparison preference</legend><label><input name="carrier_usps" type="checkbox" checked> USPS</label><label><input name="carrier_ups" type="checkbox" checked> UPS</label><label><input name="carrier_fedex" type="checkbox" checked> FedEx</label><p class="muted">The cheapest eligible carrier is selected during fulfillment. This does not change the customer’s approved flat shipping charge.</p></fieldset>
+      <label class="wide">Package details by product<textarea name="packages" rows="7" placeholder="Enter weight and dimensions for each of the five products after measurement. No defaults are assumed."></textarea></label>
+      <div class="wide editor-actions"><button class="small-btn primary" type="submit">Save Shipping Draft</button><span id="productShippingStatus" class="muted">Loading inactive shipping settings…</span></div>
+    </form>
+  </article>
   <article class="card replacement-consent-card">
     <span class="tag">Owner consent required</span>
     <h3>Replacement-candidate Stripe account</h3>
@@ -50,4 +65,4 @@
     <div id="paymentTransactions"><p class="empty-state">Loading payment activity…</p></div>
   </article>
 </section>
-</section></main><script src="../vendor/supabase-2.57.4.min.js"></script><script src="../service-catalog.js?v=2"></script><script src="owner.js?v=30"></script></body></html>
+</section></main><script src="../vendor/supabase-2.57.4.min.js"></script><script src="../service-catalog.js?v=2"></script><script src="owner.js?v=31"></script></body></html>
