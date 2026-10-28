@@ -6,11 +6,18 @@
   const isCatalog = path.endsWith('/products/');
   const isBusinessProfile = path === '/' || path === '/ogreena-preview/';
 
+  function buyAction(product) {
+    if (PUBLIC_SQUARE_PRODUCT_CHECKOUT_ENABLED && product.squareUrl) {
+      return `<a class="small-btn primary" href="${product.squareUrl}" rel="noopener">Buy Now</a>`;
+    }
+    return `<button class="small-btn primary" type="button" data-buy-product="${product.id}" aria-disabled="true">Buy Now</button>`;
+  }
+
   function card(product) {
     return `<article class="product-card" data-product-card data-search="${product.name} ${product.size}">
       <img src="${product.image}" alt="${product.name} — ${product.size}" loading="lazy">
       <div class="product-card-body"><span class="product-size">${product.size}</span><h3>${product.name}</h3><strong>$${product.price.toFixed(2)}</strong>
-      <div class="product-actions"><button class="small-btn" type="button" data-view-product="${product.id}">View Product</button><button class="small-btn primary" type="button" data-buy-product="${product.id}">Buy Now</button></div></div>
+      <div class="product-actions"><button class="small-btn" type="button" data-view-product="${product.id}">View Product</button>${buyAction(product)}</div></div>
     </article>`;
   }
 
@@ -46,13 +53,8 @@
     showMessage.timer = setTimeout(() => toast.classList.remove('show'), 4200);
   }
 
-  function startCheckout(productId) {
-    try {
-      const product = products.find(item => item.id === productId);
-      if (!product?.squareUrl) throw new Error('Checkout is unavailable for this product.');
-      if (!PUBLIC_SQUARE_PRODUCT_CHECKOUT_ENABLED) throw new Error('Checkout is unavailable until final owner activation.');
-      location.href = product.squareUrl;
-    } catch (error) { showMessage(error.message || 'Checkout is unavailable until final owner approval.'); }
+  function showCheckoutBlocked() {
+    showMessage('Checkout is unavailable until final owner activation.');
   }
 
   function openProduct(product) {
@@ -63,9 +65,9 @@
       dialog.className = 'product-dialog';
       document.body.append(dialog);
     }
-    dialog.innerHTML = `<button class="dialog-close" type="button" aria-label="Close product details">×</button><img src="${product.image}" alt="${product.name} — ${product.size}"><div><span class="product-size">${product.size}</span><h2>${product.name}</h2><strong>$${product.price.toFixed(2)}</strong><p>Original Ogreena cleaning product. Online checkout is not active yet.</p><button class="small-btn primary" type="button" data-buy-product="${product.id}">Buy Now</button></div>`;
+    dialog.innerHTML = `<button class="dialog-close" type="button" aria-label="Close product details">×</button><img src="${product.image}" alt="${product.name} — ${product.size}"><div><span class="product-size">${product.size}</span><h2>${product.name}</h2><strong>$${product.price.toFixed(2)}</strong><p>Original Ogreena cleaning product. Online checkout is not active yet.</p>${buyAction(product)}</div>`;
     dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
-    dialog.querySelector('[data-buy-product]').addEventListener('click', () => startCheckout(product.id));
+    dialog.querySelector('[data-buy-product]')?.addEventListener('click', showCheckoutBlocked);
     dialog.showModal();
   }
 
@@ -75,7 +77,7 @@
   section.querySelector('.carousel-arrow.prev').addEventListener('click', () => carousel.scrollBy({ left: -Math.max(260, carousel.clientWidth * .72), behavior: 'smooth' }));
   section.querySelector('.carousel-arrow.next').addEventListener('click', () => carousel.scrollBy({ left: Math.max(260, carousel.clientWidth * .72), behavior: 'smooth' }));
   section.querySelectorAll('[data-view-product]').forEach(button => button.addEventListener('click', () => openProduct(products.find(product => product.id === button.dataset.viewProduct))));
-  section.querySelectorAll('[data-buy-product]').forEach(button => button.addEventListener('click', () => startCheckout(button.dataset.buyProduct)));
+  section.querySelectorAll('[data-buy-product]').forEach(button => button.addEventListener('click', showCheckoutBlocked));
   const search = section.querySelector('#productSearch');
   search.addEventListener('input', () => {
     const query = search.value.trim().toLowerCase();

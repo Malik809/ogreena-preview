@@ -14,5 +14,7 @@ assert.equal(new Set(products.map(product => product.squareUrl)).size, 5, 'Squar
 assert(products.every(product => /^https:\/\/square\.link\/u\/[A-Za-z0-9]+$/.test(product.squareUrl)), 'each product must have a Square link');
 assert.match(productsSource, /PUBLIC_SQUARE_PRODUCT_CHECKOUT_ENABLED = false/, 'public checkout must remain disabled');
 assert.doesNotMatch(productsSource, /functions\.invoke\('create-checkout-session'/, 'product buttons must not invoke Stripe Checkout');
+assert.match(productsSource, /href="\$\{product\.squareUrl\}"/, 'enabled Buy Now actions must be direct Square HTTPS links');
+assert.doesNotMatch(productsSource, /location\.href = product\.squareUrl/, 'Square Checkout must use direct anchor navigation');
 
 console.log('Square product link checks passed: 5/5 links mapped; public checkout disabled.');
