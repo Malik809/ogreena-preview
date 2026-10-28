@@ -1,5 +1,6 @@
 (function () {
   const products = window.OgreenaProductCatalog || [];
+  const PUBLIC_SQUARE_PRODUCT_CHECKOUT_ENABLED = false;
   const root = location.hostname.endsWith('.github.io') ? '/ogreena-preview/' : '/';
   const path = location.pathname.replace(/\/+/g, '/');
   const isCatalog = path.endsWith('/products/');
@@ -45,15 +46,12 @@
     showMessage.timer = setTimeout(() => toast.classList.remove('show'), 4200);
   }
 
-  async function startCheckout(productId) {
+  function startCheckout(productId) {
     try {
-      if (!window.supabase) throw new Error('Secure checkout is still loading. Please try again.');
-      const client = window.supabase.createClient('https://mhhjzifeaofgskimvuom.supabase.co','sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM',{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage,storageKey:'ogreena-auth-session'}});
-      const {data:{session}}=await client.auth.getSession();
-      if(!session){sessionStorage.setItem('ogreena-pending-product',productId);location.href=`${root}auth/?mode=signin&checkout=product`;return;}
-      const {data,error}=await client.functions.invoke('create-checkout-session',{body:{kind:'product',productId,idempotencyKey:crypto.randomUUID()}});
-      if(error||!data?.url)throw new Error(data?.error||'Checkout is unavailable');
-      location.href=data.url;
+      const product = products.find(item => item.id === productId);
+      if (!product?.squareUrl) throw new Error('Checkout is unavailable for this product.');
+      if (!PUBLIC_SQUARE_PRODUCT_CHECKOUT_ENABLED) throw new Error('Checkout is unavailable until final owner activation.');
+      location.href = product.squareUrl;
     } catch (error) { showMessage(error.message || 'Checkout is unavailable until final owner approval.'); }
   }
 
@@ -85,5 +83,5 @@
     section.querySelectorAll('[data-product-card]').forEach(item => { const visible = !query || item.dataset.search.toLowerCase().includes(query); item.hidden = !visible; if (visible) shown += 1; });
     section.querySelector('.product-empty').hidden = shown > 0;
   });
-  window.OgreenaProducts = { products, render: ensureShowcase };
+  window.OgreenaProducts = { products, render: ensureShowcase, publicCheckoutEnabled: PUBLIC_SQUARE_PRODUCT_CHECKOUT_ENABLED };
 }());
