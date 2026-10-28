@@ -88,6 +88,8 @@ expect(checkout, "display_name:'Flat-rate shipping'", 'owner-approved flat shipp
 expect(checkout, "shipping.owner_approved !== true", 'shipping activation gate');
 expect(refund, 'stripeAccount:transaction.stripe_account_id', 'refund merchant context');
 expect(payoutSchedule, "const MERCHANT_ACCOUNT_ID = 'acct_1UUtHREjIGxDre3j'", 'payout schedule account isolation');
+expect(payoutSchedule, "payoutError.code !== 'more_permissions_required'", 'optional next-payout permission handling');
+expect(payoutSchedule, 'payoutReadAvailable', 'payout-read capability disclosure');
 expect(payoutSchedule, 'await requireOwner(request)', 'owner-only payout schedule access');
 expect(payoutSchedule, "schedule: { interval: 'daily' }", 'daily automatic payout setting');
 expect(payoutSchedule, "body.action === 'enable_daily'", 'explicit payout schedule mutation');

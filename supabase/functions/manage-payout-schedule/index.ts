@@ -48,11 +48,19 @@ Deno.serve(async request => {
       throw new Error('Stripe did not confirm the daily automatic payout schedule');
     }
 
-    const pendingPayouts = await stripe.payouts.list(
-      { limit: 10 },
-      { stripeAccount: MERCHANT_ACCOUNT_ID },
-    );
-    const nextAutomaticPayout = pendingPayouts.data
+    let payoutReadAvailable = true;
+    let pendingPayouts: Stripe.ApiList<Stripe.Payout> | null = null;
+    try {
+      pendingPayouts = await stripe.payouts.list(
+        { limit: 10 },
+        { stripeAccount: MERCHANT_ACCOUNT_ID },
+      );
+    } catch (error) {
+      const payoutError = error as { code?: string };
+      if (payoutError.code !== 'more_permissions_required') throw error;
+      payoutReadAvailable = false;
+    }
+    const nextAutomaticPayout = (pendingPayouts?.data || [])
       .filter(item => item.automatic && ['pending', 'in_transit'].includes(item.status))
       .sort((left, right) => left.arrival_date - right.arrival_date)[0] || null;
 
@@ -63,6 +71,7 @@ Deno.serve(async request => {
       updatedSchedule,
       dailyEnabled: updatedSchedule.interval === 'daily',
       payoutsEnabled: account.payouts_enabled === true,
+      payoutReadAvailable,
       destinationConnected: Boolean(account.external_accounts?.data.some(item =>
         item.object === 'bank_account' || (item.object === 'card' && item.funding === 'debit')
       )),
