@@ -15,6 +15,18 @@ async function ensureConversation(slug){
   if(created.error?.code==='23505')return (await client.from('service_conversations').select('*').eq('customer_id',user.id).eq('service_slug',slug).single()).data;
   if(created.error)throw created.error;return created.data;
 }
+async function submitPendingServiceSelection(conversation){
+  const raw=sessionStorage.getItem('ogreena-service-selection');if(!raw)return;
+  let draft;try{draft=JSON.parse(raw);}catch{sessionStorage.removeItem('ogreena-service-selection');return;}
+  if(draft.serviceSlug!==conversation.service_slug||!Array.isArray(draft.lines)||!draft.lines.length)return;
+  const ids=[...new Set(draft.lines.map(line=>String(line.id)))].slice(0,25);
+  const catalog=await client.from('service_price_items').select('id,service_slug,name,price_cents,pricing_type,unit_label,active').in('id',ids).eq('service_slug',conversation.service_slug).eq('active',true);if(catalog.error)throw catalog.error;
+  const byId=Object.fromEntries((catalog.data||[]).map(item=>[item.id,item]));let subtotal=0;const lines=[];
+  for(const requestedLine of draft.lines){const item=byId[requestedLine.id],quantity=Number(requestedLine.quantity);if(!item||!Number.isFinite(quantity)||quantity<=0)continue;const lineTotal=Math.round(Number(item.price_cents)*quantity);subtotal+=lineTotal;lines.push(`• ${item.name} × ${quantity} — ${new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(lineTotal/100)}`);}
+  if(!lines.length)throw new Error('The selected published services are no longer available.');
+  const body=`Service selection request\n${lines.join('\n')}\nEstimated subtotal: ${new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(subtotal/100)}\nService address: ${String(draft.address||'').slice(0,240)}\nPreferred date: ${String(draft.preferredDate||'').slice(0,40)}${draft.details?`\nAppointment details: ${String(draft.details).slice(0,1000)}`:''}\n\nOwner review and an approved invoice are required before payment.`;
+  const sent=await client.from('messages').insert({conversation_id:conversation.id,sender_id:user.id,recipient_id:null,body,message_type:'text'});if(sent.error)throw sent.error;sessionStorage.removeItem('ogreena-service-selection');status('Your selections were sent to Ogreena for review.');await renderMessages();
+}
 async function loadConversations(){
   let query=client.from('service_conversations').select('*').order('last_message_at',{ascending:false});
   if(role!=='employee')query=query.eq('customer_id',user.id);
@@ -22,7 +34,7 @@ async function loadConversations(){
   const target=role==='employee'?'employee-owner':requested;if(!conversations.some(c=>c.service_slug===target))conversations.unshift(await ensureConversation(target));
   $('#conversationList').innerHTML=conversations.map(c=>'<button class="thread-choice '+(active?.id===c.id?'active':'')+'" data-conversation="'+c.id+'"><strong>'+esc(label(c.service_slug))+'</strong><span>'+(c.participant_kind==='employee'?'Private conversation with Ogreena’s owner':c.assigned_employee_id?'Ogreena team · employee assigned':'Ogreena service conversation')+'</span></button>').join('')||'<p class="muted">No conversations are assigned yet.</p>';
   $('#conversationList').querySelectorAll('[data-conversation]').forEach(button=>button.addEventListener('click',()=>openConversation(conversations.find(c=>c.id===button.dataset.conversation))));
-  const wanted=conversations.find(c=>c.service_slug===target)||conversations[0];if(wanted&&active?.id!==wanted.id)await openConversation(wanted);
+  const wanted=conversations.find(c=>c.service_slug===target)||conversations[0];if(wanted&&active?.id!==wanted.id)await openConversation(wanted);if(wanted)await submitPendingServiceSelection(wanted);
 }
 async function openConversation(conversation){active=conversation;$('#threadHeader').innerHTML='<h2>'+esc(label(conversation.service_slug))+'</h2><p class="muted">'+(conversation.assigned_employee_id?'Ogreena’s assigned employee can also reply in this private thread.':'Private conversation with Ogreena')+'</p>';await renderMessages();}
 async function startInvoiceCheckout(estimateId){const button=$(`[data-pay-invoice="${estimateId}"]`);if(button)button.disabled=true;try{const {data,error}=await client.functions.invoke('create-checkout-session',{body:{kind:'invoice',estimateId,idempotencyKey:crypto.randomUUID()}});if(error||!data?.url)throw new Error(data?.error||error?.message||'Secure Checkout could not open.');location.href=data.url;}catch(error){status(error.message,true);if(button)button.disabled=false;}}

@@ -33,6 +33,7 @@ Deno.serve(async request => {
     }
     const kind = String(body.kind || '') as PaymentKind;
     let amount = 0, name = '', productId: string | null = null, requestId: string | null = null, estimateId: string | null = null, orderId: string | null = null, serviceSlug = '', servicePriceItemId = '';
+    let approvedInvoiceLines: Array<{price_data:{currency:'usd';product_data:{name:string};unit_amount:number};quantity:number}> | null = null;
     let productShipping: { rate_cents:number; category:string; origin_zip:string; carriers:string[] } | null = null;
     if (kind === 'product') {
       if (!settings.product_payments_enabled) throw new Error('Product checkout is unavailable');
@@ -58,7 +59,13 @@ Deno.serve(async request => {
       if (!estimate?.amount_cents || estimate.amount_cents < 50) throw new Error('Approved invoice not found');
       if (estimate.expires_at && new Date(estimate.expires_at).getTime() <= Date.now()) throw new Error('This approved invoice has expired');
       if (estimate.tax_treatment !== 'service_only_nontaxable' || !estimate.tax_confirmed_at || !estimate.tax_confirmed_by) throw new Error('This invoice is blocked pending owner-confirmed tax treatment');
-      if (estimate.catalog_price_locked) {
+      const { data: invoiceLines, error: lineError } = await admin.from('estimate_line_items').select('service_price_item_id,service_slug,item_name,unit_price_cents,pricing_type,unit_label,quantity,line_total_cents').eq('estimate_id', estimate.id).order('created_at');
+      if (lineError) throw new Error('Approved invoice lines could not be verified');
+      if (invoiceLines?.length) {
+        const verifiedTotal=invoiceLines.reduce((sum,line)=>sum+Number(line.line_total_cents),0);
+        if (!invoiceLines.every(line=>line.service_slug&&line.item_name&&Number(line.unit_price_cents)>=0&&Number(line.quantity)>0&&Math.round(Number(line.unit_price_cents)*Number(line.quantity))===Number(line.line_total_cents))||verifiedTotal!==estimate.amount_cents) throw new Error('Invoice line verification failed');
+        approvedInvoiceLines=invoiceLines.map(line=>({price_data:{currency:'usd',product_data:{name:`${line.item_name} × ${line.quantity}${line.unit_label?` ${line.unit_label}`:''}`},unit_amount:Number(line.line_total_cents)},quantity:1}));
+      } else if (estimate.catalog_price_locked) {
         if (!estimate.service_slug || !estimate.catalog_item_name || !estimate.catalog_unit_price_cents || !estimate.catalog_pricing_type || !estimate.quantity) throw new Error('This invoice is blocked because it does not contain a verified service-price snapshot');
         const snapshotAmount = Math.round(Number(estimate.catalog_unit_price_cents) * Number(estimate.quantity));
         if (snapshotAmount !== estimate.amount_cents) throw new Error('Invoice price verification failed');
@@ -69,7 +76,7 @@ Deno.serve(async request => {
     } else throw new Error('Unsupported payment type');
     const session = await stripe.checkout.sessions.create({
       mode:'payment', customer_email:user.email,
-      line_items:[{ price_data:{ currency:'usd', product_data:{ name }, unit_amount:amount }, quantity:1 }],
+      line_items:approvedInvoiceLines || [{ price_data:{ currency:'usd', product_data:{ name }, unit_amount:amount }, quantity:1 }],
       ...(kind === 'product' ? { shipping_address_collection:{ allowed_countries:['US'] }, shipping_options:[{ shipping_rate_data:{ type:'fixed_amount', fixed_amount:{ amount:productShipping!.rate_cents, currency:'usd' }, display_name:productShipping!.category === 'gallon' ? 'Gallon-product shipping' : 'Spray-bottle shipping' } }], phone_number_collection:{ enabled:true } } : {}),
       success_url:'https://ogreena.com/auth/?checkout=success&session_id={CHECKOUT_SESSION_ID}', cancel_url:'https://ogreena.com/auth/?checkout=cancelled',
       integration_identifier:'ogreena_qvmtzxpk',
