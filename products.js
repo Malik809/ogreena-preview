@@ -1,15 +1,11 @@
 (function () {
   const products = window.OgreenaProductCatalog || [];
-  const PUBLIC_SQUARE_PRODUCT_CHECKOUT_ENABLED = false;
   const root = location.hostname.endsWith('.github.io') ? '/ogreena-preview/' : '/';
   const path = location.pathname.replace(/\/+/g, '/');
   const isCatalog = path.endsWith('/products/');
   const isBusinessProfile = path === '/' || path === '/ogreena-preview/';
 
   function buyAction(product) {
-    if (PUBLIC_SQUARE_PRODUCT_CHECKOUT_ENABLED && product.squareUrl) {
-      return `<a class="small-btn primary" href="${product.squareUrl}" rel="noopener">Buy Now</a>`;
-    }
     return `<button class="small-btn primary" type="button" data-buy-product="${product.id}" aria-disabled="true">Buy Now</button>`;
   }
 
@@ -85,5 +81,5 @@
     section.querySelectorAll('[data-product-card]').forEach(item => { const visible = !query || item.dataset.search.toLowerCase().includes(query); item.hidden = !visible; if (visible) shown += 1; });
     section.querySelector('.product-empty').hidden = shown > 0;
   });
-  window.OgreenaProducts = { products, render: ensureShowcase, publicCheckoutEnabled: PUBLIC_SQUARE_PRODUCT_CHECKOUT_ENABLED };
+  window.OgreenaProducts = { products, render: ensureShowcase };
 }());
