@@ -13,6 +13,7 @@ assert.match(owner, /url\.hostname === 'square\.link'/);
 assert.match(owner, /url\.hostname === 'checkout\.square\.site'/);
 assert.match(publicData, /visible,square_payment_link/);
 assert.match(publicData, /catalogProduct\.squareUrl = product\.square_payment_link/);
+assert.match(publicData, /product_checkout_is_enabled/);
 for (const id of ['og-trinity-32oz','og-floor-32oz','og-t-fresche-32oz','og-trinity-gallon','og-floor-gallon']) assert.match(migration, new RegExp(id));
 assert.match(products, /Checkout is unavailable until final owner activation/);
 assert.doesNotMatch(products, /window\.location\s*=\s*product\.squareUrl/);

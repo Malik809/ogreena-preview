@@ -4,8 +4,14 @@
   const path = location.pathname.replace(/\/+/g, '/');
   const isCatalog = path.endsWith('/products/');
   const isBusinessProfile = path === '/' || path === '/ogreena-preview/';
+  let productCheckoutAuthorized = false;
+
+  function isSquarePaymentLink(value) {
+    try { const url = new URL(value); return url.protocol === 'https:' && url.hostname === 'square.link' && /^\/u\/[A-Za-z0-9]+\/?$/.test(url.pathname); } catch { return false; }
+  }
 
   function buyAction(product) {
+    if (productCheckoutAuthorized && isSquarePaymentLink(product.squareUrl)) return `<a class="small-btn primary" data-buy-product="${product.id}" href="${product.squareUrl}" target="_blank" rel="noopener noreferrer external">Buy Now</a>`;
     return `<button class="small-btn primary" type="button" data-buy-product="${product.id}" aria-disabled="true">Buy Now</button>`;
   }
 
@@ -63,7 +69,8 @@
     }
     dialog.innerHTML = `<button class="dialog-close" type="button" aria-label="Close product details">×</button><img src="${product.image}" alt="${product.name} — ${product.size}"><div><span class="product-size">${product.size}</span><h2>${product.name}</h2><strong>$${product.price.toFixed(2)}</strong><p>Original Ogreena cleaning product. Online checkout is not active yet.</p>${buyAction(product)}</div>`;
     dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
-    dialog.querySelector('[data-buy-product]')?.addEventListener('click', showCheckoutBlocked);
+    const buyButton = dialog.querySelector('button[data-buy-product]');
+    if (buyButton) buyButton.addEventListener('click', showCheckoutBlocked);
     dialog.showModal();
   }
 
@@ -81,5 +88,13 @@
     section.querySelectorAll('[data-product-card]').forEach(item => { const visible = !query || item.dataset.search.toLowerCase().includes(query); item.hidden = !visible; if (visible) shown += 1; });
     section.querySelector('.product-empty').hidden = shown > 0;
   });
-  window.OgreenaProducts = { products, render: ensureShowcase };
+  window.OgreenaProducts = { products, render: ensureShowcase, setCheckoutAuthorized(value) {
+    productCheckoutAuthorized = value === true;
+    section.querySelectorAll('[data-buy-product]').forEach(control => {
+      const product = products.find(item => item.id === control.dataset.buyProduct);
+      if (!product) return;
+      const wrapper = document.createElement('div'); wrapper.innerHTML = buyAction(product);
+      control.replaceWith(wrapper.firstElementChild);
+    });
+  } };
 }());

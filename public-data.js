@@ -74,13 +74,15 @@ function applyManagedContent(records) {
   });
 }
 
-const [products, services, content, serviceMedia] = await Promise.all([
+const [products, services, content, serviceMedia, productCheckout] = await Promise.all([
   supabase.from('products').select('id,name,size,price_cents,image_path,display_order,visible,square_payment_link').order('display_order'),
   supabase.from('services').select('id,name,summary,description,display_order,visible').order('display_order'),
   supabase.from('website_content').select('content_key,content_value,visible,display_order').eq('published', true).eq('visible', true).order('display_order'),
   supabase.from('service_profile_media').select('service_slug,current_path,position_x,position_y'),
+  supabase.rpc('product_checkout_is_enabled'),
 ]);
 if (!products.error) applyProducts(products.data || []);
 if (!services.error) applyServices(services.data || []);
 if (!content.error) applyManagedContent(content.data || []);
 if (!serviceMedia.error) applyServiceMedia(serviceMedia.data || []);
+window.OgreenaProducts?.setCheckoutAuthorized(!productCheckout.error && productCheckout.data === true);
