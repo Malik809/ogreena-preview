@@ -13,7 +13,7 @@ function applyProducts(products) {
     const card = byId.get(product.id); if (!card) return;
     if (!product.visible) { card.remove(); return; }
     const catalogProduct = (window.OgreenaProductCatalog || []).find(item => item.id === product.id);
-    if (catalogProduct) { catalogProduct.name = product.name; catalogProduct.size = product.size; catalogProduct.price = product.price_cents / 100; catalogProduct.image = `/${product.image_path.replace(/^\//,'')}`; }
+    if (catalogProduct) { catalogProduct.name = product.name; catalogProduct.size = product.size; catalogProduct.price = product.price_cents / 100; catalogProduct.image = `/${product.image_path.replace(/^\//,'')}`; if (isSquarePaymentLink(product.square_payment_link)) catalogProduct.squareUrl = product.square_payment_link; }
     card.dataset.search = `${product.name} ${product.size}`;
     const image = card.querySelector('img'); if (image) { image.src = `/${product.image_path.replace(/^\//,'')}`; image.alt = `${product.name} — ${product.size}`; }
     const size = card.querySelector('.product-size'); if (size) size.textContent = product.size;
@@ -21,6 +21,13 @@ function applyProducts(products) {
     const price = card.querySelector('strong'); if (price) price.textContent = `$${(product.price_cents / 100).toFixed(2)}`;
     carousel.append(card);
   });
+}
+
+function isSquarePaymentLink(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password && !url.hash && ((url.hostname === 'square.link' && /^\/u\/[A-Za-z0-9]+\/?$/.test(url.pathname)) || (url.hostname === 'checkout.square.site' && /^\/merchant\/[A-Za-z0-9_-]+\/order\/[A-Za-z0-9_-]+\/?$/.test(url.pathname)));
+  } catch { return false; }
 }
 
 function applyServices(services) {
@@ -68,7 +75,7 @@ function applyManagedContent(records) {
 }
 
 const [products, services, content, serviceMedia] = await Promise.all([
-  supabase.from('products').select('id,name,size,price_cents,image_path,display_order,visible').order('display_order'),
+  supabase.from('products').select('id,name,size,price_cents,image_path,display_order,visible,square_payment_link').order('display_order'),
   supabase.from('services').select('id,name,summary,description,display_order,visible').order('display_order'),
   supabase.from('website_content').select('content_key,content_value,visible,display_order').eq('published', true).eq('visible', true).order('display_order'),
   supabase.from('service_profile_media').select('service_slug,current_path,position_x,position_y'),
