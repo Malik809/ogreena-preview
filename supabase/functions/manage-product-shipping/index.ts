@@ -1,7 +1,23 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { corsHeaders, requireOwner } from '../_shared/owner.ts';
 
 type PackageSpec = { weight_lb:number; length_in:number; width_in:number; height_in:number };
+
+function corsHeaders(origin: string | null) {
+  const allowed = new Set(['https://ogreena.com','https://www.ogreena.com']);
+  let local = false;
+  try { const url = new URL(origin || ''); local = url.protocol === 'http:' && ['localhost','127.0.0.1'].includes(url.hostname); } catch { local = false; }
+  return { 'Access-Control-Allow-Origin':origin && (allowed.has(origin) || local) ? origin : 'https://ogreena.com', 'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods':'POST, OPTIONS', 'Vary':'Origin' };
+}
+
+async function requireOwner(request: Request) {
+  const auth = request.headers.get('Authorization');
+  if (!auth?.startsWith('Bearer ')) throw new Error('Authentication required');
+  const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global:{ headers:{ Authorization:auth } } });
+  const { data:{ user }, error } = await client.auth.getUser();
+  if (error || !user) throw new Error('Authentication required');
+  const { data:role } = await client.from('user_roles').select('role').eq('user_id',user.id).single();
+  if (role?.role !== 'owner') throw new Error('Owner access required');
+}
 
 function validatedSettings(input: Record<string, unknown>, action: string, actualConfirmed: boolean, carrierConfirmed: boolean) {
   const rates = input.category_rates_cents as Record<string, number>;
@@ -19,7 +35,7 @@ function validatedSettings(input: Record<string, unknown>, action: string, actua
 }
 
 Deno.serve(async request => {
-  const headers = { ...corsHeaders(request.headers.get('Origin'), { allowLocalPreview:true }), 'Content-Type':'application/json', 'Cache-Control':'no-store' };
+  const headers = { ...corsHeaders(request.headers.get('Origin')), 'Content-Type':'application/json', 'Cache-Control':'no-store' };
   if (request.method === 'OPTIONS') return new Response(null, { headers });
   if (request.method !== 'POST') return Response.json({ error:'Method not allowed' }, { status:405, headers });
   try {
