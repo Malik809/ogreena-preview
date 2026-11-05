@@ -15,6 +15,7 @@ const replacementOnboarding = read('supabase/functions/create-ogreena-replacemen
 const checkout = read('supabase/functions/create-checkout-session/index.ts');
 const refund = read('supabase/functions/create-refund/index.ts');
 const payoutSchedule = read('supabase/functions/manage-payout-schedule/index.ts');
+const productShipping = read('supabase/functions/manage-product-shipping/index.ts');
 
 function expect(source, value, label) {
   if (!source.includes(value)) throw new Error(`${label} missing: ${value}`);
@@ -43,6 +44,8 @@ expect(ownerHtml, 'name="spray_height_in"', 'owner-editable spray dimensions');
 expect(ownerHtml, 'name="gallon_weight_lb"', 'owner-editable gallon weight');
 expect(ownerHtml, 'name="gallon_height_in"', 'owner-editable gallon dimensions');
 expect(ownerHtml, 'These package measurements are estimates and are not verified', 'provisional package disclosure');
+expect(ownerHtml, 'data-publish-shipping', 'verified shipping publish control');
+expect(ownerHtml, 'name="confirm_actual_measurements"', 'actual measurement owner confirmation');
 expect(ownerHtml, 'name="sender_email"', 'verified order-confirmation sender placeholder');
 expect(ownerHtml, 'U.S. territories', 'territory policy control');
 expect(ownerHtml, 'P.O. boxes', 'PO box policy control');
@@ -55,15 +58,20 @@ expect(ownerJs, "row.livemode === true ? 'LIVE' : 'TEST'", 'transaction environm
 expect(ownerJs, 'product_payments_enabled', 'product payment gate');
 expect(ownerJs, 'service_payments_enabled', 'service payment gate');
 expect(ownerJs, 'live_activation_approved', 'live activation gate');
-expect(ownerJs, "owner_approved:false", 'shipping draft cannot activate checkout');
+expect(productShipping, "owner_approved:false", 'shipping draft cannot activate checkout');
 expect(ownerJs, "settings.carrier_preferences_version === 1", 'legacy carrier defaults are not treated as owner approval');
 expect(ownerJs, "['USPS','UPS']", 'approved carrier defaults');
 expect(ownerJs, 'normalizedCarrierNames', 'future carrier validation');
-expect(ownerJs, "if (!payload.carriers.length)", 'at least one carrier required');
-expect(ownerJs, "package_specs_status:'provisional_estimate'", 'provisional package status');
-expect(ownerJs, 'package_specs_verified:false', 'package estimates cannot be treated as verified');
-expect(ownerJs, 'carrier_eligibility_verified:false', 'carrier eligibility remains unverified');
-expect(ownerJs, "production_email_enabled:false", 'shipping draft cannot send production email');
+expect(productShipping, "carriers.length < 1", 'at least one carrier required');
+expect(productShipping, "package_specs_status:'provisional_estimate'", 'provisional package status');
+expect(productShipping, 'package_specs_verified:false', 'package estimates cannot be treated as verified');
+expect(productShipping, 'carrier_eligibility_verified:false', 'carrier eligibility remains unverified');
+expect(ownerJs, "functions.invoke('manage-product-shipping'", 'server-managed shipping editor');
+expect(productShipping, 'await requireOwner(request)', 'owner-only shipping management');
+expect(productShipping, "action === 'publish' && !actualConfirmed", 'server-side publish confirmation');
+expect(productShipping, "specs[category][field as keyof PackageSpec] > 200", 'server-side measurement limits');
+expect(productShipping, "content_value:settings", 'published settings become future order settings');
+expect(productShipping, "production_email_enabled:false", 'shipping draft cannot send production email');
 expect(ownerJs, "supabase.functions.invoke('create-refund'", 'authorized refund integration');
 expect(ownerJs, "body:{ statusOnly:true }", 'owner payout status request');
 expect(ownerJs, "from('ogreena_replacement_connect_consents')", 'replacement consent storage');

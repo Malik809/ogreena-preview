@@ -371,6 +371,15 @@ function normalizedCarrierNames(value) {
   if (names.some(name => name.length > 60 || !/^[A-Za-z0-9][A-Za-z0-9 .&'()/-]*$/.test(name))) throw new Error('Carrier names may use letters, numbers, spaces, and standard business-name punctuation');
   return [...new Map(names.map(name => [name.toLowerCase(), name])).values()];
 }
+function productShippingPayload(form) {
+  const values = new FormData(form);
+  const categoryRates = { spray_bottle:Math.round(Number(values.get('spray_bottle_rate_dollars')) * 100), gallon:Math.round(Number(values.get('gallon_rate_dollars')) * 100) };
+  const selectedCarriers = ['carrier_usps','carrier_ups','carrier_fedex'].filter(name => values.get(name)).map(name => ({carrier_usps:'USPS',carrier_ups:'UPS',carrier_fedex:'FedEx'})[name]);
+  const carriers = [...new Map([...selectedCarriers, ...normalizedCarrierNames(values.get('other_carriers'))].map(name => [name.toLowerCase(), name])).values()];
+  const packageSpecs = Object.fromEntries([['spray_bottle','spray'],['gallon','gallon']].map(([category,prefix]) => [category,Object.fromEntries(['weight_lb','length_in','width_in','height_in'].map(field => [field,Number(values.get(`${prefix}_${field}`))]))]));
+  const settings = { mode:'category_flat_rate', coverage:'us_50_states_dc', includes_alaska_hawaii:true, category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carrier_preferences_version:1, carriers, package_specs:packageSpecs, po_boxes:values.get('po_boxes'), territories:values.get('territories'), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null };
+  return { settings, confirmActualMeasurements:values.get('confirm_actual_measurements') === 'on', confirmCarrierEligibility:values.get('confirm_carrier_eligibility') === 'on' };
+}
 async function loadProductShipping() {
   const form = $('#productShippingForm'); if (!form) return;
   const result = await supabase.from('website_content').select('content_value,draft_value').eq('content_key', SHIPPING_CONTENT_KEY).maybeSingle();
@@ -396,21 +405,18 @@ async function loadProductShipping() {
   $('#productShippingStatus').textContent = settings.owner_approved === true ? 'Owner-approved shipping configuration saved.' : 'Draft only — product charging remains disabled.';
 }
 $('#productShippingForm')?.addEventListener('submit', event => { event.preventDefault(); run('Saving shipping draft', async () => {
-  const form = event.currentTarget; const values = new FormData(form);
-  const categoryRates = { spray_bottle:Math.round(Number(values.get('spray_bottle_rate_dollars')) * 100), gallon:Math.round(Number(values.get('gallon_rate_dollars')) * 100) };
-  const selectedCarriers = ['carrier_usps','carrier_ups','carrier_fedex'].filter(name => values.get(name)).map(name => ({carrier_usps:'USPS',carrier_ups:'UPS',carrier_fedex:'FedEx'})[name]);
-  const carriers = [...new Map([...selectedCarriers, ...normalizedCarrierNames(values.get('other_carriers'))].map(name => [name.toLowerCase(), name])).values()];
-  const packageSpecs = Object.fromEntries([['spray_bottle','spray'],['gallon','gallon']].map(([category,prefix]) => [category,Object.fromEntries(['weight_lb','length_in','width_in','height_in'].map(field => [field,Number(values.get(`${prefix}_${field}`))]))]));
-  const packageSummary = `PROVISIONAL — not physically verified. 32-oz spray: ${packageSpecs.spray_bottle.weight_lb} lb, ${packageSpecs.spray_bottle.length_in} x ${packageSpecs.spray_bottle.width_in} x ${packageSpecs.spray_bottle.height_in} in. Gallon: ${packageSpecs.gallon.weight_lb} lb, ${packageSpecs.gallon.length_in} x ${packageSpecs.gallon.width_in} x ${packageSpecs.gallon.height_in} in.`;
-  const payload = { mode:'category_flat_rate', coverage:'us_50_states_dc', includes_alaska_hawaii:true, category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carrier_preferences_version:1, carriers, package_specs:packageSpecs, package_specs_status:'provisional_estimate', package_specs_verified:false, carrier_eligibility_verified:false, packages:packageSummary, po_boxes:values.get('po_boxes'), territories:values.get('territories'), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null, production_email_enabled:false, owner_approved:false, updated_at:new Date().toISOString() };
-  if (Object.values(categoryRates).some(rate => !Number.isInteger(rate) || rate < 0)) throw new Error('Enter valid non-negative shipping amounts');
-  if (Object.values(packageSpecs).some(spec => Object.values(spec).some(value => !Number.isFinite(value) || value <= 0))) throw new Error('Enter positive package weights and dimensions');
-  if (payload.origin_zip && !/^\d{5}(-\d{4})?$/.test(payload.origin_zip)) throw new Error('Enter a valid U.S. ZIP code');
-  if (!payload.carriers.length) throw new Error('Select or enter at least one verified fulfillment carrier');
-  const existing = await supabase.from('website_content').select('content_key').eq('content_key', SHIPPING_CONTENT_KEY).maybeSingle(); if (existing.error) throw existing.error;
-  const saved = existing.data ? await supabase.from('website_content').update({ draft_value:payload }).eq('content_key', SHIPPING_CONTENT_KEY) : await supabase.from('website_content').insert({ content_key:SHIPPING_CONTENT_KEY, content_value:{}, draft_value:payload, published:false, visible:false, display_order:9999 });
-  requireOk(saved); await loadProductShipping();
+  const result = await supabase.functions.invoke('manage-product-shipping', { body:{ action:'save_draft', ...productShippingPayload(event.currentTarget) } });
+  requireOk(result); await loadProductShipping();
 }); });
+document.querySelector('[data-publish-shipping]')?.addEventListener('click', () => {
+  const form = $('#productShippingForm');
+  run('Publishing verified shipping settings', async () => {
+    const payload = productShippingPayload(form);
+    if (!payload.confirmActualMeasurements) throw new Error('Confirm the actual packaged measurements before publishing');
+    const result = await supabase.functions.invoke('manage-product-shipping', { body:{ action:'publish', ...payload } });
+    requireOk(result); await loadProductShipping();
+  });
+});
 
 const servicePaymentKinds = new Set(['service_deposit','service_full','invoice']);
 const completedPaymentStatuses = new Set(['paid','refunded','partially_refunded']);

@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const migration = fs.readFileSync('supabase/migrations/20261028170000_product_shipping_categories.sql', 'utf8');
 const checkout = fs.readFileSync('supabase/functions/create-checkout-session/index.ts', 'utf8');
 const owner = fs.readFileSync('owner/owner.js', 'utf8');
+const manager = fs.readFileSync('supabase/functions/manage-product-shipping/index.ts', 'utf8');
 
 for (const product of ['og-trinity-32oz','og-floor-32oz','og-t-fresche-32oz']) {
   assert.match(migration, new RegExp(product), `${product} must have a stored spray-bottle category`);
@@ -17,6 +18,6 @@ assert.match(checkout, /fixed_amount:\{ amount:productShipping!\.rate_cents/, 'S
 assert.doesNotMatch(checkout, /body\.(shipping|shippingRate|shipping_category)/, 'Checkout must not trust a customer-supplied shipping amount or category');
 assert.match(owner, /spray_bottle:Math\.round/, 'owner can update the spray-bottle rate');
 assert.match(owner, /gallon:Math\.round/, 'owner can update the gallon rate');
-assert.match(owner, /owner_approved:false/, 'editing rates must not activate product charging');
+assert.match(manager, /owner_approved:false/, 'editing rates must not activate product charging');
 
 console.log('Product category shipping checks passed.');
