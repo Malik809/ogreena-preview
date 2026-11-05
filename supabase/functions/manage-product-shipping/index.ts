@@ -23,7 +23,7 @@ function validatedSettings(input: Record<string, unknown>, action: string, actua
   const rates = input.category_rates_cents as Record<string, number>;
   const specs = input.package_specs as Record<string, PackageSpec>;
   const carriers = input.carriers as unknown[];
-  if (input.mode !== 'category_flat_rate' || input.coverage !== 'us_50_states_dc') throw new Error('Unsupported shipping configuration');
+  if (input.mode !== 'category_flat_rate' || !['us_contiguous_48','us_50_states_dc'].includes(String(input.coverage || ''))) throw new Error('Unsupported shipping configuration');
   if (!rates || ['spray_bottle','gallon'].some(category => !Number.isInteger(rates[category]) || rates[category] < 0 || rates[category] > 100000)) throw new Error('Invalid shipping rates');
   if (!/^\d{5}(-\d{4})?$/.test(String(input.origin_zip || ''))) throw new Error('Invalid fulfillment ZIP code');
   if (!Array.isArray(carriers) || carriers.length < 1 || carriers.length > 10 || carriers.some(name => typeof name !== 'string' || name.length > 60 || !/^[A-Za-z0-9][A-Za-z0-9 .&'()/-]*$/.test(name))) throw new Error('Invalid fulfillment carriers');
@@ -31,7 +31,8 @@ function validatedSettings(input: Record<string, unknown>, action: string, actua
   if (action === 'publish' && !actualConfirmed) throw new Error('Actual packaged measurements must be owner-confirmed before publishing');
   const verified = action === 'publish' && actualConfirmed;
   const packages = `${verified ? 'OWNER-VERIFIED ACTUAL' : 'PROVISIONAL — not physically verified'}. 32-oz spray: ${specs.spray_bottle.weight_lb} lb, ${specs.spray_bottle.length_in} x ${specs.spray_bottle.width_in} x ${specs.spray_bottle.height_in} in. Gallon: ${specs.gallon.weight_lb} lb, ${specs.gallon.length_in} x ${specs.gallon.width_in} x ${specs.gallon.height_in} in.`;
-  return { ...input, package_specs_status:verified?'owner_verified_actual':'provisional_estimate', package_specs_verified:verified, carrier_eligibility_verified:carrierConfirmed, packages, rates_approved:true, production_email_enabled:false, owner_approved:verified && carrierConfirmed, updated_at:new Date().toISOString() };
+  const contiguousOnly = input.coverage === 'us_contiguous_48';
+  return { ...input, includes_alaska_hawaii:!contiguousOnly, physical_street_addresses_only:input.po_boxes === 'not_supported', excluded_state_codes:contiguousOnly?['AK','HI']:[], package_specs_status:verified?'owner_verified_actual':'provisional_estimate', package_specs_verified:verified, carrier_eligibility_verified:carrierConfirmed, packages, rates_approved:true, production_email_enabled:false, owner_approved:verified && carrierConfirmed, updated_at:new Date().toISOString() };
 }
 
 Deno.serve(async request => {

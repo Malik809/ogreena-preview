@@ -5,6 +5,25 @@ import { stripeEnvironment } from './stripe-mode.ts';
 
 const NEW_MERCHANT = 'acct_1UUtHREjIGxDre3j';
 type PaymentKind = 'product' | 'invoice';
+type ShippingAddress = { name:string; line1:string; line2?:string; city:string; state:string; postal_code:string; country:string };
+const CONTIGUOUS_STATE_CODES = new Set(['AL','AZ','AR','CA','CO','CT','DE','FL','GA','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']);
+const ALL_STATE_CODES = new Set([...CONTIGUOUS_STATE_CODES,'AK','HI','DC']);
+const PO_BOX_PATTERN = /\b(?:P(?:OST(?:AL)?)?\.?\s*O(?:FFICE)?\.?|P\.?\s*O\.?)\s*BOX\b/i;
+
+function validatedShippingAddress(input: unknown, shipping: Record<string, unknown>): ShippingAddress {
+  const address = (input || {}) as Record<string, unknown>;
+  const normalized: ShippingAddress = {
+    name:String(address.name || '').trim(), line1:String(address.line1 || '').trim(), line2:String(address.line2 || '').trim(), city:String(address.city || '').trim(),
+    state:String(address.state || '').trim().toUpperCase(), postal_code:String(address.postal_code || '').trim(), country:String(address.country || 'US').trim().toUpperCase(),
+  };
+  if (!normalized.name || !normalized.line1 || !normalized.city || !normalized.state || !normalized.postal_code) throw new Error('A complete physical shipping address is required');
+  if (normalized.country !== 'US') throw new Error('Product shipping is limited to approved U.S. destinations');
+  const allowedStates = shipping.coverage === 'us_contiguous_48' ? CONTIGUOUS_STATE_CODES : ALL_STATE_CODES;
+  if (!allowedStates.has(normalized.state)) throw new Error('Shipping is currently limited to the 48 contiguous states');
+  if (!/^\d{5}(?:-\d{4})?$/.test(normalized.postal_code)) throw new Error('Enter a valid U.S. ZIP code');
+  if (shipping.po_boxes === 'not_supported' && PO_BOX_PATTERN.test(`${normalized.line1} ${normalized.line2 || ''}`)) throw new Error('P.O. boxes are not supported');
+  return normalized;
+}
 
 Deno.serve(async request => {
   const headers = { ...corsHeaders(request.headers.get('Origin')), 'Content-Type': 'application/json' };
@@ -35,12 +54,13 @@ Deno.serve(async request => {
     let amount = 0, name = '', productId: string | null = null, requestId: string | null = null, estimateId: string | null = null, orderId: string | null = null, serviceSlug = '', servicePriceItemId = '';
     let approvedInvoiceLines: Array<{price_data:{currency:'usd';product_data:{name:string};unit_amount:number};quantity:number}> | null = null;
     let productShipping: { rate_cents:number; category:string; origin_zip:string; carriers:string[] } | null = null;
+    let productCustomerId: string | null = null;
     if (kind === 'product') {
       if (!settings.product_payments_enabled) throw new Error('Product checkout is unavailable');
       const { data: shippingRecord, error: shippingError } = await admin.from('website_content').select('content_value').eq('content_key','product-shipping-settings').eq('published',true).single();
       if (shippingError) throw new Error('Product shipping is not approved');
       const shipping = shippingRecord?.content_value || {};
-      if (shipping.mode !== 'category_flat_rate' || shipping.coverage !== 'us_50_states_dc' || shipping.rates_approved !== true || shipping.owner_approved !== true || !/^\d{5}(-\d{4})?$/.test(shipping.origin_zip || '')) throw new Error('Product shipping is not approved');
+      if (shipping.mode !== 'category_flat_rate' || !['us_contiguous_48','us_50_states_dc'].includes(shipping.coverage) || shipping.rates_approved !== true || shipping.owner_approved !== true || !/^\d{5}(-\d{4})?$/.test(shipping.origin_zip || '')) throw new Error('Product shipping is not approved');
       if (!Array.isArray(shipping.carriers) || !shipping.carriers.length || !shipping.packages) throw new Error('Product fulfillment details are incomplete');
       if (shipping.package_specs_verified !== true || shipping.carrier_eligibility_verified !== true) throw new Error('Product package measurements and carrier eligibility must be verified');
       const { data: product } = await admin.from('products').select('id,name,size,price_cents,visible,shipping_category').eq('id', String(body.productId)).single();
@@ -50,6 +70,9 @@ Deno.serve(async request => {
       if (!['spray_bottle','gallon'].includes(shippingCategory) || !Number.isInteger(shippingRate) || shippingRate < 0) throw new Error('This product does not have an approved shipping category');
       productShipping = { rate_cents:shippingRate, category:shippingCategory, origin_zip:shipping.origin_zip, carriers:shipping.carriers };
       productId = product.id; amount = product.price_cents; name = `${product.name} — ${product.size}`;
+      const shippingAddress = validatedShippingAddress(body.shippingAddress, shipping);
+      const customer = await stripe.customers.create({ email:user.email, name:shippingAddress.name, shipping:{ name:shippingAddress.name, address:{ line1:shippingAddress.line1, line2:shippingAddress.line2 || undefined, city:shippingAddress.city, state:shippingAddress.state, postal_code:shippingAddress.postal_code, country:'US' } } }, { idempotencyKey:`ogreena-product-customer-${idempotencyKey}`, ...requestOptions });
+      productCustomerId = customer.id;
       const { data: order, error } = await admin.from('orders').insert({ customer_id:user.id, status:'pending', total_cents:amount, stripe_account_id:stripeAccountId }).select('id').single();
       if (error) throw error; orderId = order.id;
       const { error: itemError } = await admin.from('order_items').insert({ order_id:orderId, product_id:productId, quantity:1, unit_price_cents:amount });
@@ -76,9 +99,9 @@ Deno.serve(async request => {
       await admin.from('estimates').update({ stripe_account_id:stripeAccountId }).eq('id', estimate.id).is('stripe_account_id', null);
     } else throw new Error('Unsupported payment type');
     const session = await stripe.checkout.sessions.create({
-      mode:'payment', customer_email:user.email,
+      mode:'payment', ...(kind === 'product' ? { customer:productCustomerId! } : { customer_email:user.email }),
       line_items:approvedInvoiceLines || [{ price_data:{ currency:'usd', product_data:{ name }, unit_amount:amount }, quantity:1 }],
-      ...(kind === 'product' ? { automatic_tax:{ enabled:true, liability:{ type:'self' as const } }, shipping_address_collection:{ allowed_countries:['US'] }, shipping_options:[{ shipping_rate_data:{ type:'fixed_amount', fixed_amount:{ amount:productShipping!.rate_cents, currency:'usd' }, display_name:productShipping!.category === 'gallon' ? 'Gallon-product shipping' : 'Spray-bottle shipping' } }], phone_number_collection:{ enabled:true } } : {}),
+      ...(kind === 'product' ? { automatic_tax:{ enabled:true, liability:{ type:'self' as const } }, shipping_options:[{ shipping_rate_data:{ type:'fixed_amount', fixed_amount:{ amount:productShipping!.rate_cents, currency:'usd' }, display_name:productShipping!.category === 'gallon' ? 'Gallon-product shipping' : 'Spray-bottle shipping' } }], phone_number_collection:{ enabled:true } } : {}),
       success_url:'https://ogreena.com/auth/?checkout=success&session_id={CHECKOUT_SESSION_ID}', cancel_url:'https://ogreena.com/auth/?checkout=cancelled',
       integration_identifier:'ogreena_qvmtzxpk',
       metadata:{ customer_id:user.id, payment_kind:kind, product_id:productId || '', service_request_id:requestId || '', estimate_id:estimateId || '', order_id:orderId || '', stripe_account_id:stripeAccountId || '', tax_treatment:kind==='invoice'?'service_only_nontaxable':'', service_slug:serviceSlug, service_price_item_id:servicePriceItemId, shipping_mode:kind==='product'?'category_flat_rate':'', shipping_category:productShipping?.category || '', shipping_rate_cents:String(productShipping?.rate_cents ?? ''), fulfillment_origin_zip:productShipping?.origin_zip || '', carrier_comparison:productShipping?.carriers.join(',') || '' },

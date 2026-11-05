@@ -263,8 +263,13 @@ async function renderSession(session) {
   if (!session) return;
   const pendingProduct = sessionStorage.getItem('ogreena-pending-product');
   if (pendingProduct) {
+    const pendingShipping = sessionStorage.getItem('ogreena-pending-shipping');
     sessionStorage.removeItem('ogreena-pending-product');
-    await startCheckout({ kind:'product', productId:pendingProduct });
+    sessionStorage.removeItem('ogreena-pending-shipping');
+    let shippingAddress = null;
+    try { shippingAddress = JSON.parse(pendingShipping || 'null'); } catch { shippingAddress = null; }
+    if (!shippingAddress) { alert('Enter your shipping address again from the product page.'); location.href='../products/'; return; }
+    await startCheckout({ kind:'product', productId:pendingProduct, shippingAddress });
     return;
   }
   const user = session.user;

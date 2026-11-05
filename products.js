@@ -55,17 +55,31 @@
     showMessage('Checkout is unavailable until final owner activation.');
   }
 
-  async function startCheckout(productId) {
+  function shippingAddressDialog(productId) {
+    let dialog = document.querySelector('#productShippingDialog');
+    if (!dialog) { dialog = document.createElement('dialog'); dialog.id = 'productShippingDialog'; dialog.className = 'product-dialog shipping-dialog'; document.body.append(dialog); }
+    dialog.innerHTML = `<button class="dialog-close" type="button" aria-label="Close shipping address">×</button><form class="shipping-address-form"><div><span class="product-size">SHIPPING CHECK</span><h2>Where should we ship your order?</h2><p>Initial shipping is available to physical street addresses in the 48 contiguous states. P.O. boxes, Alaska, Hawaii, and U.S. territories are excluded.</p></div><label>Full name<input name="name" autocomplete="shipping name" required></label><label>Street address<input name="line1" autocomplete="shipping address-line1" required></label><label>Apartment or suite<input name="line2" autocomplete="shipping address-line2"></label><label>City<input name="city" autocomplete="shipping address-level2" required></label><label>State abbreviation<input name="state" autocomplete="shipping address-level1" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" placeholder="CA" required></label><label>ZIP code<input name="postal_code" autocomplete="shipping postal-code" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" required></label><button class="small-btn primary" type="submit">Continue to Stripe</button></form>`;
+    dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
+    dialog.querySelector('form').addEventListener('submit', event => { event.preventDefault(); const values=Object.fromEntries(new FormData(event.currentTarget)); dialog.close(); continueCheckout(productId,{...values,country:'US'}); });
+    dialog.showModal();
+  }
+
+  async function continueCheckout(productId, shippingAddress) {
     if (!productCheckoutAuthorized) { showCheckoutBlocked(); return; }
     try {
       if (!window.supabase) throw new Error('Secure checkout is still loading. Please try again.');
       const client = window.supabase.createClient('https://mhhjzifeaofgskimvuom.supabase.co','sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM',{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage,storageKey:'ogreena-auth-session'}});
       const {data:{session}}=await client.auth.getSession();
-      if(!session){sessionStorage.setItem('ogreena-pending-product',productId);location.href=`${root}auth/?mode=signin&checkout=product`;return;}
-      const {data,error}=await client.functions.invoke('create-checkout-session',{body:{kind:'product',productId,idempotencyKey:crypto.randomUUID()}});
+      if(!session){sessionStorage.setItem('ogreena-pending-product',productId);sessionStorage.setItem('ogreena-pending-shipping',JSON.stringify(shippingAddress));location.href=`${root}auth/?mode=signin&checkout=product`;return;}
+      const {data,error}=await client.functions.invoke('create-checkout-session',{body:{kind:'product',productId,shippingAddress,idempotencyKey:crypto.randomUUID()}});
       if(error||!data?.url)throw new Error(data?.error||'Checkout is unavailable');
       location.href=data.url;
     } catch (error) { showMessage(error.message || 'Checkout is unavailable until final owner approval.'); }
+  }
+
+  function startCheckout(productId) {
+    if (!productCheckoutAuthorized) { showCheckoutBlocked(); return; }
+    shippingAddressDialog(productId);
   }
 
   function openProduct(product) {

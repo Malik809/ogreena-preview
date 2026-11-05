@@ -403,7 +403,8 @@ function productShippingPayload(form) {
   const selectedCarriers = ['carrier_usps','carrier_ups','carrier_fedex'].filter(name => values.get(name)).map(name => ({carrier_usps:'USPS',carrier_ups:'UPS',carrier_fedex:'FedEx'})[name]);
   const carriers = [...new Map([...selectedCarriers, ...normalizedCarrierNames(values.get('other_carriers'))].map(name => [name.toLowerCase(), name])).values()];
   const packageSpecs = Object.fromEntries([['spray_bottle','spray'],['gallon','gallon']].map(([category,prefix]) => [category,Object.fromEntries(['weight_lb','length_in','width_in','height_in'].map(field => [field,Number(values.get(`${prefix}_${field}`))]))]));
-  const settings = { mode:'category_flat_rate', coverage:'us_50_states_dc', includes_alaska_hawaii:true, category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carrier_preferences_version:1, carriers, package_specs:packageSpecs, po_boxes:values.get('po_boxes'), territories:values.get('territories'), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null };
+  const coverage = String(values.get('coverage') || 'us_contiguous_48');
+  const settings = { mode:'category_flat_rate', coverage, includes_alaska_hawaii:coverage === 'us_50_states_dc', physical_street_addresses_only:values.get('po_boxes') === 'not_supported', category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carrier_preferences_version:1, carriers, package_specs:packageSpecs, po_boxes:values.get('po_boxes'), territories:values.get('territories'), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null };
   return { settings, confirmActualMeasurements:values.get('confirm_actual_measurements') === 'on', confirmCarrierEligibility:values.get('confirm_carrier_eligibility') === 'on' };
 }
 async function loadProductShipping() {
@@ -412,6 +413,7 @@ async function loadProductShipping() {
   if (result.error) throw result.error;
   const settings = result.data?.draft_value || result.data?.content_value || {};
   const categoryRates = settings.category_rates_cents || {};
+  form.elements.coverage.value = settings.coverage || 'us_contiguous_48';
   form.elements.spray_bottle_rate_dollars.value = Number.isInteger(categoryRates.spray_bottle) ? (categoryRates.spray_bottle / 100).toFixed(2) : '4.00';
   form.elements.gallon_rate_dollars.value = Number.isInteger(categoryRates.gallon) ? (categoryRates.gallon / 100).toFixed(2) : '8.00';
   form.elements.origin_zip.value = settings.origin_zip || '94609';
