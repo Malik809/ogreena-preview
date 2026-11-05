@@ -1,7 +1,21 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './auth/supabase-config.js';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth:{ persistSession:false, autoRefreshToken:false } });
+const restHeaders = { apikey:SUPABASE_PUBLISHABLE_KEY, Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json' };
+async function publicGet(path) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers:restHeaders });
+  if (!response.ok) return { data:null, error:new Error(`Public content request failed (${response.status})`) };
+  return { data:await response.json(), error:null };
+}
+async function publicRpc(name) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', headers:restHeaders, body:'{}' });
+  if (!response.ok) return { data:null, error:new Error(`Public status request failed (${response.status})`) };
+  return { data:await response.json(), error:null };
+}
+
+function optimizedProductImage(path) {
+  const clean = String(path || '').replace(/^\//,'');
+  return clean.startsWith('assets/products/') && clean.endsWith('.jpg') ? `/${clean.replace(/\.jpg$/, '-480.webp')}` : `/${clean}`;
+}
 
 function applyProducts(products) {
   const carousel = document.querySelector('[data-product-carousel]');
@@ -13,9 +27,9 @@ function applyProducts(products) {
     const card = byId.get(product.id); if (!card) return;
     if (!product.visible) { card.remove(); return; }
     const catalogProduct = (window.OgreenaProductCatalog || []).find(item => item.id === product.id);
-    if (catalogProduct) { catalogProduct.name = product.name; catalogProduct.size = product.size; catalogProduct.price = product.price_cents / 100; catalogProduct.image = `/${product.image_path.replace(/^\//,'')}`; }
+    if (catalogProduct) { catalogProduct.name = product.name; catalogProduct.size = product.size; catalogProduct.price = product.price_cents / 100; catalogProduct.image = optimizedProductImage(product.image_path); }
     card.dataset.search = `${product.name} ${product.size}`;
-    const image = card.querySelector('img'); if (image) { image.src = `/${product.image_path.replace(/^\//,'')}`; image.alt = `${product.name} — ${product.size}`; }
+    const image = card.querySelector('img'); if (image) { const source=optimizedProductImage(product.image_path); if (image.dataset.src) image.dataset.src=source; else image.src=source; image.alt = `${product.name} — ${product.size}`; }
     const size = card.querySelector('.product-size'); if (size) size.textContent = product.size;
     const name = card.querySelector('h3'); if (name) name.textContent = product.name;
     const price = card.querySelector('strong'); if (price) price.textContent = `$${(product.price_cents / 100).toFixed(2)}`;
@@ -68,11 +82,11 @@ function applyManagedContent(records) {
 }
 
 const [products, services, content, serviceMedia, productCheckout] = await Promise.all([
-  supabase.from('products').select('id,name,size,price_cents,image_path,display_order,visible').order('display_order'),
-  supabase.from('services').select('id,name,summary,description,display_order,visible').order('display_order'),
-  supabase.from('website_content').select('content_key,content_value,visible,display_order').eq('published', true).eq('visible', true).order('display_order'),
-  supabase.from('service_profile_media').select('service_slug,current_path,position_x,position_y'),
-  supabase.rpc('product_checkout_is_enabled'),
+  publicGet('products?select=id,name,size,price_cents,image_path,display_order,visible&order=display_order.asc'),
+  publicGet('services?select=id,name,summary,description,display_order,visible&order=display_order.asc'),
+  publicGet('website_content?select=content_key,content_value,visible,display_order&published=eq.true&visible=eq.true&order=display_order.asc'),
+  publicGet('service_profile_media?select=service_slug,current_path,position_x,position_y'),
+  publicRpc('product_checkout_is_enabled'),
 ]);
 if (!products.error) applyProducts(products.data || []);
 if (!services.error) applyServices(services.data || []);

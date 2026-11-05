@@ -14,7 +14,32 @@ let paymentRows = [];
 let paymentSettings = null;
 let replacementConnectInstance = null;
 let ownerMessageChannel = null;
+const loadedOwnerSections = new Set();
 const OWNER_SESSION_HANDOFF_KEY = 'ogreena-owner-session-handoff';
+
+async function loadOwnerOverview() {
+  const countRole = async role => { const result=await supabase.from('user_roles').select('*',{count:'exact',head:true}).eq('role',role); return result.error?0:(result.count||0); };
+  const [customers,employees,requests,appointments,unread] = await Promise.all([
+    countRole('customer'), countRole('employee'), count('service_requests'), count('appointments'),
+    supabase.from('messages').select('id',{count:'exact',head:true}).neq('sender_id',currentUserId).is('read_at',null)
+  ]);
+  $('#customerCount').textContent=customers; $('#employeeCount').textContent=employees; $('#requestCount').textContent=requests; $('#appointmentCount').textContent=appointments; setOwnerUnreadCount(unread.error?0:(unread.count||0));
+  await loadBusiness();
+}
+
+async function ensureOwnerSectionLoaded(section) {
+  if (loadedOwnerSections.has(section)) return;
+  const loaders = {
+    overview:loadOwnerOverview,
+    website:async()=>{await refreshServiceProfileOptions();await Promise.all([loadServicePrices(),loadServicePictures(),loadContent()]);},
+    products:loadProducts,
+    services:loadServices,
+    operations:loadOperations,
+    payments:loadPayments,
+  };
+  if (!loaders[section]) return;
+  await loaders[section](); loadedOwnerSections.add(section);
+}
 
 function setStatus(message, error = false) { const node = $('#globalStatus'); node.textContent = message; node.classList.toggle('error', error); }
 async function run(label, action) { setStatus(`${label}…`); try { const value = await action(); setStatus(`${label} complete`); return value; } catch (error) { setStatus(error.message || `${label} failed`, true); throw error; } }
@@ -28,6 +53,7 @@ document.querySelectorAll('[data-owner-tab]').forEach(button => button.addEventL
   $('[data-owner-messenger]').classList.remove('active');
   document.querySelectorAll('.owner-panel').forEach(panel => panel.classList.toggle('active', panel.id === `owner-${button.dataset.ownerTab}`));
   if (location.hash === '#operations:messages') history.replaceState(null, '', `${location.pathname}${location.search}`);
+  ensureOwnerSectionLoaded(button.dataset.ownerTab).catch(error=>setStatus(error.message||'Dashboard section failed to load',true));
 }));
 document.querySelectorAll('[data-operation]').forEach(button => button.addEventListener('click', () => {
   operationView = button.dataset.operation;
@@ -642,10 +668,7 @@ async function initialize() {
   currentUserId = session.user.id;
   denied.hidden = true; dashboard.hidden = false;
   applyOwnerRoute();
-  await refreshServiceProfileOptions();
-  const [roles, requests, appointments, messages] = await Promise.all([supabase.from('user_roles').select('role'), count('service_requests'), count('appointments'), supabase.from('messages').select('sender_id,read_at').not('conversation_id','is',null)]);
-  const roleRows = roles.data || [], unreadMessages=(messages.data||[]).filter(row=>row.sender_id!==currentUserId&&!row.read_at).length; $('#customerCount').textContent = roleRows.filter(row => row.role === 'customer').length; $('#employeeCount').textContent = roleRows.filter(row => row.role === 'employee').length; $('#requestCount').textContent = requests; $('#appointmentCount').textContent = appointments; setOwnerUnreadCount(unreadMessages);
-  await Promise.all([loadBusiness(), loadProducts(), loadServices(), loadServicePrices(), loadServicePictures(), loadContent(), loadOperations(), loadPayments()]);
+  await ensureOwnerSectionLoaded(location.hash === '#operations:messages' ? 'operations' : 'overview');
   setStatus('All owner controls loaded');
 }
 

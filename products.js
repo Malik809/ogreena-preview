@@ -10,9 +10,10 @@
     return `<button class="small-btn primary" type="button" data-buy-product="${product.id}"${productCheckoutAuthorized ? '' : ' aria-disabled="true"'}>Buy Now</button>`;
   }
 
-  function card(product) {
+  function card(product, index) {
+    const imageSource = index < 2 ? `src="${product.image}" fetchpriority="${index === 0 ? 'high' : 'auto'}"` : `data-src="${product.image}"`;
     return `<article class="product-card" data-product-card data-search="${product.name} ${product.size}">
-      <img src="${product.image}" alt="${product.name} — ${product.size}" loading="lazy">
+      <img ${imageSource} alt="${product.name} — ${product.size}" loading="${index < 2 ? 'eager' : 'lazy'}" width="480" height="631">
       <div class="product-card-body"><span class="product-size">${product.size}</span><h3>${product.name}</h3><strong>$${product.price.toFixed(2)}</strong>
       <div class="product-actions"><button class="small-btn" type="button" data-view-product="${product.id}">View Product</button>${buyAction(product)}</div></div>
     </article>`;
@@ -84,6 +85,11 @@
   const section = ensureShowcase();
   if (!section) return;
   const carousel = section.querySelector('[data-product-carousel]');
+  const deferredImages = [...carousel.querySelectorAll('img[data-src]')];
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (!entry.isIntersecting) return; const image=entry.target; image.src=image.dataset.src; image.removeAttribute('data-src'); observer.unobserve(image); }), { root:carousel, rootMargin:'160px' });
+    deferredImages.forEach(image => observer.observe(image));
+  } else deferredImages.forEach(image => { image.src=image.dataset.src; image.removeAttribute('data-src'); });
   section.querySelector('.carousel-arrow.prev').addEventListener('click', () => carousel.scrollBy({ left: -Math.max(260, carousel.clientWidth * .72), behavior: 'smooth' }));
   section.querySelector('.carousel-arrow.next').addEventListener('click', () => carousel.scrollBy({ left: Math.max(260, carousel.clientWidth * .72), behavior: 'smooth' }));
   section.querySelectorAll('[data-view-product]').forEach(button => button.addEventListener('click', () => openProduct(products.find(product => product.id === button.dataset.viewProduct))));
