@@ -361,6 +361,12 @@ async function loadBusiness() { const data = requireOk(await supabase.from('busi
 $('#businessForm').addEventListener('submit', event => { event.preventDefault(); run('Saving business settings', async () => { const values = Object.fromEntries(new FormData(event.currentTarget)); requireOk(await supabase.from('business_settings').update({ ...values, updated_at:new Date().toISOString() }).eq('id', true)); }); });
 
 const SHIPPING_CONTENT_KEY = 'product-shipping-settings';
+const BUILT_IN_SHIPPING_CARRIERS = ['USPS','UPS','FedEx'];
+function normalizedCarrierNames(value) {
+  const names = String(value || '').split(',').map(name => name.trim()).filter(Boolean);
+  if (names.some(name => name.length > 60 || !/^[A-Za-z0-9][A-Za-z0-9 .&'()/-]*$/.test(name))) throw new Error('Carrier names may use letters, numbers, spaces, and standard business-name punctuation');
+  return [...new Map(names.map(name => [name.toLowerCase(), name])).values()];
+}
 async function loadProductShipping() {
   const form = $('#productShippingForm'); if (!form) return;
   const result = await supabase.from('website_content').select('content_value,draft_value').eq('content_key', SHIPPING_CONTENT_KEY).maybeSingle();
@@ -369,23 +375,28 @@ async function loadProductShipping() {
   const categoryRates = settings.category_rates_cents || {};
   form.elements.spray_bottle_rate_dollars.value = Number.isInteger(categoryRates.spray_bottle) ? (categoryRates.spray_bottle / 100).toFixed(2) : '4.00';
   form.elements.gallon_rate_dollars.value = Number.isInteger(categoryRates.gallon) ? (categoryRates.gallon / 100).toFixed(2) : '8.00';
-  form.elements.origin_zip.value = settings.origin_zip || '';
+  form.elements.origin_zip.value = settings.origin_zip || '94609';
   form.elements.email_provider.value = settings.email_provider || '';
   form.elements.sender_email.value = settings.sender_email || '';
   form.elements.po_boxes.value = settings.po_boxes || 'pending';
   form.elements.territories.value = settings.territories || 'pending';
-  form.elements.carrier_usps.checked = (settings.carriers || ['USPS','UPS','FedEx']).includes('USPS');
-  form.elements.carrier_ups.checked = (settings.carriers || ['USPS','UPS','FedEx']).includes('UPS');
-  form.elements.carrier_fedex.checked = (settings.carriers || ['USPS','UPS','FedEx']).includes('FedEx');
+  const carriers = settings.carrier_preferences_version === 1 ? (settings.carriers || []) : ['USPS','UPS'];
+  form.elements.carrier_usps.checked = carriers.includes('USPS');
+  form.elements.carrier_ups.checked = carriers.includes('UPS');
+  form.elements.carrier_fedex.checked = carriers.includes('FedEx');
+  form.elements.other_carriers.value = carriers.filter(name => !BUILT_IN_SHIPPING_CARRIERS.includes(name)).join(', ');
   form.elements.packages.value = settings.packages || '';
   $('#productShippingStatus').textContent = settings.owner_approved === true ? 'Owner-approved shipping configuration saved.' : 'Draft only — product charging remains disabled.';
 }
 $('#productShippingForm')?.addEventListener('submit', event => { event.preventDefault(); run('Saving shipping draft', async () => {
   const form = event.currentTarget; const values = new FormData(form);
   const categoryRates = { spray_bottle:Math.round(Number(values.get('spray_bottle_rate_dollars')) * 100), gallon:Math.round(Number(values.get('gallon_rate_dollars')) * 100) };
-  const payload = { mode:'category_flat_rate', coverage:'us_50_states_dc', includes_alaska_hawaii:true, category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carriers:['carrier_usps','carrier_ups','carrier_fedex'].filter(name => values.get(name)).map(name => ({carrier_usps:'USPS',carrier_ups:'UPS',carrier_fedex:'FedEx'})[name]), po_boxes:values.get('po_boxes'), territories:values.get('territories'), packages:String(values.get('packages') || '').trim(), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null, production_email_enabled:false, owner_approved:false, updated_at:new Date().toISOString() };
+  const selectedCarriers = ['carrier_usps','carrier_ups','carrier_fedex'].filter(name => values.get(name)).map(name => ({carrier_usps:'USPS',carrier_ups:'UPS',carrier_fedex:'FedEx'})[name]);
+  const carriers = [...new Map([...selectedCarriers, ...normalizedCarrierNames(values.get('other_carriers'))].map(name => [name.toLowerCase(), name])).values()];
+  const payload = { mode:'category_flat_rate', coverage:'us_50_states_dc', includes_alaska_hawaii:true, category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carrier_preferences_version:1, carriers, po_boxes:values.get('po_boxes'), territories:values.get('territories'), packages:String(values.get('packages') || '').trim(), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null, production_email_enabled:false, owner_approved:false, updated_at:new Date().toISOString() };
   if (Object.values(categoryRates).some(rate => !Number.isInteger(rate) || rate < 0)) throw new Error('Enter valid non-negative shipping amounts');
   if (payload.origin_zip && !/^\d{5}(-\d{4})?$/.test(payload.origin_zip)) throw new Error('Enter a valid U.S. ZIP code');
+  if (!payload.carriers.length) throw new Error('Select or enter at least one verified fulfillment carrier');
   const existing = await supabase.from('website_content').select('content_key').eq('content_key', SHIPPING_CONTENT_KEY).maybeSingle(); if (existing.error) throw existing.error;
   const saved = existing.data ? await supabase.from('website_content').update({ draft_value:payload }).eq('content_key', SHIPPING_CONTENT_KEY) : await supabase.from('website_content').insert({ content_key:SHIPPING_CONTENT_KEY, content_value:{}, draft_value:payload, published:false, visible:false, display_order:9999 });
   requireOk(saved); await loadProductShipping();
