@@ -50,6 +50,7 @@ function applyServices(services) {
   if (current) {
     const heading = document.querySelector('h1'); if (heading) heading.textContent = current.name;
     const summary = document.querySelector('.identity p'); if (summary && current.summary) summary.textContent = current.summary;
+    const description = document.querySelector('[data-managed-service-description]'); if (description && current.description) description.textContent = current.description;
   }
 }
 

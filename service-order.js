@@ -13,7 +13,9 @@
     { slug:'window-cleaning', name:'Window Cleaning', icon:'▣', summary:'Interior and exterior glass care' },
     { slug:'mattress-cleaning', name:'Mattress Cleaning', icon:'▱', summary:'Twin, full, queen and king mattress care' },
     { slug:'floor-polishing', name:'Floor Polishing', icon:'◇', summary:'Residential floor polishing by square foot' },
-    { slug:'pressure-washing', name:'Pressure Washing', icon:'≈', summary:'Exterior hard-surface cleaning' }
+    { slug:'pressure-washing', name:'Pressure Washing', icon:'≈', summary:'Exterior hard-surface cleaning' },
+    { slug:'landscaping', name:'Landscaping', icon:'♧', summary:'Lawn care, yard cleanup and grounds maintenance' },
+    { slug:'hauling', name:'Hauling', icon:'▰', summary:'Junk removal, debris hauling and property cleanouts' }
   ];
   const defaults = services.map(service => service.slug);
   const getOrder = () => defaults.slice();

@@ -91,6 +91,19 @@ const serviceData = {
     description: 'Exterior surface cleaning for property entries, walkways and suitable hard surfaces after the material, access and drainage needs are reviewed.',
     handles: ['Walkways and entry areas', 'Suitable hardscape and exterior surfaces', 'Property-presentation cleaning', 'Seasonal exterior upkeep', 'Coordination with graffiti removal or facility maintenance'],
     jobs: ['Residential exteriors', 'Apartment and commercial entries', 'Walkways and common areas', 'Managed-property maintenance']
+  },
+  'landscaping': {
+    name: 'Landscaping', icon: '♧', availability: 'Residential and commercial', cover: 'facilities-maintenance', requestLabel: 'Request Estimate',
+    description: 'Lawn care, yard cleanup, landscaping and property grounds maintenance for Bay Area homes, rental properties and businesses.',
+    handles: ['Lawn care and routine grounds upkeep', 'Yard cleanup and green-waste preparation', 'Landscape bed and outdoor-area maintenance', 'Seasonal property cleanup', 'Grounds maintenance for residential and commercial properties'],
+    jobs: ['Homes and rental properties', 'Apartment and multi-unit grounds', 'Commercial property exteriors', 'One-time cleanup and recurring maintenance']
+  },
+  'hauling': {
+    name: 'Hauling', icon: '▰', availability: 'Residential and commercial', cover: 'pressure-washing', requestLabel: 'Request Estimate',
+    description: 'Junk removal, debris hauling, property cleanouts and unwanted-item removal for Bay Area homes, rentals and commercial properties.',
+    handles: ['Junk and unwanted-item removal', 'Debris hauling after approved cleanup work', 'Property and unit cleanouts', 'Move-related item removal', 'Residential and commercial hauling requests'],
+    jobs: ['Homes and apartments', 'Rental and property turnovers', 'Commercial-property cleanouts', 'One-time debris and unwanted-item removal'],
+    notice: 'Final scope depends on item type, volume, access and lawful disposal options. Hazardous or restricted materials are not accepted without prior verification.'
   }
 };
 
@@ -107,12 +120,13 @@ if (item) {
   document.querySelector('#serviceDesc').textContent = item.description;
   window.OgreenaServiceIcons.renderInto(document.querySelector('#serviceIcon'), { slug:document.body.dataset.service, name:item.name, icon:item.icon });
   const requestService = () => { location.href = `${siteRoot}messages/?service=${encodeURIComponent(document.body.dataset.service)}`; };
+  const requestLabel = item.requestLabel || 'Message Ogreena';
   document.querySelectorAll('[data-request],[data-unavailable]').forEach(control => {
     control.addEventListener('click', requestService);
     const title=control.querySelector('b');
     const detail=control.querySelector('span');
-    if(title){title.textContent='Message Ogreena';if(detail)detail.textContent='Chat directly with our team';}
-    else control.textContent='Message Ogreena';
+    if(title){title.textContent=requestLabel;if(detail)detail.textContent='Chat directly with our team';}
+    else control.textContent=control.dataset.requestLabel || requestLabel;
     control.removeAttribute('aria-disabled');
     control.classList.remove('disabled-action');
   });
@@ -120,7 +134,7 @@ if (item) {
   document.querySelector('#overview').innerHTML = `
     <article class="card profile-accent">
       <div class="card-title"><h2>About ${item.name}</h2><span class="tag">${item.availability}</span></div>
-      <p>${item.description}</p>
+      <p data-managed-service-description>${item.description}</p>
     </article>
     <article class="card">
       <div class="card-title"><h2>What We Handle</h2><span class="tag">Service capabilities</span></div>
@@ -133,7 +147,7 @@ if (item) {
     </article>
     <article class="card action-card">
       <div><h2>Ready to discuss the work?</h2><p class="muted">Tell Ogreena what you need and confirm availability.</p></div>
-      <div class="form-actions"><a class="small-btn" href="tel:+15104729327">Call ${common.phone}</a><button class="small-btn primary" type="button" data-generated-unavailable>Request service</button></div>
+      <div class="form-actions"><a class="small-btn" href="tel:+15104729327">Call ${common.phone}</a><button class="small-btn primary" type="button" data-generated-unavailable>${requestLabel}</button></div>
     </article>`;
   document.querySelector('[data-generated-unavailable]').addEventListener('click', requestService);
 

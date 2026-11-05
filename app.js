@@ -3,7 +3,9 @@ let servicesExpanded = false;
 function serviceCard(service) { return `<a class="service-card" href="services/${service.slug}/">${window.OgreenaServiceIcons.markup(service)}<span><h3>${service.name}</h3><p>${service.summary}</p></span><span class="chev">›</span></a>`; }
 function renderServices() {
   const services = serviceOrder.getServices();
-  document.querySelector('#featuredServices').innerHTML = (servicesExpanded ? services : services.slice(0, 4)).map(serviceCard).join('');
+  const featuredSlugs = ['carpet-cleaning','house-cleaning','deep-cleaning','move-in-move-out-cleaning','landscaping','hauling'];
+  const featured = services.filter(service => featuredSlugs.includes(service.slug));
+  document.querySelector('#featuredServices').innerHTML = (servicesExpanded ? services : featured).map(serviceCard).join('');
   document.querySelector('#allServices').innerHTML = services.map(serviceCard).join('');
   const toggle = document.querySelector('#serviceToggle');
   toggle.textContent = servicesExpanded ? 'Show Less' : 'View All';

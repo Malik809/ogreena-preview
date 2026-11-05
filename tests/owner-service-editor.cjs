@@ -16,7 +16,7 @@ assert.match(ownerPage, /Edit Service Pictures/);
 assert.match(ownerPage, /websiteServiceSelector/);
 assert.match(ownerPage, /data-website-editor-tab="prices"/);
 assert.match(ownerPage, /data-website-editor-tab="pictures"/);
-assert.match(ownerPage, /owner\.js\?v=32/);
+assert.match(ownerPage, /owner\.js\?v=37/);
 assert.match(owner, /service_profile_media/);
 assert.match(owner, /image\/jpeg/);
 assert.match(owner, /5\*1024\*1024/);
@@ -45,11 +45,11 @@ assert.doesNotMatch(owner, /service_role|secret key/i);
 const servicePages = fs.readdirSync(path.join(root, 'services'))
   .map(name => `services/${name}/index.html`)
   .filter(file => fs.existsSync(path.join(root, file)));
-assert.equal(servicePages.length, 14);
+assert.equal(servicePages.length, 16);
 for (const file of servicePages) {
   const html = read(file);
-  assert.match(html, /service\.js\?v=22/);
-  assert.match(html, /public-data\.js\?v=2/);
+  assert.match(html, /service\.js\?v=23/);
+  assert.match(html, /public-data\.js\?v=3/);
 }
 
 console.log('owner service editor: pricing, independent pictures, owner-only storage, restore, and public sync PASS');

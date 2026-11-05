@@ -137,7 +137,8 @@ let serviceProfileOptions = [
   ['tile-grout-cleaning','Tile & Grout Cleaning'], ['floor-polishing','Floor Polishing'],
   ['move-in-move-out-cleaning','Move-In / Move-Out'], ['pressure-washing','Pressure Washing'],
   ['commercial-cleaning','Commercial Cleaning'], ['janitorial-services','Janitorial Services'],
-  ['facilities-maintenance','Facilities Maintenance'], ['electrical-services','Electrical Services']
+  ['facilities-maintenance','Facilities Maintenance'], ['electrical-services','Electrical Services'],
+  ['landscaping','Landscaping'], ['hauling','Hauling']
 ];
 let pricePageOptions = serviceProfileOptions.map(([value,label]) => `<option value="${value}">${label}</option>`).join('');
 const serviceLabel = slug => serviceProfileOptions.find(([value]) => value === slug)?.[1] || slug.replaceAll('-', ' ');

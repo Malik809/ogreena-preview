@@ -4,6 +4,7 @@ const base = process.env.SITE_URL || 'http://127.0.0.1:4173';
 const services = [
   'carpet-cleaning', 'commercial-cleaning', 'deep-cleaning',
   'electrical-services', 'facilities-maintenance', 'house-cleaning',
+  'hauling', 'landscaping',
   'janitorial-services', 'move-in-move-out-cleaning', 'pressure-washing',
   'tile-grout-cleaning', 'upholstery-cleaning', 'window-cleaning'
 ];
@@ -101,7 +102,7 @@ async function assertProducts(page, label) {
     if (!cover || cover === 'none') throw new Error(`${slug} cover image missing`);
     if (await page.locator('[data-ogreena-products], .product-card').count() !== 0) throw new Error(`${slug} still shows products`);
   }
-  results.push(`service profiles without products: ${services.length}/12 PASS`);
+  results.push(`service profiles without products: ${services.length}/${services.length} PASS`);
 
   await page.setContent('<main><section class="profile-card" data-customer-profile><h1>Future customer profile</h1></section></main>');
   await page.addScriptTag({ url: `${base}/product-catalog.js` });
