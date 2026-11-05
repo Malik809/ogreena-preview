@@ -42,6 +42,7 @@ Deno.serve(async request => {
       const shipping = shippingRecord?.content_value || {};
       if (shipping.mode !== 'category_flat_rate' || shipping.coverage !== 'us_50_states_dc' || shipping.rates_approved !== true || shipping.owner_approved !== true || !/^\d{5}(-\d{4})?$/.test(shipping.origin_zip || '')) throw new Error('Product shipping is not approved');
       if (!Array.isArray(shipping.carriers) || !shipping.carriers.length || !shipping.packages) throw new Error('Product fulfillment details are incomplete');
+      if (shipping.package_specs_verified !== true || shipping.carrier_eligibility_verified !== true) throw new Error('Product package measurements and carrier eligibility must be verified');
       const { data: product } = await admin.from('products').select('id,name,size,price_cents,visible,shipping_category').eq('id', String(body.productId)).single();
       if (!product?.visible) throw new Error('Product is unavailable');
       const shippingCategory = String(product.shipping_category || '');

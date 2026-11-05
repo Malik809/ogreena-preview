@@ -362,6 +362,10 @@ $('#businessForm').addEventListener('submit', event => { event.preventDefault();
 
 const SHIPPING_CONTENT_KEY = 'product-shipping-settings';
 const BUILT_IN_SHIPPING_CARRIERS = ['USPS','UPS','FedEx'];
+const PROVISIONAL_PACKAGE_SPECS = {
+  spray_bottle:{ weight_lb:3, length_in:5, width_in:5, height_in:13 },
+  gallon:{ weight_lb:10, length_in:8, width_in:8, height_in:14 }
+};
 function normalizedCarrierNames(value) {
   const names = String(value || '').split(',').map(name => name.trim()).filter(Boolean);
   if (names.some(name => name.length > 60 || !/^[A-Za-z0-9][A-Za-z0-9 .&'()/-]*$/.test(name))) throw new Error('Carrier names may use letters, numbers, spaces, and standard business-name punctuation');
@@ -385,7 +389,10 @@ async function loadProductShipping() {
   form.elements.carrier_ups.checked = carriers.includes('UPS');
   form.elements.carrier_fedex.checked = carriers.includes('FedEx');
   form.elements.other_carriers.value = carriers.filter(name => !BUILT_IN_SHIPPING_CARRIERS.includes(name)).join(', ');
-  form.elements.packages.value = settings.packages || '';
+  const packageSpecs = settings.package_specs || PROVISIONAL_PACKAGE_SPECS;
+  for (const [category, prefix] of [['spray_bottle','spray'],['gallon','gallon']]) {
+    for (const field of ['weight_lb','length_in','width_in','height_in']) form.elements[`${prefix}_${field}`].value = packageSpecs[category]?.[field] ?? PROVISIONAL_PACKAGE_SPECS[category][field];
+  }
   $('#productShippingStatus').textContent = settings.owner_approved === true ? 'Owner-approved shipping configuration saved.' : 'Draft only — product charging remains disabled.';
 }
 $('#productShippingForm')?.addEventListener('submit', event => { event.preventDefault(); run('Saving shipping draft', async () => {
@@ -393,8 +400,11 @@ $('#productShippingForm')?.addEventListener('submit', event => { event.preventDe
   const categoryRates = { spray_bottle:Math.round(Number(values.get('spray_bottle_rate_dollars')) * 100), gallon:Math.round(Number(values.get('gallon_rate_dollars')) * 100) };
   const selectedCarriers = ['carrier_usps','carrier_ups','carrier_fedex'].filter(name => values.get(name)).map(name => ({carrier_usps:'USPS',carrier_ups:'UPS',carrier_fedex:'FedEx'})[name]);
   const carriers = [...new Map([...selectedCarriers, ...normalizedCarrierNames(values.get('other_carriers'))].map(name => [name.toLowerCase(), name])).values()];
-  const payload = { mode:'category_flat_rate', coverage:'us_50_states_dc', includes_alaska_hawaii:true, category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carrier_preferences_version:1, carriers, po_boxes:values.get('po_boxes'), territories:values.get('territories'), packages:String(values.get('packages') || '').trim(), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null, production_email_enabled:false, owner_approved:false, updated_at:new Date().toISOString() };
+  const packageSpecs = Object.fromEntries([['spray_bottle','spray'],['gallon','gallon']].map(([category,prefix]) => [category,Object.fromEntries(['weight_lb','length_in','width_in','height_in'].map(field => [field,Number(values.get(`${prefix}_${field}`))]))]));
+  const packageSummary = `PROVISIONAL — not physically verified. 32-oz spray: ${packageSpecs.spray_bottle.weight_lb} lb, ${packageSpecs.spray_bottle.length_in} x ${packageSpecs.spray_bottle.width_in} x ${packageSpecs.spray_bottle.height_in} in. Gallon: ${packageSpecs.gallon.weight_lb} lb, ${packageSpecs.gallon.length_in} x ${packageSpecs.gallon.width_in} x ${packageSpecs.gallon.height_in} in.`;
+  const payload = { mode:'category_flat_rate', coverage:'us_50_states_dc', includes_alaska_hawaii:true, category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carrier_preferences_version:1, carriers, package_specs:packageSpecs, package_specs_status:'provisional_estimate', package_specs_verified:false, carrier_eligibility_verified:false, packages:packageSummary, po_boxes:values.get('po_boxes'), territories:values.get('territories'), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null, production_email_enabled:false, owner_approved:false, updated_at:new Date().toISOString() };
   if (Object.values(categoryRates).some(rate => !Number.isInteger(rate) || rate < 0)) throw new Error('Enter valid non-negative shipping amounts');
+  if (Object.values(packageSpecs).some(spec => Object.values(spec).some(value => !Number.isFinite(value) || value <= 0))) throw new Error('Enter positive package weights and dimensions');
   if (payload.origin_zip && !/^\d{5}(-\d{4})?$/.test(payload.origin_zip)) throw new Error('Enter a valid U.S. ZIP code');
   if (!payload.carriers.length) throw new Error('Select or enter at least one verified fulfillment carrier');
   const existing = await supabase.from('website_content').select('content_key').eq('content_key', SHIPPING_CONTENT_KEY).maybeSingle(); if (existing.error) throw existing.error;

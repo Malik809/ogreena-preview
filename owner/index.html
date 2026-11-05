@@ -33,7 +33,9 @@
       <label>P.O. boxes<select name="po_boxes"><option value="pending">Pending owner approval</option><option value="supported">Supported</option><option value="not_supported">Not supported</option></select></label>
       <label>U.S. territories<select name="territories"><option value="pending">Pending owner approval</option><option value="supported">Supported</option><option value="not_supported">Not supported</option></select></label>
       <fieldset class="wide"><legend>Approved fulfillment carriers</legend><label><input name="carrier_usps" type="checkbox" checked> USPS</label><label><input name="carrier_ups" type="checkbox" checked> UPS</label><label><input name="carrier_fedex" type="checkbox"> FedEx</label><label class="wide">Other verified carriers<input name="other_carriers" placeholder="Comma-separated carrier names"></label><p class="muted">Selecting a carrier records the owner's fulfillment preference; it does not claim live carrier-rate integration. Verify a new carrier's service before adding it. Customers continue to see the approved flat shipping charge.</p></fieldset>
-      <label class="wide">Package details by product<textarea name="packages" rows="7" placeholder="Enter weight and dimensions for each of the five products after measurement. No defaults are assumed."></textarea></label>
+      <fieldset class="wide"><legend>32-oz spray package — provisional estimate</legend><label>Weight (lb)<input name="spray_weight_lb" type="number" min="0.01" step="0.01" value="3"></label><label>Length (in)<input name="spray_length_in" type="number" min="0.01" step="0.01" value="5"></label><label>Width (in)<input name="spray_width_in" type="number" min="0.01" step="0.01" value="5"></label><label>Height (in)<input name="spray_height_in" type="number" min="0.01" step="0.01" value="13"></label></fieldset>
+      <fieldset class="wide"><legend>1-gallon package — provisional estimate</legend><label>Weight (lb)<input name="gallon_weight_lb" type="number" min="0.01" step="0.01" value="10"></label><label>Length (in)<input name="gallon_length_in" type="number" min="0.01" step="0.01" value="8"></label><label>Width (in)<input name="gallon_width_in" type="number" min="0.01" step="0.01" value="8"></label><label>Height (in)<input name="gallon_height_in" type="number" min="0.01" step="0.01" value="14"></label></fieldset>
+      <p class="muted wide"><strong>Provisional:</strong> These package measurements are estimates and are not verified. Confirm actual packed weights, dimensions, product safety data sheets, and carrier eligibility before approving or publishing shipping.</p>
       <div class="wide editor-actions"><button class="small-btn primary" type="submit">Save Shipping Draft</button><span id="productShippingStatus" class="muted">Loading inactive shipping settings…</span></div>
     </form>
   </article>
@@ -66,4 +68,4 @@
     <div id="paymentTransactions"><p class="empty-state">Loading payment activity…</p></div>
   </article>
 </section>
-</section></main><script src="../vendor/supabase-2.57.4.min.js"></script><script src="../service-catalog.js?v=2"></script><script src="owner.js?v=33"></script></body></html>
+</section></main><script src="../vendor/supabase-2.57.4.min.js"></script><script src="../service-catalog.js?v=2"></script><script src="owner.js?v=34"></script></body></html>
