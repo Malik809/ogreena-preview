@@ -85,6 +85,7 @@ expect(checkout, 'const requestOptions = stripeAccountId ? { stripeAccount: stri
 expect(checkout, 'stripe_account_id:stripeAccountId', 'transaction merchant persistence');
 expect(checkout, "content_key','product-shipping-settings'", 'server-managed shipping settings');
 expect(checkout, "shipping_address_collection:{ allowed_countries:['US'] }", 'US shipping address collection');
+expect(checkout, "automatic_tax:{ enabled:true, liability:{ type:'self' as const } }", 'connected merchant automatic product tax');
 expect(checkout, "display_name:productShipping!.category === 'gallon' ? 'Gallon-product shipping' : 'Spray-bottle shipping'", 'owner-approved category shipping rate');
 expect(checkout, "shipping.category_rates_cents?.[shippingCategory]", 'server-side category shipping lookup');
 expect(checkout, "shipping.owner_approved !== true", 'shipping activation gate');

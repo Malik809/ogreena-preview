@@ -10,13 +10,11 @@ vm.runInNewContext(catalogSource, context);
 const products = context.window.OgreenaProductCatalog;
 assert.equal(products.length, 5, 'five published products are required');
 assert.equal(new Set(products.map(product => product.id)).size, 5, 'product IDs must be unique');
-assert.equal(new Set(products.map(product => product.squareUrl)).size, 5, 'Square links must be unique');
-assert(products.every(product => /^https:\/\/square\.link\/u\/[A-Za-z0-9]+$/.test(product.squareUrl)), 'each product must have a Square link');
+assert(products.every(product => !('squareUrl' in product)), 'public products must not expose Square links');
 assert.doesNotMatch(productsSource, /PUBLIC_SQUARE_PRODUCT_CHECKOUT_ENABLED/, 'obsolete duplicate payment gate must be removed');
-assert.doesNotMatch(productsSource, /functions\.invoke\('create-checkout-session'/, 'product buttons must not invoke Stripe Checkout');
-assert.match(productsSource, /productCheckoutAuthorized && isSquarePaymentLink\(product\.squareUrl\)/, 'direct Square links must require the canonical sales authorization');
-assert.match(productsSource, /href="\$\{product\.squareUrl\}"/, 'authorized Buy Now must be a direct Square-hosted link');
-assert.match(productsSource, /rel="noopener noreferrer external"/, 'external Square links must be isolated');
+assert.match(productsSource, /functions\.invoke\('create-checkout-session'/, 'product buttons must invoke existing Stripe Checkout');
+assert.match(productsSource, /productCheckoutAuthorized/, 'Stripe Buy Now must require the canonical sales authorization');
+assert.doesNotMatch(productsSource, /squareUrl|square\.link|checkout\.square\.site/, 'public Buy Now must not route to Square');
 assert.match(productsSource, /aria-disabled="true"/, 'Buy Now must remain non-navigating while sales authorization is closed');
 
-console.log('Square product link checks passed: 5/5 links mapped; public checkout disabled.');
+console.log('Public product checkout checks passed: 5/5 products use gated Stripe Checkout; Square links are not public.');
