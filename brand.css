@@ -13,6 +13,7 @@ body{background:linear-gradient(180deg,#eef5ef 0,#f7f7f1 420px,#f3f6f3 100%)}
 .tabs{background:linear-gradient(180deg,#fff,#fbfcf9)}.tab{color:#587064}.tab:hover{color:var(--green)}.tab.active{color:var(--green-dark);border-bottom-color:var(--gold);background:linear-gradient(180deg,transparent,var(--gold-soft))}
 .card{border-color:#c9d9cc;background:linear-gradient(145deg,#fff 0,#fcfdf9 100%);box-shadow:0 5px 18px rgba(20,74,44,.045)}
 .left-col .card:first-child,.service-layout aside .card:first-child{background:linear-gradient(145deg,var(--green-soft),#fbfdf8);border-color:#afd0b7}.right-col>.tab-panel>.card:first-child{border-top:3px solid var(--gold)}
+.card.electrification-feature{background:linear-gradient(145deg,#0f5037,#116b43 68%,#1b7b50);border-color:transparent}
 .info-row i{background:linear-gradient(145deg,var(--green),var(--leaf));color:#fff;box-shadow:0 3px 9px rgba(17,109,63,.15)}.info-row:nth-child(even) i{background:linear-gradient(145deg,var(--gold),#e1bf62);color:var(--green-deep)}
 .notice,.safety-box{background:linear-gradient(135deg,var(--gold-soft),#fffaf0);border-color:#e5cf8b;color:#5b4510}
 .tag{background:linear-gradient(135deg,var(--green-soft),#f4edd7);color:var(--green-dark);border:1px solid #d7c98f}

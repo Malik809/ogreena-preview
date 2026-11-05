@@ -75,6 +75,7 @@ function applyManagedContent(records) {
     const entry = record.content_value || {}; if (!entry.selector || typeof entry.selector !== 'string') return;
     let nodes; try { nodes = document.querySelectorAll(entry.selector); } catch { return; }
     nodes.forEach(node => {
+      if (node.hasAttribute('data-static-content')) return;
       if (typeof entry.text === 'string') node.textContent = entry.text;
       if (typeof entry.image === 'string' && node instanceof HTMLImageElement && (/^\/[^/]/.test(entry.image) || entry.image.startsWith('https://ogreena.com/'))) node.src = entry.image;
     });
