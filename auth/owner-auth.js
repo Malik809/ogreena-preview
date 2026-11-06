@@ -252,17 +252,8 @@ async function loadRequests(userId) {
 }
 
 async function loadCustomerActivity(userId) {
-  const [appointmentsResult, messagesResult, historyResult] = await Promise.all([
-    supabase.from('appointments').select('id,starts_at,ends_at,status,request_id').eq('customer_id', userId).order('starts_at', { ascending:false }),
-    supabase.from('messages').select('id,body,created_at,sender_id,recipient_id,request_id,conversation_id,read_at').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending:false }).limit(25),
-    supabase.from('service_requests').select('id,service_slug,summary,status,updated_at').eq('customer_id', userId).in('status', ['completed','cancelled']).order('updated_at', { ascending:false })
-  ]);
-  const appointments = document.querySelector('#customerAppointments');
-  const messages = document.querySelector('#customerMessages');
+  const historyResult = await supabase.from('service_requests').select('id,service_slug,summary,status,updated_at').eq('customer_id', userId).in('status', ['completed','cancelled']).order('updated_at', { ascending:false });
   const history = document.querySelector('#customerHistory');
-  appointments.innerHTML = appointmentsResult.error ? `<p class="muted">${escapeHTML(friendlyError(appointmentsResult.error))}</p>` : (appointmentsResult.data?.length ? appointmentsResult.data.map(item => `<div class="request-item"><b>${escapeHTML(new Date(item.starts_at).toLocaleString())}</b><span>${escapeHTML(item.status)}${item.ends_at ? ` · ends ${escapeHTML(new Date(item.ends_at).toLocaleString())}` : ''}</span></div>`).join('') : '<p class="muted">No appointments scheduled.</p>');
-  const unreadCount=(messagesResult.data||[]).filter(item=>item.recipient_id===userId&&!item.read_at).length;
-  messages.innerHTML = `<p><a class="small-btn primary" href="../messages/">Open Ogreena Messenger${unreadCount?` · ${unreadCount} new`:''}</a></p>`+(messagesResult.error ? `<p class="muted">${escapeHTML(friendlyError(messagesResult.error))}</p>` : (messagesResult.data?.length ? messagesResult.data.slice(0,3).map(item => `<div class="request-item"><b>${item.sender_id === userId ? 'Sent' : 'Received'} · ${escapeHTML(new Date(item.created_at).toLocaleString())}</b><span>${escapeHTML(item.body)}</span></div>`).join('') : '<p class="muted">No messages yet.</p>'));
   history.innerHTML = historyResult.error ? `<p class="muted">${escapeHTML(friendlyError(historyResult.error))}</p>` : (historyResult.data?.length ? historyResult.data.map(item => `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(item.service_slug.replaceAll('-',' '))} · ${escapeHTML(item.status)} · ${escapeHTML(new Date(item.updated_at).toLocaleDateString())}</span></div>`).join('') : '<p class="muted">No completed or cancelled service history yet.</p>');
 }
 
@@ -333,23 +324,8 @@ async function renderSession(session) {
   document.querySelector('#roleBadge').textContent = role[0].toUpperCase() + role.slice(1);
   document.querySelector('#welcomeName').textContent = profile?.display_name ? `${profile.display_name} · Customer Profile` : 'Customer Profile';
   document.querySelector('#accountEmail').textContent = user.email;
-  document.querySelector('#ownerPanel').hidden = role !== 'owner';
-  document.querySelector('#ownerRequestPanel').hidden = role === 'owner';
-  if (role !== 'owner') {
-    const { data: memberships } = await supabase.from('business_memberships').select('verification_status').eq('user_id', user.id).limit(1);
-    if (memberships?.length) document.querySelector('#ownerRequestStatus').textContent = `Business verification status: ${memberships[0].verification_status}.`;
-  }
-  if (role === 'owner') {
-    const { data } = await supabase.from('payment_settings').select('provider,payments_enabled,product_payments_enabled,service_payments_enabled').single();
-    document.querySelector('#paymentState').textContent = data ? `Provider: ${data.provider}; payments enabled: ${data.payments_enabled ? 'yes' : 'no'}` : 'Payment settings unavailable.';
-  }
   await loadServiceCatalog();
   await Promise.all([loadProducts(), loadRequests(user.id), loadCustomerActivity(user.id)]);
-  if (role === 'owner' && !document.querySelector('#ownerPanel [data-owner-dashboard]')) {
-    const link = document.createElement('a');
-    link.className = 'small-btn primary'; link.href = '../owner/'; link.textContent = 'Open Owner Dashboard';
-    link.dataset.ownerDashboard = 'true'; document.querySelector('#ownerPanel').append(link);
-  }
 }
 
 function escapeHTML(value = '') { const node = document.createElement('div'); node.textContent = String(value); return node.innerHTML; }
