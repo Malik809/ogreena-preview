@@ -15,6 +15,9 @@ assert.equal(services.at(-1).name, 'Hauling & Junk Removal');
 
 const app = read('app.js');
 assert.match(app, /featuredSlugs = \['carpet-cleaning','house-cleaning','deep-cleaning','move-in-move-out-cleaning','landscaping','hauling'\]/);
+assert.match(app, /data-service-slug=/);
+assert.match(app, /window\.addEventListener\('pageshow', repairHaulingRoute\)/);
+assert.match(app, /location\.assign\(new URL\('services\/hauling\/'/);
 const serviceScript = read('service.js');
 
 for (const [slug, title] of [['landscaping','Landscaping'],['hauling','Hauling']]) {

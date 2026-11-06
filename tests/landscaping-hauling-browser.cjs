@@ -14,6 +14,17 @@ const base = process.env.SITE_URL || 'http://127.0.0.1:4173';
     const names = await featured.locator('h3').allTextContents();
     const expected = ['Carpet Cleaning','House Cleaning','Deep Cleaning','Move-In / Move-Out','Landscaping','Hauling & Junk Removal'];
     if (names.join('|') !== expected.join('|')) throw new Error(`${viewport.name}: featured order was ${names.join('|')}`);
+    const haulingCard = page.locator('#featuredServices .service-card', { hasText:'Hauling & Junk Removal' });
+    if (!new URL(await haulingCard.getAttribute('href'), page.url()).pathname.endsWith('/services/hauling/')) throw new Error(`${viewport.name}: hauling card route is incorrect`);
+    await haulingCard.evaluate(card => card.setAttribute('href', 'services/move-in-move-out-cleaning/'));
+    await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted:true })));
+    if (!new URL(await haulingCard.getAttribute('href'), page.url()).pathname.endsWith('/services/hauling/')) throw new Error(`${viewport.name}: pageshow did not repair stale hauling route`);
+    await haulingCard.evaluate(card => card.setAttribute('href', 'services/move-in-move-out-cleaning/'));
+    await haulingCard.click();
+    await page.waitForLoadState('networkidle');
+    if (!page.url().includes('/services/hauling/')) throw new Error(`${viewport.name}: stale hauling click reached ${page.url()}`);
+    if ((await page.locator('#serviceTitle').textContent())?.trim() !== 'Hauling & Junk Removal') throw new Error(`${viewport.name}: homepage click loaded the wrong service`);
+    if (!(await page.locator('.service-profile .cover').evaluate(node => getComputedStyle(node).backgroundImage)).includes('hauling.jpg')) throw new Error(`${viewport.name}: homepage click loaded the wrong cover`);
     for (const slug of ['landscaping','hauling']) {
       await page.goto(`${base}/services/${slug}/`, { waitUntil:'networkidle' });
       if (slug === 'landscaping') {
