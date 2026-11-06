@@ -54,18 +54,19 @@
     <section class="account-panel" id="accountPanel" hidden>
       <div class="content-head"><div><span class="tag" id="roleBadge">Customer</span><h1 id="welcomeName">Customer Profile</h1></div></div>
       <div class="account-grid">
-        <article class="card"><h2>Profile</h2><p id="accountEmail"></p><p class="muted">Private account data is protected by row-level security.</p></article>
+        <article class="card"><h2>Profile</h2><p id="accountEmail"></p><form id="contactPropertyForm" class="auth-form profile-form"><label>Full name<input name="display_name" autocomplete="name" maxlength="100" required></label><label>Phone number<input name="phone" type="tel" autocomplete="tel" maxlength="40" required></label><label class="wide">Property street address<input name="property_street_address" autocomplete="address-line1" maxlength="200" required></label><label>Apartment or unit number (optional)<input name="property_unit" autocomplete="address-line2" maxlength="50"></label><label>City<input name="property_city" autocomplete="address-level2" maxlength="100" required></label><label>State<input name="property_state" autocomplete="address-level1" inputmode="text" maxlength="2" placeholder="CA" required></label><label>ZIP code<input name="property_zip" autocomplete="postal-code" inputmode="numeric" maxlength="10" required></label><label>Property type<select name="property_type" required><option value="">Choose property type</option><option value="house">House</option><option value="apartment">Apartment</option><option value="condominium">Condominium</option><option value="commercial">Commercial property</option><option value="multi-unit">Multi-unit property</option><option value="other">Other</option></select></label><button class="small-btn primary wide" type="submit">Save Contact &amp; Property Information</button><p class="auth-status wide" id="profileStatus" role="status" aria-live="polite"></p></form><p class="muted">Private contact and property data is protected by row-level security.</p></article>
         <article class="card products-account"><h2>Ogreena Products</h2><p class="muted">Browse Ogreena’s published cleaning products.</p><div class="account-products" id="accountProducts"></div></article>
         <article class="card service-request-card">
-          <h2>Request Ogreena Services</h2>
+          <h2>Service Requests</h2>
           <p class="muted">Choose one or more services, including services from different categories, and send one request.</p>
           <form id="requestForm" class="auth-form compact">
             <fieldset class="service-picker-fieldset"><legend>Choose a service category</legend><div class="service-category-grid" id="requestCategories"></div></fieldset>
             <section class="service-choice-panel" aria-live="polite"><h3 id="requestCategoryTitle">Select a category</h3><div id="requestChoices"><p class="muted">Tap a service category to see its available services.</p></div></section>
             <div class="selection-summary"><strong id="requestSelectionCount">0 services selected</strong><button class="text-button" id="copyRequestPreview" type="button">Copy request preview</button></div>
             <div id="requestPreview" class="request-preview" aria-live="polite"></div>
+            <fieldset><legend>Contact for this request</legend><div class="profile-form"><label>Full name<input name="customer_name" autocomplete="name" maxlength="100" required></label><label>Phone number<input name="customer_phone" type="tel" autocomplete="tel" maxlength="40" required></label></div></fieldset>
+            <fieldset><legend>Service location</legend><p class="muted">Your saved property is filled in automatically. Change these fields only when this job is at another location; your saved profile will not be overwritten.</p><div class="profile-form"><label class="wide">Street address<input name="service_address_street" autocomplete="address-line1" maxlength="200" required></label><label>Apartment or unit (optional)<input name="service_address_unit" autocomplete="address-line2" maxlength="50"></label><label>City<input name="service_address_city" autocomplete="address-level2" maxlength="100" required></label><label>State<input name="service_address_state" autocomplete="address-level1" maxlength="2" required></label><label>ZIP code<input name="service_address_zip" autocomplete="postal-code" inputmode="numeric" maxlength="10" required></label><label>Property type<select name="property_type" required><option value="">Choose property type</option><option value="house">House</option><option value="apartment">Apartment</option><option value="condominium">Condominium</option><option value="commercial">Commercial property</option><option value="multi-unit">Multi-unit property</option><option value="other">Other</option></select></label></div></fieldset>
             <label>Additional details<textarea name="details" maxlength="2000" placeholder="Describe the work, condition, access details, or anything Ogreena should know."></textarea></label>
-            <label>Property information<input name="property_information" maxlength="500" autocomplete="street-address" placeholder="Service address or property location" required></label>
             <label>Preferred service date<input name="preferred_date" type="date"></label>
             <button class="small-btn primary" type="submit">Send Request to Ogreena</button>
             <p class="muted">Submitting does not create an invoice or charge. It creates one service request; final scope, quantities, and pricing require Ogreena’s approval.</p>
@@ -80,6 +81,6 @@
   <div id="toast"></div>
   <script src="../vendor/supabase-2.57.4.min.js"></script>
   <script src="../service-catalog.js?v=1"></script>
-  <script src="owner-auth.js?v=20"></script>
+  <script src="owner-auth.js?v=21"></script>
 </body>
 </html>

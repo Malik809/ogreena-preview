@@ -198,6 +198,50 @@ let servicePriceItems = window.OgreenaServiceCatalog.items;
 let publishedServices = [];
 let activeRequestCategory = '';
 const selectedRequestItems = new Map();
+let currentCustomerProfile = null;
+
+function contactPropertyValues(form) {
+  const values = Object.fromEntries(new FormData(form));
+  return {
+    display_name:values.display_name.trim(), phone:values.phone.trim(),
+    property_street_address:values.property_street_address.trim(), property_unit:values.property_unit.trim() || null,
+    property_city:values.property_city.trim(), property_state:values.property_state.trim().toUpperCase(),
+    property_zip:values.property_zip.trim(), property_type:values.property_type
+  };
+}
+
+function fillContactPropertyForms(profile) {
+  currentCustomerProfile = profile;
+  const profileForm = document.querySelector('#contactPropertyForm');
+  for (const [name,value] of Object.entries(profile || {})) if (profileForm.elements[name]) profileForm.elements[name].value = value || '';
+  const requestForm = document.querySelector('#requestForm');
+  const requestDefaults = {
+    customer_name:profile?.display_name, customer_phone:profile?.phone,
+    service_address_street:profile?.property_street_address, service_address_unit:profile?.property_unit,
+    service_address_city:profile?.property_city, service_address_state:profile?.property_state,
+    service_address_zip:profile?.property_zip, property_type:profile?.property_type
+  };
+  for (const [name,value] of Object.entries(requestDefaults)) if (requestForm.elements[name]) requestForm.elements[name].value = value || '';
+}
+
+document.querySelector('#contactPropertyForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const profileStatus = document.querySelector('#profileStatus');
+  const { data:{ user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const values = contactPropertyValues(form);
+  form.querySelector('button').disabled = true;
+  profileStatus.textContent = 'Saving private contact and property information…';
+  profileStatus.className = 'auth-status wide';
+  const { data, error } = await supabase.from('profiles').update(values).eq('id', user.id).select('display_name,phone,property_street_address,property_unit,property_city,property_state,property_zip,property_type').single();
+  form.querySelector('button').disabled = false;
+  if (error) { profileStatus.textContent = friendlyError(error); profileStatus.className = 'auth-status wide error'; return; }
+  fillContactPropertyForms(data);
+  document.querySelector('#welcomeName').textContent = `${data.display_name} · Customer Profile`;
+  profileStatus.textContent = 'Contact and property information saved.';
+  profileStatus.className = 'auth-status wide success';
+});
 
 function requestItemKey(serviceSlug, priceItemId = '') { return priceItemId || `general:${serviceSlug}`; }
 function pricesForService(serviceSlug) { return servicePriceItems.filter(item => item.active && item.service_slug === serviceSlug); }
@@ -277,15 +321,20 @@ document.querySelector('#requestForm').addEventListener('submit', async event =>
   if(!selections.length)return alert('Select at least one Ogreena service.');
   if(selections.some(item=>!Number.isFinite(Number(item.quantity))||Number(item.quantity)<=0))return alert('Enter a valid quantity for each selected service.');
   const values=Object.fromEntries(new FormData(form));
+  const state=values.service_address_state.trim().toUpperCase();
   const submit=form.querySelector('button[type="submit"]');submit.disabled=true;
   document.querySelector('#requestConfirmation').textContent='Sending your request securely…';
   const { data,error }=await supabase.rpc('create_multi_service_request',{
     selected_items:selections.map(item=>({service_slug:item.service_slug,service_price_item_id:item.service_price_item_id,quantity:Number(item.quantity)})),
-    request_details:values.details.trim(),property_information:values.property_information.trim(),requested_date:values.preferred_date||null
+    request_details:values.details.trim(),requested_date:values.preferred_date||null,
+    request_customer_name:values.customer_name.trim(),request_customer_phone:values.customer_phone.trim(),
+    request_address_street:values.service_address_street.trim(),request_address_unit:values.service_address_unit.trim()||null,
+    request_address_city:values.service_address_city.trim(),request_address_state:state,
+    request_address_zip:values.service_address_zip.trim(),request_property_type:values.property_type
   });
   submit.disabled=false;
   if(error){document.querySelector('#requestConfirmation').textContent=friendlyError(error);return;}
-  form.reset();selectedRequestItems.clear();renderRequestChoices();updateRequestPreview();
+  form.reset();fillContactPropertyForms(currentCustomerProfile);selectedRequestItems.clear();renderRequestChoices();updateRequestPreview();
   document.querySelector('#requestConfirmation').textContent=`Request sent to Ogreena. Status: submitted. Reference ${String(data).slice(0,8)}.`;
   await loadRequests(user.id);
 });
@@ -349,7 +398,7 @@ async function renderSession(session) {
   }
   const user = session.user;
   const [profileResult, roleResult] = await Promise.all([
-    supabase.from('profiles').select('display_name').eq('id', user.id).single(),
+    supabase.from('profiles').select('display_name,phone,property_street_address,property_unit,property_city,property_state,property_zip,property_type').eq('id', user.id).single(),
     supabase.from('user_roles').select('role').eq('user_id', user.id).single()
   ]);
   if (roleResult.error || !roleResult.data?.role) {
@@ -378,6 +427,7 @@ async function renderSession(session) {
   document.querySelector('#roleBadge').textContent = role[0].toUpperCase() + role.slice(1);
   document.querySelector('#welcomeName').textContent = profile?.display_name ? `${profile.display_name} · Customer Profile` : 'Customer Profile';
   document.querySelector('#accountEmail').textContent = user.email;
+  fillContactPropertyForms(profile);
   await loadServiceCatalog();
   await Promise.all([loadProducts(), loadRequests(user.id), loadCustomerActivity(user.id)]);
 }

@@ -17,13 +17,13 @@ async function mockCustomer(page){
   await page.route('**/rest/v1/rpc/create_multi_service_request',async route=>{
     const body=route.request().postDataJSON();
     if(body.selected_items.length!==2)throw new Error('RPC did not receive both selected services');
-    if(!body.property_information||!body.requested_date)throw new Error('RPC missing property information or preferred date');
+    if(!body.request_address_street||!body.request_customer_phone||!body.requested_date)throw new Error('RPC missing contact, property information, or preferred date');
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify('11111111-2222-4333-8444-555555555555')});
   });
   await page.route('**/rest/v1/**',route=>{
     const url=route.request().url();let body=[];
     if(url.includes('/user_roles'))body={role:'customer'};
-    else if(url.includes('/profiles'))body={display_name:'Demo Customer'};
+    else if(url.includes('/profiles'))body={display_name:'Demo Customer',phone:'5105550123',property_street_address:'100 Saved Street',property_unit:'',property_city:'Oakland',property_state:'CA',property_zip:'94609',property_type:'house'};
     else if(url.includes('/service_price_items'))body=prices;
     else if(url.includes('/services?'))body=services;
     else if(url.includes('/job_applications')||url.includes('/employee_access_requests'))body=null;
@@ -38,14 +38,14 @@ async function mockCustomer(page){
     console.log(`${viewport.name}: opening customer profile`);
     const page=await browser.newPage({viewport});page.setDefaultTimeout(15000);page.on('pageerror',error=>console.error(`${viewport.name} page error:`,error.message));await mockCustomer(page);
     await page.goto(`${base}/auth/`,{waitUntil:'domcontentloaded'});
-    await page.getByRole('heading',{name:'Request Ogreena Services'}).waitFor();
+    await page.getByRole('heading',{name:'Service Requests'}).waitFor();
     await page.locator('[data-request-category]').first().waitFor();
     await page.getByRole('button',{name:/Carpet Cleaning/}).click();
     await page.getByLabel(/Landing/).check();
     await page.getByRole('button',{name:/Landscaping/}).click();
     await page.getByLabel(/Landscaping estimate request/).check();
     if((await page.locator('#requestSelectionCount').innerText()).trim()!=='2 services selected')throw new Error(`${viewport.name}: multi-category selection failed`);
-    await page.getByLabel('Property information').fill('5600 Martin Luther King Jr Way, Oakland, CA');
+    await page.getByLabel('Street address',{exact:true}).fill('5600 Martin Luther King Jr Way');
     await page.getByLabel('Preferred service date').fill('2026-11-20');
     await page.getByRole('button',{name:'Send Request to Ogreena'}).click();
     await page.locator('#requestConfirmation').filter({hasText:'Request sent to Ogreena'}).waitFor();
