@@ -34,7 +34,7 @@ assert.match(auth, /customerHistory/);
 assert.doesNotMatch(auth, /business_memberships/);
 assert.doesNotMatch(customerPage, /Business owner account/i);
 assert.doesNotMatch(customerPage, /customerAppointments|customerMessages/);
-const customerSections = ['Profile', 'Ogreena Products', 'Service requests', 'Service history'];
+const customerSections = ['Profile', 'Ogreena Products', 'Request Ogreena Services', 'Service history'];
 let lastSection = -1;
 for (const section of customerSections) {
   const sectionIndex = customerPage.indexOf(`<h2>${section}</h2>`);

@@ -195,59 +195,113 @@ signOutButton.addEventListener('click', async () => {
 });
 
 let servicePriceItems = window.OgreenaServiceCatalog.items;
+let publishedServices = [];
+let activeRequestCategory = '';
+const selectedRequestItems = new Map();
 
-function renderServiceOptions() {
-  const select = document.querySelector('#requestService');
-  const grouped = servicePriceItems.filter(item => item.active).reduce((groups,item) => { (groups[item.category] ||= []).push(item); return groups; }, {});
-  select.innerHTML = '<option value="">Choose a service</option>' + Object.entries(window.OgreenaServiceCatalog.categoryNames).map(([category,label]) => `<optgroup label="${escapeHTML(label)}">${(grouped[category] || []).map(item => `<option value="${escapeHTML(item.id)}">${escapeHTML(item.name)} — ${escapeHTML(window.OgreenaServiceCatalog.priceLabel(item))}</option>`).join('')}</optgroup>`).join('');
+function requestItemKey(serviceSlug, priceItemId = '') { return priceItemId || `general:${serviceSlug}`; }
+function pricesForService(serviceSlug) { return servicePriceItems.filter(item => item.active && item.service_slug === serviceSlug); }
+
+function renderRequestCategories() {
+  const holder = document.querySelector('#requestCategories');
+  holder.innerHTML = publishedServices.map(service => `<button class="service-category-card ${service.id===activeRequestCategory?'active':''}" type="button" data-request-category="${escapeHTML(service.id)}"><span>${escapeHTML(service.name)}</span><small>${pricesForService(service.id).length ? `${pricesForService(service.id).length} published option${pricesForService(service.id).length===1?'':'s'}` : 'Request an estimate'}</small></button>`).join('');
+  holder.querySelectorAll('[data-request-category]').forEach(button => button.addEventListener('click', () => {
+    activeRequestCategory = button.dataset.requestCategory;
+    renderRequestCategories(); renderRequestChoices();
+  }));
 }
 
-function updateRequestEstimate() {
-  const item = servicePriceItems.find(row => row.id === document.querySelector('#requestService').value);
-  const quantityLabel = document.querySelector('#requestQuantityLabel');
-  const quantityInput = document.querySelector('#requestQuantity');
-  if (!item) { quantityLabel.hidden = true; document.querySelector('#requestEstimate').textContent = 'Choose a service to view its published price.'; return; }
-  quantityLabel.hidden = item.pricing_type === 'fixed';
-  quantityLabel.firstChild.textContent = item.unit_label === 'each' ? 'Quantity' : 'Estimated square feet';
-  quantityInput.required = item.pricing_type !== 'fixed';
-  const quantity = item.pricing_type !== 'fixed' ? Math.max(Number(quantityInput.value) || 0, 0) : 1;
-  const total = item.price_cents * quantity;
-  document.querySelector('#requestEstimate').textContent = item.pricing_type !== 'fixed'
-    ? `Published rate: ${window.OgreenaServiceCatalog.priceLabel(item)}. Estimated total: ${window.OgreenaServiceCatalog.money(total)}. Owner approval required.`
-    : `Published price: ${window.OgreenaServiceCatalog.priceLabel(item)}. Final scope requires owner approval.`;
+function renderRequestChoices() {
+  const service = publishedServices.find(item => item.id === activeRequestCategory);
+  const holder = document.querySelector('#requestChoices');
+  document.querySelector('#requestCategoryTitle').textContent = service ? service.name : 'Select a category';
+  if (!service) { holder.innerHTML = '<p class="muted">Tap a service category to see its available services.</p>'; return; }
+  const prices = pricesForService(service.id);
+  const choices = prices.length ? prices : [{ id:'', service_slug:service.id, name:`${service.name} estimate request`, price_cents:null, pricing_type:'fixed', unit_label:'' }];
+  holder.innerHTML = choices.map(item => {
+    const key=requestItemKey(service.id,item.id),selected=selectedRequestItems.get(key),isQuantity=item.pricing_type!=='fixed';
+    return `<label class="service-choice"><span><input type="checkbox" data-request-choice="${escapeHTML(key)}" ${selected?'checked':''}> <b>${escapeHTML(item.name)}</b><small>${item.price_cents===null?'Price provided after review':escapeHTML(window.OgreenaServiceCatalog.priceLabel(item))}</small></span>${isQuantity?`<input class="choice-quantity" data-request-quantity="${escapeHTML(key)}" type="number" min="0.01" step="0.01" value="${escapeHTML(selected?.quantity||1)}" aria-label="${escapeHTML(item.name)} quantity" ${selected?'':'disabled'}>`:''}</label>`;
+  }).join('');
+  holder.querySelectorAll('[data-request-choice]').forEach(input => input.addEventListener('change', () => {
+    const key=input.dataset.requestChoice;
+    const item=choices.find(candidate=>requestItemKey(service.id,candidate.id)===key);
+    if(input.checked) selectedRequestItems.set(key,{service_slug:service.id,service_price_item_id:item.id||null,service_name:service.name,item_name:item.name,price_cents:item.price_cents,pricing_type:item.pricing_type,unit_label:item.unit_label,quantity:1});
+    else selectedRequestItems.delete(key);
+    renderRequestChoices(); updateRequestPreview();
+  }));
+  holder.querySelectorAll('[data-request-quantity]').forEach(input => input.addEventListener('input',()=>{
+    const selected=selectedRequestItems.get(input.dataset.requestQuantity); if(!selected)return;
+    selected.quantity=Math.max(Number(input.value)||0,0); updateRequestPreview();
+  }));
+}
+
+function requestPreviewText() {
+  const lines=[...selectedRequestItems.values()].map(item=>{
+    const price=item.price_cents===null?'Estimate requested':window.OgreenaServiceCatalog.priceLabel(item);
+    const quantity=item.pricing_type==='fixed'?'':` × ${item.quantity} ${item.unit_label}`;
+    return `${item.service_name}: ${item.item_name} — ${price}${quantity}`;
+  });
+  return lines.length ? `Ogreena service request\n${lines.join('\n')}` : '';
+}
+
+function updateRequestPreview() {
+  const count=selectedRequestItems.size;
+  document.querySelector('#requestSelectionCount').textContent=`${count} service${count===1?'':'s'} selected`;
+  document.querySelector('#requestPreview').innerHTML=count?`<ul>${[...selectedRequestItems.values()].map(item=>`<li><b>${escapeHTML(item.service_name)}</b>: ${escapeHTML(item.item_name)}${item.price_cents===null?' · estimate requested':` · ${escapeHTML(window.OgreenaServiceCatalog.priceLabel(item))}`}</li>`).join('')}</ul>`:'';
 }
 
 async function loadServiceCatalog() {
-  renderServiceOptions();
-  const { data, error } = await supabase.from('service_price_items').select('id,category,service_slug,name,price_cents,pricing_type,unit_label,active,display_order').eq('active',true).order('display_order');
-  if (!error && data?.length) { servicePriceItems = data; renderServiceOptions(); }
-  updateRequestEstimate();
+  const [pricesResult,servicesResult]=await Promise.all([
+    supabase.from('service_price_items').select('id,category,service_slug,name,price_cents,pricing_type,unit_label,active,display_order').eq('active',true).order('display_order'),
+    supabase.from('services').select('id,name,summary,display_order,visible').eq('visible',true).order('display_order')
+  ]);
+  if (!pricesResult.error && pricesResult.data?.length) servicePriceItems=pricesResult.data;
+  if (!servicesResult.error && servicesResult.data?.length) publishedServices=servicesResult.data;
+  if (!publishedServices.length) publishedServices=[...new Map(servicePriceItems.map(item=>[item.service_slug,{id:item.service_slug,name:item.service_slug.replaceAll('-',' '),display_order:item.display_order}])).values()];
+  activeRequestCategory=publishedServices[0]?.id||'';
+  renderRequestCategories(); renderRequestChoices(); updateRequestPreview();
 }
 
-document.querySelector('#requestService').addEventListener('change', updateRequestEstimate);
-document.querySelector('#requestQuantity').addEventListener('input', updateRequestEstimate);
+document.querySelector('#copyRequestPreview').addEventListener('click', async () => {
+  const text=requestPreviewText(); if(!text)return;
+  try { await navigator.clipboard.writeText(text); document.querySelector('#requestConfirmation').textContent='Request preview copied.'; }
+  catch { document.querySelector('#requestConfirmation').textContent='Copy is unavailable in this browser. Your selections are still saved on this page.'; }
+});
 
 document.querySelector('#requestForm').addEventListener('submit', async event => {
   event.preventDefault();
+  const form=event.currentTarget;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  const values = Object.fromEntries(new FormData(event.currentTarget));
-  const item = servicePriceItems.find(row => row.id === values.service_price_item_id);
-  if (!item) return alert('Choose a published service.');
-  const requestedQuantity = item.pricing_type !== 'fixed' ? Number(values.requested_quantity) : 1;
-  if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) return alert('Enter a valid quantity.');
-  const { error } = await supabase.from('service_requests').insert({ customer_id:user.id, service_slug:item.service_slug, service_price_item_id:item.id, requested_quantity:requestedQuantity, summary:values.summary.trim() });
-  if (error) return alert(friendlyError(error));
-  event.currentTarget.reset(); updateRequestEstimate(); await loadRequests(user.id);
+  const selections=[...selectedRequestItems.values()];
+  if(!selections.length)return alert('Select at least one Ogreena service.');
+  if(selections.some(item=>!Number.isFinite(Number(item.quantity))||Number(item.quantity)<=0))return alert('Enter a valid quantity for each selected service.');
+  const values=Object.fromEntries(new FormData(form));
+  const submit=form.querySelector('button[type="submit"]');submit.disabled=true;
+  document.querySelector('#requestConfirmation').textContent='Sending your request securely…';
+  const { data,error }=await supabase.rpc('create_multi_service_request',{
+    selected_items:selections.map(item=>({service_slug:item.service_slug,service_price_item_id:item.service_price_item_id,quantity:Number(item.quantity)})),
+    request_details:values.details.trim(),property_information:values.property_information.trim(),requested_date:values.preferred_date||null
+  });
+  submit.disabled=false;
+  if(error){document.querySelector('#requestConfirmation').textContent=friendlyError(error);return;}
+  form.reset();selectedRequestItems.clear();renderRequestChoices();updateRequestPreview();
+  document.querySelector('#requestConfirmation').textContent=`Request sent to Ogreena. Status: submitted. Reference ${String(data).slice(0,8)}.`;
+  await loadRequests(user.id);
 });
 
 async function loadRequests(userId) {
   const list = document.querySelector('#requestList');
-  const { data, error } = await supabase.from('service_requests').select('id,service_slug,service_price_item_id,requested_quantity,summary,status,created_at').eq('customer_id', userId).order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('service_requests').select('id,service_slug,service_price_item_id,requested_quantity,summary,details,service_address,preferred_date,status,created_at').eq('customer_id', userId).order('created_at', { ascending: false });
   if (error) { list.textContent = friendlyError(error); return; }
-  const { data: estimates } = await supabase.from('estimates').select('id,request_id,amount_cents,status,tax_treatment,tax_confirmed_at').eq('customer_id', userId).eq('status','accepted');
+  const requestIds=data.map(item=>item.id);
+  const [{ data: estimates },itemsResult] = await Promise.all([
+    supabase.from('estimates').select('id,request_id,amount_cents,status,tax_treatment,tax_confirmed_at').eq('customer_id', userId).eq('status','accepted'),
+    requestIds.length?supabase.from('service_request_items').select('request_id,service_name,item_name,price_cents,pricing_type,unit_label,requested_quantity').in('request_id',requestIds).order('created_at'):Promise.resolve({data:[]})
+  ]);
   const payable = Object.fromEntries((estimates || []).filter(item => item.amount_cents >= 50 && item.tax_treatment === 'service_only_nontaxable' && item.tax_confirmed_at).map(item => [item.request_id,item]));
-  list.innerHTML = data.length ? data.map(item => { const catalogItem=servicePriceItems.find(price => price.id === item.service_price_item_id); return `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(catalogItem?.name || item.service_slug)} · ${escapeHTML(item.status)}</span>${payable[item.id]?`<button class="small-btn primary" data-pay-estimate="${escapeHTML(payable[item.id].id)}">Pay approved invoice</button>`:''}</div>`; }).join('') : '<p class="muted">No service requests yet.</p>';
+  const grouped=(itemsResult.data||[]).reduce((groups,row)=>{(groups[row.request_id]||=[]).push(row);return groups;},{});
+  list.innerHTML = data.length ? data.map(item => { const catalogItem=servicePriceItems.find(price => price.id === item.service_price_item_id),lines=grouped[item.id]||[]; return `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(item.status)}${item.preferred_date?` · preferred ${escapeHTML(item.preferred_date)}`:''}</span>${lines.length?`<ul>${lines.map(line=>`<li>${escapeHTML(line.service_name)} — ${escapeHTML(line.item_name)}</li>`).join('')}</ul>`:`<span>${escapeHTML(catalogItem?.name || item.service_slug)}</span>`}${item.details?`<small>${escapeHTML(item.details)}</small>`:''}${payable[item.id]?`<button class="small-btn primary" data-pay-estimate="${escapeHTML(payable[item.id].id)}">Pay approved invoice</button>`:''}</div>`; }).join('') : '<p class="muted">No service requests yet.</p>';
   list.querySelectorAll('[data-pay-estimate]').forEach(button=>button.addEventListener('click',()=>startCheckout({kind:'invoice',estimateId:button.dataset.payEstimate})));
 }
 

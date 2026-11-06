@@ -56,7 +56,23 @@
       <div class="account-grid">
         <article class="card"><h2>Profile</h2><p id="accountEmail"></p><p class="muted">Private account data is protected by row-level security.</p></article>
         <article class="card products-account"><h2>Ogreena Products</h2><p class="muted">Browse Ogreena’s published cleaning products.</p><div class="account-products" id="accountProducts"></div></article>
-        <article class="card"><h2>Service requests</h2><form id="requestForm" class="auth-form compact"><label>Service<select name="service_price_item_id" id="requestService" required><option value="">Choose a service</option></select></label><label id="requestQuantityLabel" hidden>Quantity<input name="requested_quantity" id="requestQuantity" type="number" min="0.01" step="0.01" value="1"></label><p class="catalog-estimate" id="requestEstimate">Choose a service to view its published price.</p><label>What do you need?<textarea name="summary" maxlength="500" required></textarea></label><button class="small-btn primary">Request Appointment or Estimate</button><p class="muted">Submitting does not create an invoice or charge. Final scope, quantities, and charges require owner approval.</p></form><div id="requestList"></div></article>
+        <article class="card service-request-card">
+          <h2>Request Ogreena Services</h2>
+          <p class="muted">Choose one or more services, including services from different categories, and send one request.</p>
+          <form id="requestForm" class="auth-form compact">
+            <fieldset class="service-picker-fieldset"><legend>Choose a service category</legend><div class="service-category-grid" id="requestCategories"></div></fieldset>
+            <section class="service-choice-panel" aria-live="polite"><h3 id="requestCategoryTitle">Select a category</h3><div id="requestChoices"><p class="muted">Tap a service category to see its available services.</p></div></section>
+            <div class="selection-summary"><strong id="requestSelectionCount">0 services selected</strong><button class="text-button" id="copyRequestPreview" type="button">Copy request preview</button></div>
+            <div id="requestPreview" class="request-preview" aria-live="polite"></div>
+            <label>Additional details<textarea name="details" maxlength="2000" placeholder="Describe the work, condition, access details, or anything Ogreena should know."></textarea></label>
+            <label>Property information<input name="property_information" maxlength="500" autocomplete="street-address" placeholder="Service address or property location" required></label>
+            <label>Preferred service date<input name="preferred_date" type="date"></label>
+            <button class="small-btn primary" type="submit">Send Request to Ogreena</button>
+            <p class="muted">Submitting does not create an invoice or charge. It creates one service request; final scope, quantities, and pricing require Ogreena’s approval.</p>
+            <p class="request-confirmation" id="requestConfirmation" role="status" aria-live="polite"></p>
+          </form>
+          <div id="requestList"></div>
+        </article>
         <article class="card"><h2>Service history</h2><div id="customerHistory"><p class="muted">Loading history…</p></div></article>
       </div>
     </section>
@@ -64,6 +80,6 @@
   <div id="toast"></div>
   <script src="../vendor/supabase-2.57.4.min.js"></script>
   <script src="../service-catalog.js?v=1"></script>
-  <script src="owner-auth.js?v=19"></script>
+  <script src="owner-auth.js?v=20"></script>
 </body>
 </html>
