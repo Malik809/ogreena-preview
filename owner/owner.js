@@ -87,6 +87,7 @@ const JOB_TIME_ZONE='America/Los_Angeles';
 let calendarView='month';
 let calendarCursor=new Date();
 let calendarData={appointments:[],requests:[],items:[],profiles:[],employees:[]};
+let calendarAutoRefreshTimer=null;
 const laDateFormatter=new Intl.DateTimeFormat('en-CA',{timeZone:JOB_TIME_ZONE,year:'numeric',month:'2-digit',day:'2-digit'});
 const laTimeFormatter=new Intl.DateTimeFormat('en-US',{timeZone:JOB_TIME_ZONE,hour:'numeric',minute:'2-digit'});
 const laFullFormatter=new Intl.DateTimeFormat('en-US',{timeZone:JOB_TIME_ZONE,weekday:'short',month:'short',day:'numeric',year:'numeric'});
@@ -131,6 +132,7 @@ function renderJobCalendar(){
 async function loadJobCalendar(){
   const [appointments,requests,items,profiles,employees]=await Promise.all([supabase.from('appointments').select('*').order('starts_at'),supabase.from('service_requests').select('*').order('created_at',{ascending:false}),supabase.from('service_request_items').select('*').order('created_at'),supabase.from('profiles').select('id,display_name'),supabase.from('user_roles').select('user_id').eq('role','employee')]);
   calendarData={appointments:requireOk(appointments)||[],requests:requireOk(requests)||[],items:requireOk(items)||[],profiles:requireOk(profiles)||[],employees:requireOk(employees)||[]};renderJobCalendar();
+  if(!calendarAutoRefreshTimer)calendarAutoRefreshTimer=setInterval(()=>{if(!document.hidden&&$('#owner-calendar').classList.contains('active')&&!$('#jobScheduleDialog').open)loadJobCalendar().catch(()=>{});},30000);
 }
 function openJobSchedule(appointment,requestId,dateKeyValue){
   const form=$('#jobScheduleForm'),activeRequests=new Set(calendarData.appointments.filter(row=>row.status!=='cancelled'&&row.id!==appointment?.id).map(row=>row.request_id)),available=appointment?calendarData.requests.filter(row=>row.id===appointment.request_id):calendarData.requests.filter(row=>!activeRequests.has(row.id)&&!['completed','cancelled'].includes(row.status)),selectedId=requestId||appointment?.request_id||available[0]?.id||'',names=Object.fromEntries(calendarData.profiles.map(row=>[row.id,row.display_name||'Ogreena worker']));
@@ -143,6 +145,7 @@ function openJobSchedule(appointment,requestId,dateKeyValue){
 document.querySelectorAll('[data-calendar-view]').forEach(button=>button.addEventListener('click',()=>{calendarView=button.dataset.calendarView;document.querySelectorAll('[data-calendar-view]').forEach(item=>item.classList.toggle('active',item===button));renderJobCalendar();}));
 document.querySelectorAll('[data-calendar-move]').forEach(button=>button.addEventListener('click',()=>{const direction=button.dataset.calendarMove==='next'?1:-1;calendarCursor=calendarView==='month'?new Date(Date.UTC(calendarCursor.getUTCFullYear(),calendarCursor.getUTCMonth()+direction,1,12)):addDays(calendarCursor,direction*(calendarView==='week'?7:1));renderJobCalendar();}));
 $('[data-calendar-today]').addEventListener('click',()=>{calendarCursor=new Date();renderJobCalendar();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('#owner-calendar').classList.contains('active')&&!$('#jobScheduleDialog').open)loadJobCalendar().catch(()=>{});});
 $('[data-close-job-dialog]').addEventListener('click',()=>$('#jobScheduleDialog').close());
 $('#jobScheduleForm').addEventListener('submit',event=>{event.preventDefault();const form=event.currentTarget,values=Object.fromEntries(new FormData(form)),status=$('#jobScheduleStatus');status.textContent='Saving job…';run('Saving scheduled job',async()=>{const result=await supabase.rpc('manage_job_schedule',{schedule_id:values.schedule_id||null,target_request_id:values.request_id,assigned_worker_id:values.employee_id||null,scheduled_start:laLocalToIso(values.starts_at),scheduled_end:laLocalToIso(values.ends_at),schedule_status:values.status});requireOk(result);$('#jobScheduleDialog').close();loadedOwnerSections.delete('operations');await loadJobCalendar();}).catch(error=>{status.textContent=error.message||'The job could not be scheduled.';});});
 

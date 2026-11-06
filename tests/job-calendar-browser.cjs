@@ -5,10 +5,11 @@ const employeeId='00000000-0000-4000-8000-000000000011';
 const session={access_token:'mock-owner-access',refresh_token:'mock-owner-refresh',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,token_type:'bearer',user:owner};
 const requests=[
   {id:'10000000-0000-4000-8000-000000000001',customer_id:'20000000-0000-4000-8000-000000000001',customer_name:'Jordan Customer',customer_phone:'5105550188',service_address:'123 Broadway, Oakland, CA 94607',service_slug:'carpet-cleaning',summary:'1 service selected',status:'scheduled',created_at:'2026-11-01T12:00:00Z'},
-  {id:'10000000-0000-4000-8000-000000000002',customer_id:'20000000-0000-4000-8000-000000000002',customer_name:'Taylor Pending',customer_phone:'5105550199',service_address:'456 College Ave, Berkeley, CA 94704',service_slug:'house-cleaning',summary:'1 service selected',status:'submitted',created_at:'2026-11-02T12:00:00Z'}
+  {id:'10000000-0000-4000-8000-000000000002',customer_id:'20000000-0000-4000-8000-000000000002',customer_name:'Taylor Pending',customer_phone:'5105550199',service_address:'456 College Ave, Berkeley, CA 94704',service_slug:'house-cleaning',summary:'1 service selected',status:'submitted',created_at:'2026-11-02T12:00:00Z'},
+  {id:'10000000-0000-4000-8000-000000000003',customer_id:'20000000-0000-4000-8000-000000000003',customer_name:'Morgan History',customer_phone:'5105550177',service_address:'789 Grand Ave, Oakland, CA 94610',service_slug:'janitorial-cleaning',summary:'Completed office cleaning',status:'completed',created_at:'2026-10-28T12:00:00Z'}
 ];
-const appointments=[{id:'30000000-0000-4000-8000-000000000001',request_id:requests[0].id,customer_id:requests[0].customer_id,employee_id:employeeId,starts_at:'2026-11-10T17:00:00Z',ends_at:'2026-11-10T18:00:00Z',status:'confirmed'}];
-const items=[{request_id:requests[0].id,service_name:'Carpet Cleaning',item_name:'Bedroom Cleaning',created_at:'2026-11-01T12:00:00Z'},{request_id:requests[1].id,service_name:'House Cleaning',item_name:'Deep Cleaning',created_at:'2026-11-02T12:00:00Z'}];
+const appointments=[{id:'30000000-0000-4000-8000-000000000001',request_id:requests[0].id,customer_id:requests[0].customer_id,employee_id:employeeId,starts_at:'2026-11-10T17:00:00Z',ends_at:'2026-11-10T18:00:00Z',status:'confirmed'},{id:'30000000-0000-4000-8000-000000000003',request_id:requests[2].id,customer_id:requests[2].customer_id,employee_id:employeeId,starts_at:'2026-11-05T18:00:00Z',ends_at:'2026-11-05T19:00:00Z',status:'completed'}];
+const items=[{request_id:requests[0].id,service_name:'Carpet Cleaning',item_name:'Bedroom Cleaning',created_at:'2026-11-01T12:00:00Z'},{request_id:requests[1].id,service_name:'House Cleaning',item_name:'Deep Cleaning',created_at:'2026-11-02T12:00:00Z'},{request_id:requests[2].id,service_name:'Janitorial Cleaning',item_name:'Office Cleaning',created_at:'2026-10-28T12:00:00Z'}];
 
 (async()=>{
   const browser=await (process.env.BROWSER_ENGINE==='webkit'?webkit:chromium).launch({headless:true});
@@ -33,9 +34,15 @@ const items=[{request_id:requests[0].id,service_name:'Carpet Cleaning',item_name
     const columns=await page.locator('#jobCalendarGrid').evaluate(element=>getComputedStyle(element).gridTemplateColumns.split(' ').length);
     if(columns!==7)throw new Error(`${viewport.name}: month calendar does not have seven columns (${columns})`);
     if(await page.locator('.calendar-day').count()!==42)throw new Error(`${viewport.name}: month calendar does not render a complete six-week grid`);
+    if(await page.locator('[data-calendar-job]').count()!==appointments.length)throw new Error(`${viewport.name}: existing or completed jobs were not loaded exactly once`);
+    if(!await page.locator(`[data-calendar-job="${appointments[1].id}"]`).count())throw new Error(`${viewport.name}: completed job history is missing`);
     await page.locator(`[data-calendar-job="${appointments[0].id}"]`).click();
     for(const text of ['5105550188','123 Broadway','Bedroom Cleaning','Alex Worker','confirmed'])if(!await page.getByText(text,{exact:false}).count())throw new Error(`${viewport.name}: calendar is missing ${text}`);
-    await page.getByRole('button',{name:'Cancel'}).click();
+    await page.locator('#jobScheduleForm [name="starts_at"]').fill('2026-11-11T10:15');
+    await page.locator('#jobScheduleForm [name="ends_at"]').fill('2026-11-11T11:15');
+    await page.getByRole('button',{name:'Save Job'}).click();await page.waitForTimeout(300);
+    if(!scheduledPayload||scheduledPayload.schedule_id!==appointments[0].id||scheduledPayload.target_request_id!==requests[0].id)throw new Error(`${viewport.name}: existing job reschedule did not update the original appointment`);
+    scheduledPayload=null;
     await page.locator('[data-calendar-empty-date="2026-11-12"]').click();
     if(await page.locator('#jobScheduleForm [name="request_id"]').inputValue()!==requests[1].id)throw new Error(`${viewport.name}: empty date did not offer the pending request`);
     if(await page.locator('#jobScheduleForm [name="starts_at"]').inputValue()!=='2026-11-12T09:00')throw new Error(`${viewport.name}: empty date did not prefill the selected calendar date`);
