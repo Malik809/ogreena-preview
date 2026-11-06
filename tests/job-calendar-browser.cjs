@@ -1,4 +1,4 @@
-const {webkit}=require('playwright');
+const {webkit,chromium}=require('playwright');
 const base=process.env.SITE_URL||'http://127.0.0.1:4173';
 const owner={id:'00000000-0000-4000-8000-000000000010',email:'owner@example.invalid',role:'authenticated'};
 const employeeId='00000000-0000-4000-8000-000000000011';
@@ -11,7 +11,7 @@ const appointments=[{id:'30000000-0000-4000-8000-000000000001',request_id:reques
 const items=[{request_id:requests[0].id,service_name:'Carpet Cleaning',item_name:'Bedroom Cleaning',created_at:'2026-11-01T12:00:00Z'},{request_id:requests[1].id,service_name:'House Cleaning',item_name:'Deep Cleaning',created_at:'2026-11-02T12:00:00Z'}];
 
 (async()=>{
-  const browser=await webkit.launch({headless:true});
+  const browser=await (process.env.BROWSER_ENGINE==='webkit'?webkit:chromium).launch({headless:true});
   for(const viewport of [{name:'desktop',width:1440,height:900},{name:'iphone',width:390,height:844}]){
     const page=await browser.newPage({viewport});let scheduledPayload=null;
     await page.addInitScript(value=>localStorage.setItem('ogreena-auth-session',JSON.stringify(value)),session);
@@ -29,10 +29,18 @@ const items=[{request_id:requests[0].id,service_name:'Carpet Cleaning',item_name
     });
     await page.goto(`${base}/owner/`,{waitUntil:'networkidle'});
     await page.getByRole('button',{name:'Job Calendar'}).click();
-    await page.getByRole('button',{name:'Next date range'}).click();
-    await page.getByText('Jordan Customer').waitFor();
+    await page.getByRole('heading',{name:'November 2026'}).waitFor();
+    const columns=await page.locator('#jobCalendarGrid').evaluate(element=>getComputedStyle(element).gridTemplateColumns.split(' ').length);
+    if(columns!==7)throw new Error(`${viewport.name}: month calendar does not have seven columns (${columns})`);
+    if(await page.locator('.calendar-day').count()!==42)throw new Error(`${viewport.name}: month calendar does not render a complete six-week grid`);
+    await page.locator(`[data-calendar-job="${appointments[0].id}"]`).click();
     for(const text of ['5105550188','123 Broadway','Bedroom Cleaning','Alex Worker','confirmed'])if(!await page.getByText(text,{exact:false}).count())throw new Error(`${viewport.name}: calendar is missing ${text}`);
-    await page.getByRole('button',{name:'Month',exact:true}).click();await page.getByRole('button',{name:'Day',exact:true}).click();await page.getByRole('button',{name:'Week',exact:true}).click();
+    await page.getByRole('button',{name:'Cancel'}).click();
+    await page.locator('[data-calendar-empty-date="2026-11-12"]').click();
+    if(await page.locator('#jobScheduleForm [name="request_id"]').inputValue()!==requests[1].id)throw new Error(`${viewport.name}: empty date did not offer the pending request`);
+    if(await page.locator('#jobScheduleForm [name="starts_at"]').inputValue()!=='2026-11-12T09:00')throw new Error(`${viewport.name}: empty date did not prefill the selected calendar date`);
+    await page.getByRole('button',{name:'Cancel'}).click();
+    await page.getByRole('button',{name:'Day',exact:true}).click();await page.getByRole('button',{name:'Week',exact:true}).click();await page.getByRole('button',{name:'Month',exact:true}).click();
     await page.locator(`[data-schedule-pending="${requests[1].id}"]`).click();
     await page.locator('#jobScheduleForm [name="starts_at"]').fill('2026-11-12T13:30');
     await page.locator('#jobScheduleForm [name="ends_at"]').fill('2026-11-12T15:30');
