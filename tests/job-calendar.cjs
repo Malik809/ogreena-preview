@@ -1,0 +1,34 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const ownerPage=fs.readFileSync('owner/index.html','utf8');
+const owner=fs.readFileSync('owner/owner.js','utf8');
+const customer=fs.readFileSync('auth/owner-auth.js','utf8');
+const migration=fs.readFileSync('supabase/migrations/20261106203710_job_calendar_scheduling.sql','utf8');
+const syncMigration=fs.readFileSync('supabase/migrations/20261106204314_sync_job_calendar_status.sql','utf8');
+
+assert.match(ownerPage,/data-owner-tab="calendar"/);
+assert.match(ownerPage,/id="owner-calendar"/);
+assert.match(ownerPage,/data-calendar-view="week"/);
+assert.match(ownerPage,/data-calendar-view="month"/);
+assert.match(ownerPage,/data-calendar-view="day"/);
+assert.match(ownerPage,/Pending requests/);
+assert.match(owner,/America\/Los_Angeles/);
+assert.match(owner,/manage_job_schedule/);
+assert.match(owner,/selected services|service_request_items/i);
+assert.match(owner,/request_customer_name|customer_name/);
+assert.match(owner,/request_customer_phone|customer_phone/);
+assert.match(customer,/from\('appointments'\)/);
+assert.match(customer,/Scheduled:/);
+assert.match(migration,/appointments_prevent_employee_overlap/);
+assert.match(migration,/alter column ends_at set not null/);
+assert.match(migration,/tstzrange\(starts_at,ends_at,'\[\)'\)/);
+assert.match(migration,/private\.manage_job_schedule_internal[\s\S]+security definer/);
+assert.match(migration,/public\.manage_job_schedule[\s\S]+security invoker/);
+assert.match(migration,/not \(select private\.is_owner\(\)\)/);
+assert.match(migration,/status=case schedule_status/);
+assert.match(migration,/That worker is already booked during this time/);
+assert.match(syncMigration,/service_requests_sync_calendar_status/);
+assert.match(syncMigration,/appointments_sync_request_status/);
+assert.doesNotMatch(ownerPage,/Illustrative schedule|not live customer data/i);
+
+console.log('Private owner job calendar, atomic scheduling, double-booking prevention, timezone, and customer appointment sync PASS');

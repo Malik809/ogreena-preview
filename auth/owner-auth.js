@@ -341,7 +341,10 @@ document.querySelector('#requestForm').addEventListener('submit', async event =>
 
 async function loadRequests(userId) {
   const list = document.querySelector('#requestList');
-  const { data, error } = await supabase.from('service_requests').select('id,service_slug,service_price_item_id,requested_quantity,summary,details,service_address,preferred_date,status,created_at').eq('customer_id', userId).order('created_at', { ascending: false });
+  const [{ data, error },appointmentsResult] = await Promise.all([
+    supabase.from('service_requests').select('id,service_slug,service_price_item_id,requested_quantity,summary,details,service_address,preferred_date,status,created_at').eq('customer_id', userId).order('created_at', { ascending: false }),
+    supabase.from('appointments').select('request_id,starts_at,ends_at,status').eq('customer_id',userId).neq('status','cancelled').order('starts_at')
+  ]);
   if (error) { list.textContent = friendlyError(error); return; }
   const requestIds=data.map(item=>item.id);
   const [{ data: estimates },itemsResult] = await Promise.all([
@@ -349,8 +352,9 @@ async function loadRequests(userId) {
     requestIds.length?supabase.from('service_request_items').select('request_id,service_name,item_name,price_cents,pricing_type,unit_label,requested_quantity').in('request_id',requestIds).order('created_at'):Promise.resolve({data:[]})
   ]);
   const payable = Object.fromEntries((estimates || []).filter(item => item.amount_cents >= 50 && item.tax_treatment === 'service_only_nontaxable' && item.tax_confirmed_at).map(item => [item.request_id,item]));
+  const appointmentsByRequest=Object.fromEntries((appointmentsResult.data||[]).map(item=>[item.request_id,item]));
   const grouped=(itemsResult.data||[]).reduce((groups,row)=>{(groups[row.request_id]||=[]).push(row);return groups;},{});
-  list.innerHTML = data.length ? data.map(item => { const catalogItem=servicePriceItems.find(price => price.id === item.service_price_item_id),lines=grouped[item.id]||[]; return `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(item.status)}${item.preferred_date?` · preferred ${escapeHTML(item.preferred_date)}`:''}</span>${lines.length?`<ul>${lines.map(line=>`<li>${escapeHTML(line.service_name)} — ${escapeHTML(line.item_name)}</li>`).join('')}</ul>`:`<span>${escapeHTML(catalogItem?.name || item.service_slug)}</span>`}${item.details?`<small>${escapeHTML(item.details)}</small>`:''}${payable[item.id]?`<button class="small-btn primary" data-pay-estimate="${escapeHTML(payable[item.id].id)}">Pay approved invoice</button>`:''}</div>`; }).join('') : '<p class="muted">No service requests yet.</p>';
+  list.innerHTML = data.length ? data.map(item => { const catalogItem=servicePriceItems.find(price => price.id === item.service_price_item_id),lines=grouped[item.id]||[],appointment=appointmentsByRequest[item.id]; return `<div class="request-item"><b>${escapeHTML(item.summary)}</b><span>${escapeHTML(item.status)}${item.preferred_date?` · preferred ${escapeHTML(item.preferred_date)}`:''}</span>${appointment?`<strong class="appointment-time">Scheduled: ${escapeHTML(new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',dateStyle:'medium',timeStyle:'short'}).format(new Date(appointment.starts_at)))} PT</strong>`:''}${lines.length?`<ul>${lines.map(line=>`<li>${escapeHTML(line.service_name)} — ${escapeHTML(line.item_name)}</li>`).join('')}</ul>`:`<span>${escapeHTML(catalogItem?.name || item.service_slug)}</span>`}${item.details?`<small>${escapeHTML(item.details)}</small>`:''}${payable[item.id]?`<button class="small-btn primary" data-pay-estimate="${escapeHTML(payable[item.id].id)}">Pay approved invoice</button>`:''}</div>`; }).join('') : '<p class="muted">No service requests yet.</p>';
   list.querySelectorAll('[data-pay-estimate]').forEach(button=>button.addEventListener('click',()=>startCheckout({kind:'invoice',estimateId:button.dataset.payEstimate})));
 }
 

@@ -26,6 +26,8 @@ const session = { access_token:'mock-customer-access', refresh_token:'mock-custo
       if (url.pathname.endsWith('/user_roles')) body = { role:'customer' };
       if (url.pathname.endsWith('/services')) body = services;
       if (url.pathname.endsWith('/service_price_items')) body = prices;
+      if (url.pathname.endsWith('/appointments')) body = [{ request_id:'request-1', starts_at:'2026-11-10T17:00:00Z', ends_at:'2026-11-10T18:00:00Z', status:'confirmed' }];
+      if (url.pathname.endsWith('/service_requests') && route.request().method() === 'GET') body = [{ id:'request-1', service_slug:'carpet-cleaning', service_price_item_id:'carpet-cleaning-bedroom', requested_quantity:1, summary:'1 service selected', details:'Scheduled test', service_address:'100 Saved Street, Oakland, CA 94609', preferred_date:'2026-11-10', status:'scheduled', created_at:'2026-11-01T12:00:00Z' }];
       return route.fulfill({ status:200, contentType:'application/json', body:JSON.stringify(body) });
     });
     await page.goto(`${base}/auth/`, { waitUntil:'networkidle' });
@@ -34,6 +36,7 @@ const session = { access_token:'mock-customer-access', refresh_token:'mock-custo
     const expected = ['Profile', 'Ogreena Products', 'Service Requests', 'Service history'];
     if (JSON.stringify(headings) !== JSON.stringify(expected)) throw new Error(`${viewport.name}: customer sections are ${JSON.stringify(headings)}`);
     if (await page.getByText('Business owner account', { exact:false }).count()) throw new Error(`${viewport.name}: business-owner section is still present`);
+    if (!await page.getByText(/Scheduled: Nov 10, 2026/).count()) throw new Error(`${viewport.name}: scheduled appointment is missing from the customer request`);
     if (await page.locator('#requestForm [name="service_address_street"]').inputValue() !== savedProfile.property_street_address) throw new Error(`${viewport.name}: saved address did not prefill the request`);
     await page.getByRole('button', { name:/Carpet Cleaning/ }).click();
     await page.getByLabel(/Bedroom Cleaning/).check();
