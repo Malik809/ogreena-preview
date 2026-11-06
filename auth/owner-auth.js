@@ -6,6 +6,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: 'ogreena-auth-session', lock: safariSafeAuthLock }
 });
 const authRedirect = 'https://ogreena.com/auth/';
+// This exact production path is already used by Ogreena Auth and is present in
+// the project's allowed redirects. Supabase adds the recovery session to it.
+const recoveryRedirect = 'https://ogreena.com/auth/';
 const OWNER_SESSION_HANDOFF_KEY = 'ogreena-owner-session-handoff';
 
 const authPanel = document.querySelector('#authPanel');
@@ -28,6 +31,7 @@ function friendlyError(error) {
   if (code === 'over_email_send_rate_limit') return 'Too many confirmation emails were requested. Please wait a few minutes, then try again.';
   if (code === 'over_request_rate_limit') return 'Too many account requests were made. Please wait a few minutes, then try again.';
   if (code === 'weak_password') return 'Please choose a stronger password with at least 8 characters.';
+  if (code === 'session_not_found' || /auth session missing|invalid.*token|expired/i.test(error.message || '')) return 'This password-reset link is invalid or expired. Choose Reset Password to request a new email.';
   if (code === 'email_address_invalid') return 'Please enter a valid email address.';
   if (code === 'invalid_credentials' || /invalid login/i.test(error.message || '')) return 'The email or password is incorrect. If you already confirmed this account, use the same password or choose Reset Password.';
   if (error instanceof TypeError || /failed to fetch|network/i.test(error.message || '')) return 'Ogreena could not reach the secure account service. Check your connection and try again.';
@@ -77,7 +81,10 @@ document.querySelectorAll('[data-auth-tab]').forEach(button => button.addEventLi
 const requestedMode = new URLSearchParams(location.search).get('mode');
 const requestedNext = new URLSearchParams(location.search).get('next');
 const safeNext = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '';
-if (['signin', 'signup', 'recovery'].includes(requestedMode)) switchTab(requestedMode);
+const recoveryHash = new URLSearchParams(location.hash.replace(/^#/, ''));
+let recoveryMode = requestedMode === 'password' || recoveryHash.get('type') === 'recovery';
+if (['signin', 'signup', 'recovery', 'password'].includes(requestedMode)) switchTab(requestedMode);
+if (recoveryMode) switchTab('password');
 
 document.querySelector('#signUpForm').addEventListener('submit', async event => {
   event.preventDefault();
@@ -143,7 +150,7 @@ document.querySelector('#recoveryForm').addEventListener('submit', async event =
   event.preventDefault();
   const form = event.currentTarget;
   const values = Object.fromEntries(new FormData(form));
-  await runFormRequest(form, 'Requesting a secure recovery email…', () => supabase.auth.resetPasswordForEmail(values.email, { redirectTo: authRedirect }), async () => {
+  await runFormRequest(form, 'Requesting a secure recovery email…', () => supabase.auth.resetPasswordForEmail(values.email, { redirectTo: recoveryRedirect }), async () => {
     form.reset(); setStatus('If that account exists, a recovery email has been sent.', 'success');
   });
 });
@@ -151,9 +158,24 @@ document.querySelector('#recoveryForm').addEventListener('submit', async event =
 document.querySelector('#newPasswordForm').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;
-  const password = new FormData(form).get('password');
+  const values = Object.fromEntries(new FormData(form));
+  const password = values.password;
+  if (password !== values.password_confirmation) {
+    setStatus('The two passwords do not match.', 'error');
+    return;
+  }
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!recoveryMode || !session) {
+    setStatus('This password-reset link is invalid or expired. Choose Reset Password to request a new email.', 'error');
+    return;
+  }
   await runFormRequest(form, 'Saving the new password…', () => supabase.auth.updateUser({ password }), async () => {
-    form.reset(); setStatus('Password updated. You can now sign in.', 'success');
+    form.reset();
+    await supabase.auth.signOut({ scope: 'local' });
+    recoveryMode = false;
+    history.replaceState({}, '', './?mode=signin');
+    switchTab('signin');
+    setStatus('Password updated successfully. Sign in with your new password.', 'success');
   });
 });
 
@@ -259,6 +281,14 @@ async function loadProducts() {
 }
 
 async function renderSession(session) {
+  if (recoveryMode) {
+    authPanel.hidden = false;
+    accountPanel.hidden = true;
+    signOutButton.hidden = true;
+    if (document.querySelector('#newPasswordForm').hidden) switchTab('password');
+    if (!session) setStatus('This password-reset link is invalid or expired. Choose Reset Password to request a new email.', 'error');
+    return;
+  }
   authPanel.hidden = Boolean(session); accountPanel.hidden = !session; signOutButton.hidden = !session;
   if (!session) return;
   const pendingProduct = sessionStorage.getItem('ogreena-pending-product');
@@ -325,7 +355,14 @@ async function renderSession(session) {
 function escapeHTML(value = '') { const node = document.createElement('div'); node.textContent = String(value); return node.innerHTML; }
 
 supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'PASSWORD_RECOVERY') switchTab('password');
+  if (event === 'PASSWORD_RECOVERY') {
+    recoveryMode = true;
+    authPanel.hidden = false;
+    accountPanel.hidden = true;
+    signOutButton.hidden = true;
+    switchTab('password');
+    setStatus('Create a new password for your Ogreena account.', 'success');
+  }
   // Run database lookups after the auth callback has returned. Awaiting another
   // Supabase request inside this callback can block session/role restoration.
   setTimeout(() => renderSession(session), 0);
