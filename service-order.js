@@ -15,7 +15,7 @@
     { slug:'floor-polishing', name:'Floor Polishing', icon:'◇', summary:'Residential floor polishing by square foot' },
     { slug:'pressure-washing', name:'Pressure Washing', icon:'≈', summary:'Exterior hard-surface cleaning' },
     { slug:'landscaping', name:'Landscaping', icon:'♧', summary:'Lawn care, yard cleanup and grounds maintenance' },
-    { slug:'hauling', name:'Hauling', icon:'▰', summary:'Junk removal, debris hauling and property cleanouts' }
+    { slug:'hauling', name:'Hauling & Junk Removal', icon:'▰', summary:'Junk removal, furniture removal and property cleanouts' }
   ];
   const defaults = services.map(service => service.slug);
   const getOrder = () => defaults.slice();

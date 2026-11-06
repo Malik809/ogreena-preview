@@ -99,8 +99,8 @@ const serviceData = {
     jobs: ['Homes and rental properties', 'Apartment and multi-unit grounds', 'Commercial property exteriors', 'One-time cleanup and recurring maintenance']
   },
   'hauling': {
-    name: 'Hauling', icon: '▰', availability: 'Residential and commercial', cover: 'pressure-washing', requestLabel: 'Request Estimate',
-    description: 'Junk removal, debris hauling, property cleanouts and unwanted-item removal for Bay Area homes, rentals and commercial properties.',
+    name: 'Hauling & Junk Removal', icon: '▰', availability: 'Residential and commercial', requestLabel: 'Request Estimate',
+    description: 'Professional hauling, junk removal, furniture removal, and property cleanout services throughout the Bay Area.',
     handles: ['Junk and unwanted-item removal', 'Debris hauling after approved cleanup work', 'Property and unit cleanouts', 'Move-related item removal', 'Residential and commercial hauling requests'],
     jobs: ['Homes and apartments', 'Rental and property turnovers', 'Commercial-property cleanouts', 'One-time debris and unwanted-item removal'],
     notice: 'Final scope depends on item type, volume, access and lawful disposal options. Hazardous or restricted materials are not accepted without prior verification.'

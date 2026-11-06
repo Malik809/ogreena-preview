@@ -12,7 +12,7 @@ const base = process.env.SITE_URL || 'http://127.0.0.1:4173';
     const featured = page.locator('#featuredServices .service-card');
     if (await featured.count() !== 6) throw new Error(`${viewport.name}: expected six featured services`);
     const names = await featured.locator('h3').allTextContents();
-    const expected = ['Carpet Cleaning','House Cleaning','Deep Cleaning','Move-In / Move-Out','Landscaping','Hauling'];
+    const expected = ['Carpet Cleaning','House Cleaning','Deep Cleaning','Move-In / Move-Out','Landscaping','Hauling & Junk Removal'];
     if (names.join('|') !== expected.join('|')) throw new Error(`${viewport.name}: featured order was ${names.join('|')}`);
     for (const slug of ['landscaping','hauling']) {
       await page.goto(`${base}/services/${slug}/`, { waitUntil:'networkidle' });
@@ -21,6 +21,14 @@ const base = process.env.SITE_URL || 'http://127.0.0.1:4173';
         if (description?.trim() !== 'Professional landscaping, lawn care, yard maintenance, and property groundskeeping services throughout the Bay Area.') throw new Error(`${viewport.name}: landscaping description is incorrect`);
         const background = await page.locator('.service-profile .cover').evaluate(node => getComputedStyle(node).backgroundImage);
         if (!background.includes('landscaping.jpg')) throw new Error(`${viewport.name}: landscaping cover is incorrect: ${background}`);
+      }
+      if (slug === 'hauling') {
+        const title = await page.locator('#serviceTitle').textContent();
+        const description = await page.locator('#serviceDesc').textContent();
+        const background = await page.locator('.service-profile .cover').evaluate(node => getComputedStyle(node).backgroundImage);
+        if (title?.trim() !== 'Hauling & Junk Removal') throw new Error(`${viewport.name}: hauling title is incorrect`);
+        if (description?.trim() !== 'Professional hauling, junk removal, furniture removal, and property cleanout services throughout the Bay Area.') throw new Error(`${viewport.name}: hauling description is incorrect`);
+        if (!background.includes('hauling.jpg')) throw new Error(`${viewport.name}: hauling cover is incorrect: ${background}`);
       }
       const request = page.getByRole('button', { name:'Request Estimate', exact:true }).first();
       if (!await request.isVisible()) throw new Error(`${viewport.name}: ${slug} estimate button missing`);
