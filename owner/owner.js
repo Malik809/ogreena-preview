@@ -53,7 +53,7 @@ document.querySelectorAll('[data-owner-tab]').forEach(button => button.addEventL
   document.querySelectorAll('[data-owner-tab]').forEach(item => item.classList.toggle('active', item === button));
   $('[data-owner-messenger]').classList.remove('active');
   document.querySelectorAll('.owner-panel').forEach(panel => panel.classList.toggle('active', panel.id === `owner-${button.dataset.ownerTab}`));
-  if (location.hash === '#operations:messages') history.replaceState(null, '', `${location.pathname}${location.search}`);
+  if (location.hash.startsWith('#operations:')) history.replaceState(null, '', `${location.pathname}${location.search}`);
   ensureOwnerSectionLoaded(button.dataset.ownerTab).catch(error=>setStatus(error.message||'Dashboard section failed to load',true));
 }));
 document.querySelectorAll('[data-operation]').forEach(button => button.addEventListener('click', () => {
@@ -75,8 +75,12 @@ function openOwnerMessenger({ updateHash = true, load = true } = {}) {
 $('[data-owner-messenger]').addEventListener('click', () => openOwnerMessenger());
 
 function applyOwnerRoute() {
-  if (location.hash !== '#operations:messages') return;
-  openOwnerMessenger({ updateHash:false, load:false });
+  if (location.hash === '#operations:messages') { openOwnerMessenger({ updateHash:false, load:false }); return; }
+  if (location.hash !== '#operations:requests') return;
+  document.querySelectorAll('[data-owner-tab]').forEach(button=>button.classList.toggle('active',button.dataset.ownerTab==='operations'));
+  document.querySelectorAll('.owner-panel').forEach(panel=>panel.classList.toggle('active',panel.id==='owner-operations'));
+  operationView='requests';
+  document.querySelectorAll('[data-operation]').forEach(button=>button.classList.toggle('active',button.dataset.operation==='requests'));
 }
 
 const JOB_TIME_ZONE='America/Los_Angeles';
@@ -359,6 +363,9 @@ async function loadOperations() {
     const [requestsResult, rolesResult, profilesResult, pricesResult, itemsResult] = await Promise.all([supabase.from('service_requests').select('*').order('created_at', { ascending:false }), supabase.from('user_roles').select('*').eq('role','employee'), supabase.from('profiles').select('*'), supabase.from('service_price_items').select('*').eq('active',true), supabase.from('service_request_items').select('*').order('created_at')]);
     const data = requireOk(requestsResult) || [], employees = requireOk(rolesResult) || [], profiles = requireOk(profilesResult) || [], prices = requireOk(pricesResult) || [], requestItems=requireOk(itemsResult)||[]; const names = Object.fromEntries(profiles.map(profile => [profile.id, profile.display_name || 'Employee'])); const priceById=Object.fromEntries(prices.map(item=>[item.id,item])); const itemsByRequest=requestItems.reduce((groups,item)=>{(groups[item.request_id]||=[]).push(item);return groups;},{});
     target.innerHTML = table(['Customer','Service / details','Preferred date','Notification','Status / employee','Actions'], data.map(row => { const price=priceById[row.service_price_item_id]; const quantity=Number(row.approved_quantity || row.requested_quantity || 1); const quantityBased=price && price.pricing_type!=='fixed'; const selected=itemsByRequest[row.id]||[]; const selectedHtml=selected.length?`<ul>${selected.map(item=>`<li><b>${escapeHtml(item.service_name)}</b> — ${escapeHtml(item.item_name)}${item.price_cents===null?' · estimate requested':` · ${money(item.price_cents)}${item.pricing_type!=='fixed'?` × ${escapeHtml(item.requested_quantity)} ${escapeHtml(item.unit_label)}`:''}`}</li>`).join('')}</ul>`:''; return `<tr><td><b>${escapeHtml(row.customer_name || names[row.customer_id] || row.summary)}</b><br>${escapeHtml(row.customer_phone || '—')}<br>${escapeHtml(row.customer_email || 'Account customer')}<br>${escapeHtml(row.service_address || '—')}</td><td><b>${escapeHtml(selected.length?`${selected.length} selected services`:price?.name || row.service_slug.replaceAll('-',' '))}</b>${selectedHtml}<br>${price ? `${escapeHtml(window.OgreenaServiceCatalog.priceLabel(price))}${quantityBased?` · requested ${escapeHtml(row.requested_quantity || '—')} · approved ${escapeHtml(row.approved_quantity || 'pending')}`:''}<br>`:''}${escapeHtml(row.details || row.summary)}</td><td>${escapeHtml(row.preferred_date || '—')}</td><td><span class="tag">${escapeHtml(row.notification_status || 'not required')}</span>${row.notification_status === 'failed' ? '<br><small>Email queued for retry</small>' : ''}</td><td><select data-status-table="service_requests" data-id="${row.id}">${['submitted','reviewing','estimate_ready','scheduled','in_progress','completed','cancelled'].map(status => `<option ${row.status===status?'selected':''}>${status}</option>`).join('')}</select><select data-request-assignment data-id="${row.id}"><option value="">Unassigned</option>${employees.map(employee => `<option value="${employee.user_id}" ${row.assigned_employee_id===employee.user_id?'selected':''}>${escapeHtml(names[employee.user_id])}</option>`).join('')}</select></td><td>${quantityBased?`<button class="small-btn" data-approve-quantity="${row.id}" data-requested="${row.requested_quantity || 1}">Approve Quantity</button> `:''}<button class="small-btn" data-respond-request="${row.id}">Respond</button> ${price?`<button class="small-btn" data-create-estimate="${row.id}" data-customer="${row.customer_id || ''}" data-price-item="${escapeHtml(price.id)}" data-quantity="${quantity}">Create Estimate</button>`:'<span class="muted">Review selected services before preparing an estimate.</span>'} <button class="small-btn" data-schedule-request="${row.id}" data-customer="${row.customer_id || ''}" data-employee="${row.assigned_employee_id || ''}">Schedule</button></td></tr>`; }));
+  } else if (operationView === 'notifications') {
+    const deliveries=requireOk(await supabase.from('business_notification_deliveries').select('*').order('created_at',{ascending:false}).limit(100))||[];
+    target.innerHTML=table(['Created','Customer / type','Recipient','Delivery','Failure'],deliveries.map(row=>`<tr><td>${escapeHtml(new Date(row.created_at).toLocaleString())}</td><td><b>${escapeHtml(row.customer_name)}</b><br>${escapeHtml(row.request_type)}<br>${escapeHtml(row.summary)}</td><td>${escapeHtml(row.recipient_email)}</td><td><span class="status-pill ${escapeHtml(row.status)}">${escapeHtml(row.status)}</span><br>${escapeHtml(row.provider||'Provider pending')} · attempt ${escapeHtml(row.attempt_count)}</td><td>${escapeHtml(row.last_error||'—')}</td></tr>`));
   } else if (operationView === 'businesses') {
     const data = requireOk(await supabase.from('business_registration_requests').select('id,business_id,authority_description,status,created_at,businesses!inner(display_name)').order('created_at', { ascending:false })) || [];
     target.innerHTML = table(['Business','Authority statement','Requested','Status','Action'], data.map(row => `<tr><td><b>${escapeHtml(row.businesses?.display_name || 'Business')}</b></td><td>${escapeHtml(row.authority_description)}</td><td>${escapeHtml(new Date(row.created_at).toLocaleDateString())}</td><td>${escapeHtml(row.status)}</td><td>${row.status === 'pending' ? `<button class="small-btn primary" data-review-business="${row.id}" data-decision="approved">Approve</button> <button class="small-btn danger" data-review-business="${row.id}" data-decision="rejected">Reject</button>` : 'Reviewed'}</td></tr>`));
@@ -729,7 +736,7 @@ async function initialize() {
   currentUserId = session.user.id;
   denied.hidden = true; dashboard.hidden = false;
   applyOwnerRoute();
-  await ensureOwnerSectionLoaded(location.hash === '#operations:messages' ? 'operations' : 'overview');
+  await ensureOwnerSectionLoaded(location.hash.startsWith('#operations:') ? 'operations' : 'overview');
   setStatus('All owner controls loaded');
 }
 

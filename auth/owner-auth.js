@@ -334,6 +334,7 @@ document.querySelector('#requestForm').addEventListener('submit', async event =>
   });
   submit.disabled=false;
   if(error){document.querySelector('#requestConfirmation').textContent=friendlyError(error);return;}
+  supabase.functions.invoke('send-business-notifications',{body:{source:'service_request'}}).catch(()=>{});
   form.reset();fillContactPropertyForms(currentCustomerProfile);selectedRequestItems.clear();renderRequestChoices();updateRequestPreview();
   document.querySelector('#requestConfirmation').textContent=`Request sent to Ogreena. Status: submitted. Reference ${String(data).slice(0,8)}.`;
   await loadRequests(user.id);

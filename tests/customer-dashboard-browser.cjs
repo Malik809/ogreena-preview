@@ -15,6 +15,7 @@ const session = { access_token:'mock-customer-access', refresh_token:'mock-custo
     const prices = [{ id:'carpet-cleaning-bedroom', category:'carpet-cleaning', service_slug:'carpet-cleaning', name:'Bedroom Cleaning', price_cents:10000, pricing_type:'fixed', unit_label:'', active:true, display_order:1 }];
     await page.addInitScript(value => localStorage.setItem('ogreena-auth-session', JSON.stringify(value)), session);
     await page.route('**/auth/v1/user', route => route.fulfill({ status:200, contentType:'application/json', body:JSON.stringify(user) }));
+    await page.route('**/functions/v1/send-business-notifications', route => route.fulfill({ status:200, contentType:'application/json', body:JSON.stringify({ processed:1, sent:1, failed:0 }) }));
     await page.route('**/rest/v1/**', route => {
       const url = new URL(route.request().url());
       let body = [];

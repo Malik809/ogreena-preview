@@ -1,0 +1,32 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const migration=fs.readFileSync('supabase/migrations/20261106205226_business_email_notification_outbox.sql','utf8');
+const edge=fs.readFileSync('supabase/functions/send-business-notifications/index.ts','utf8');
+const customer=fs.readFileSync('auth/owner-auth.js','utf8');
+const messenger=fs.readFileSync('messages/messenger.js','utf8');
+const owner=fs.readFileSync('owner/owner.js','utf8');
+const ownerPage=fs.readFileSync('owner/index.html','utf8');
+
+assert.match(migration,/business_notification_deliveries/);
+assert.match(migration,/far\.i@ogreena\.com/);
+assert.match(migration,/unique\(event_type,source_id,recipient_email\)/);
+assert.match(migration,/service_requests_enqueue_business_notification/);
+assert.match(migration,/messages_enqueue_business_notification/);
+assert.match(migration,/on conflict\(event_type,source_id,recipient_email\) do nothing/);
+assert.match(migration,/business_notification_deliveries_owner_read[\s\S]+private\.is_owner/);
+assert.match(migration,/for update skip locked/);
+assert.match(migration,/grant execute on function public\.claim_business_notifications\(integer\) to service_role/);
+assert.match(edge,/RESEND_API_KEY/);
+assert.match(edge,/NOTIFICATION_FROM_EMAIL/);
+assert.match(edge,/api\.resend\.com\/emails/);
+assert.match(edge,/Sign-in is required to view full customer details/);
+assert.match(edge,/status:'failed'/);
+assert.doesNotMatch(edge,/console\.log\([^)]*(customer|summary|delivery)/i);
+assert.match(customer,/send-business-notifications/);
+assert.match(messenger,/send-business-notifications/g);
+assert.match(ownerPage,/Email Notifications/);
+assert.match(owner,/business_notification_deliveries/);
+assert.match(owner,/operations:requests/);
+assert.doesNotMatch(edge,/TWILIO|SMS/i);
+
+console.log('Private deduplicated email outbox, owner-only delivery log, authenticated dispatcher, and failure logging PASS');
