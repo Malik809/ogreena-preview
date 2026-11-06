@@ -14,6 +14,7 @@ assert.equal(services.slice(-2).map(service => service.slug).join(','), 'landsca
 
 const app = read('app.js');
 assert.match(app, /featuredSlugs = \['carpet-cleaning','house-cleaning','deep-cleaning','move-in-move-out-cleaning','landscaping','hauling'\]/);
+const serviceScript = read('service.js');
 
 for (const [slug, title] of [['landscaping','Landscaping'],['hauling','Hauling']]) {
   const html = read(`services/${slug}/index.html`);
@@ -23,10 +24,15 @@ for (const [slug, title] of [['landscaping','Landscaping'],['hauling','Hauling']
   assert.match(html, new RegExp(`canonical" href="https://ogreena.com/services/${slug}/`));
 }
 
-const service = read('service.js');
-assert.match(service, /'landscaping':/);
-assert.match(service, /'hauling':/);
-assert.match(service, /messages\/\?service=/);
+const landscapingPage = read('services/landscaping/index.html');
+assert.match(landscapingPage, /Professional landscaping, lawn care, yard maintenance, and property groundskeeping services throughout the Bay Area\./);
+assert.match(serviceScript, /'landscaping'[\s\S]*description: 'Professional landscaping, lawn care, yard maintenance, and property groundskeeping services throughout the Bay Area\.'/);
+assert.doesNotMatch(serviceScript, /'landscaping'[\s\S]{0,250}cover: 'facilities-maintenance'/);
+assert.ok(fs.existsSync(path.join(root, 'assets/service-covers/landscaping.jpg')), 'landscaping cover image is missing');
+
+assert.match(serviceScript, /'landscaping':/);
+assert.match(serviceScript, /'hauling':/);
+assert.match(serviceScript, /messages\/\?service=/);
 
 const owner = read('owner/owner.js');
 assert.match(owner, /\['landscaping','Landscaping'\]/);

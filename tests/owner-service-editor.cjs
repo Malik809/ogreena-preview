@@ -48,7 +48,7 @@ const servicePages = fs.readdirSync(path.join(root, 'services'))
 assert.equal(servicePages.length, 16);
 for (const file of servicePages) {
   const html = read(file);
-  assert.match(html, /service\.js\?v=23/);
+  assert.match(html, /service\.js\?v=(?:23|24)/);
   assert.match(html, /public-data\.js\?v=3/);
 }
 

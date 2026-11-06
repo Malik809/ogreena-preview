@@ -5,6 +5,7 @@ const base = process.env.SITE_URL || 'http://127.0.0.1:4173';
   const browser = await chromium.launch({ headless:true });
   for (const viewport of [{name:'desktop',width:1280,height:900},{name:'iphone',width:390,height:844}]) {
     const page = await browser.newPage({ viewport });
+    if (base.includes('127.0.0.1') || base.includes('localhost')) await page.route('**/rest/v1/**', route => route.fulfill({ status:200, contentType:'application/json', body:route.request().url().includes('/rpc/') ? 'false' : '[]' }));
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(`${base}/`, { waitUntil:'networkidle' });
@@ -15,6 +16,12 @@ const base = process.env.SITE_URL || 'http://127.0.0.1:4173';
     if (names.join('|') !== expected.join('|')) throw new Error(`${viewport.name}: featured order was ${names.join('|')}`);
     for (const slug of ['landscaping','hauling']) {
       await page.goto(`${base}/services/${slug}/`, { waitUntil:'networkidle' });
+      if (slug === 'landscaping') {
+        const description = await page.locator('#serviceDesc').textContent();
+        if (description?.trim() !== 'Professional landscaping, lawn care, yard maintenance, and property groundskeeping services throughout the Bay Area.') throw new Error(`${viewport.name}: landscaping description is incorrect`);
+        const background = await page.locator('.service-profile .cover').evaluate(node => getComputedStyle(node).backgroundImage);
+        if (!background.includes('landscaping.jpg')) throw new Error(`${viewport.name}: landscaping cover is incorrect: ${background}`);
+      }
       const request = page.getByRole('button', { name:'Request Estimate', exact:true }).first();
       if (!await request.isVisible()) throw new Error(`${viewport.name}: ${slug} estimate button missing`);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);

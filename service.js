@@ -93,8 +93,8 @@ const serviceData = {
     jobs: ['Residential exteriors', 'Apartment and commercial entries', 'Walkways and common areas', 'Managed-property maintenance']
   },
   'landscaping': {
-    name: 'Landscaping', icon: '♧', availability: 'Residential and commercial', cover: 'facilities-maintenance', requestLabel: 'Request Estimate',
-    description: 'Lawn care, yard cleanup, landscaping and property grounds maintenance for Bay Area homes, rental properties and businesses.',
+    name: 'Landscaping', icon: '♧', availability: 'Residential and commercial', requestLabel: 'Request Estimate',
+    description: 'Professional landscaping, lawn care, yard maintenance, and property groundskeeping services throughout the Bay Area.',
     handles: ['Lawn care and routine grounds upkeep', 'Yard cleanup and green-waste preparation', 'Landscape bed and outdoor-area maintenance', 'Seasonal property cleanup', 'Grounds maintenance for residential and commercial properties'],
     jobs: ['Homes and rental properties', 'Apartment and multi-unit grounds', 'Commercial property exteriors', 'One-time cleanup and recurring maintenance']
   },
