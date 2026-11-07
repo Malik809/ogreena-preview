@@ -43,6 +43,7 @@ async function ensureOwnerSectionLoaded(section) {
     website:async()=>{await refreshServiceProfileOptions();await Promise.all([loadServicePrices(),loadServicePictures(),loadContent()]);},
     products:loadProducts,
     services:loadServices,
+    events:loadCommunityEventReview,
     calendar:loadJobCalendar,
     operations:loadOperations,
     payments:loadPayments,
@@ -55,6 +56,14 @@ function setStatus(message, error = false) { const node = $('#globalStatus'); no
 async function run(label, action) { setStatus(`${label}…`); try { const value = await action(); setStatus(`${label} complete`); return value; } catch (error) { setStatus(error.message || `${label} failed`, true); throw error; } }
 function requireOk(result) { if (result.error) throw result.error; return result.data; }
 async function count(table) { const result = await supabase.from(table).select('*', { count:'exact', head:true }); return result.error ? 0 : (result.count || 0); }
+async function ownerEventFlyer(path){const result=await supabase.storage.from('community-event-flyers').createSignedUrl(path,900);return result.error?'':result.data.signedUrl;}
+async function loadCommunityEventReview(){
+  const target=$('#communityEventReviewList'),result=await supabase.from('community_events').select('*').order('created_at',{ascending:false});
+  if(result.error)throw result.error;const rows=result.data||[];if(!rows.length){target.innerHTML='<p class="empty-state">No community events have been submitted.</p>';return;}
+  const urls=await Promise.all(rows.map(row=>ownerEventFlyer(row.flyer_path)));
+  target.innerHTML=rows.map((row,index)=>`<article class="owner-event-card">${urls[index]?`<img src="${escapeHtml(urls[index])}" alt="Flyer for ${escapeHtml(row.event_name)}">`:''}<div><span class="status-pill ${escapeHtml(row.moderation_status)}">${escapeHtml(row.moderation_status)}</span><h3>${escapeHtml(row.event_name)}</h3><p><strong>${escapeHtml(row.event_date)}</strong>${row.start_time?` · ${escapeHtml(row.start_time.slice(0,5))}`:''}</p><p>${escapeHtml(row.event_location)}</p><p>${escapeHtml(row.description)}</p><p class="muted">Organizer: ${escapeHtml(row.organizer_name)}${row.contact_information?` · ${escapeHtml(row.contact_information)}`:''}</p><label>Private moderation note<textarea data-event-note="${row.id}" rows="2" maxlength="500">${escapeHtml(row.moderation_note||'')}</textarea></label><div class="editor-actions"><button class="small-btn primary" type="button" data-event-decision="approved" data-event-id="${row.id}">Approve</button><button class="small-btn danger" type="button" data-event-decision="rejected" data-event-id="${row.id}">Reject</button></div></div></article>`).join('');
+  target.querySelectorAll('[data-event-decision]').forEach(button=>button.addEventListener('click',()=>run(`${button.dataset.eventDecision==='approved'?'Approving':'Rejecting'} event`,async()=>{const note=target.querySelector(`[data-event-note="${button.dataset.eventId}"]`).value;requireOk(await supabase.rpc('moderate_community_event',{event_id:button.dataset.eventId,decision:button.dataset.eventDecision,note}));await loadCommunityEventReview();})));
+}
 function setOwnerUnreadCount(count) { $('#messageCount').textContent=count; const badge=$('#ownerMessengerUnread'); badge.textContent=count; badge.hidden=count===0; }
 
 document.querySelector('#signOut').addEventListener('click', async () => { await supabase.auth.signOut(); location.href = '../auth/?mode=signin'; });

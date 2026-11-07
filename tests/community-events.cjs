@@ -1,0 +1,8 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');
+const read=path=>fs.readFileSync(path,'utf8'),page=read('kinship-network/index.html'),script=read('kinship-network/community-events.js'),owner=read('owner/owner.js'),sql=read('supabase/migrations/20261107203531_community_events.sql'),edge=read('supabase/functions/community-event-flyer/index.ts');
+test('community event page includes submission, preview, and responsive assets',()=>{for(const text of ['Post an Event','Upload Event Flyer','Event preview','My event posts','community-events.css'])assert.match(page,new RegExp(text));});
+test('public listings are approved and upcoming only',()=>{assert.match(script,/eq\('moderation_status','approved'\)/);assert.match(script,/gte\('event_date',today\)/);});
+test('organizers can edit and remove owned posts',()=>{assert.match(script,/data-edit-event/);assert.match(script,/data-delete-event/);assert.match(script,/eq\('organizer_id',session\.user\.id\)/);});
+test('database enforces ownership, approval, spam limits, and private storage',()=>{for(const text of ['enable row level security','private.is_owner()','recent_count>=3',"false,5242880","moderation_status='approved'"])assert.ok(sql.includes(text),text);});
+test('server validates flyer authentication, size, MIME, magic bytes, and ownership',()=>{for(const text of ['auth.getUser','5*1024*1024','magicOk','eq(\'organizer_id\',user.id)','SUPABASE_SERVICE_ROLE_KEY'])assert.ok(edge.includes(text),text);});
+test('owner dashboard exposes approval and rejection only to existing owner authorization',()=>{assert.match(owner,/moderate_community_event/);assert.match(owner,/decision:button\.dataset\.eventDecision/);});
