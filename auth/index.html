@@ -23,6 +23,7 @@
       <div class="auth-tabs" role="tablist">
         <button class="active" data-auth-tab="signin">Sign In</button>
         <button data-auth-tab="signup">Sign Up</button>
+        <button data-auth-tab="confirmation">Resend Confirmation</button>
         <button data-auth-tab="recovery">Reset Password</button>
       </div>
       <form id="signInForm" class="auth-form">
@@ -37,6 +38,11 @@
         <label>Password<input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
         <button class="small-btn primary" type="submit">Create Ogreena Account</button>
         <p class="muted">A confirmation email is required before sign-in. Choosing Business Owner starts a separate business-verification request; it never grants owner access by itself.</p>
+      </form>
+      <form id="confirmationForm" class="auth-form" hidden>
+        <label>Email<input name="email" type="email" autocomplete="email" required></label>
+        <button class="small-btn primary" type="submit">Send New Confirmation Email</button>
+        <p class="muted">Use the same email you registered with. Ogreena will not verify an account automatically.</p>
       </form>
       <form id="recoveryForm" class="auth-form" hidden>
         <label>Email<input name="email" type="email" autocomplete="email" required></label>
@@ -81,6 +87,6 @@
   <div id="toast"></div>
   <script src="../vendor/supabase-2.57.4.min.js"></script>
   <script src="../service-catalog.js?v=1"></script>
-  <script src="owner-auth.js?v=22"></script>
+  <script src="owner-auth.js?v=23"></script>
 </body>
 </html>

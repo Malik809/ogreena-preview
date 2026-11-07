@@ -40,6 +40,20 @@ async function fillSignup(page, suffix) {
     if (await duplicate.locator('#signUpForm button[type="submit"]').isDisabled()) throw new Error(`${viewport.name}: signup button stayed disabled after error`);
     await duplicate.close();
 
+    const confirmation = await browser.newPage({ viewport });
+    let confirmationRedirect = '';
+    await confirmation.route('**/auth/v1/resend**', route => {
+      confirmationRedirect = new URL(route.request().url()).searchParams.get('redirect_to') || '';
+      return route.fulfill({ status:200, contentType:'application/json', body:JSON.stringify({}) });
+    });
+    await confirmation.goto(`${base}/auth/?mode=confirmation`, { waitUntil:'networkidle' });
+    await confirmation.locator('#confirmationForm input[name="email"]').fill(`ogreena-${viewport.name}@example.invalid`);
+    await confirmation.locator('#confirmationForm button[type="submit"]').click();
+    await confirmation.locator('#authStatus.success').waitFor();
+    if (!/new confirmation link has been sent/i.test(await confirmation.locator('#authStatus').innerText())) throw new Error(`${viewport.name}: resend confirmation response is unclear`);
+    if (confirmationRedirect !== 'https://ogreena.com/auth/') throw new Error(`${viewport.name}: resend confirmation redirect is incorrect`);
+    await confirmation.close();
+
     const owner = await browser.newPage({ viewport });
     const ownerUser = { id: '00000000-0000-4000-8000-000000000010', email: 'owner@example.invalid', email_confirmed_at: new Date().toISOString(), role: 'authenticated' };
     await owner.route('**/rest/v1/**', route => route.fulfill({ status: 200, contentType: 'application/json', body:'[]' }));
@@ -55,7 +69,7 @@ async function fillSignup(page, suffix) {
     if (!await owner.locator('#ownerDashboard').isVisible()) throw new Error(`${viewport.name}: verified owner did not reach the dashboard`);
     await owner.close();
 
-    console.log(`${viewport.name}: duplicate recovery and verified owner redirect PASS`);
+    console.log(`${viewport.name}: duplicate recovery, confirmation resend, and verified owner redirect PASS`);
   }
   await browser.close();
 })().catch(error => { console.error(error.stack || error); process.exit(1); });

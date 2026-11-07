@@ -17,6 +17,7 @@ const items=[{request_id:requests[0].id,service_name:'Carpet Cleaning',item_name
     const page=await browser.newPage({viewport});let scheduledPayload=null;
     await page.addInitScript(value=>localStorage.setItem('ogreena-auth-session',JSON.stringify(value)),session);
     await page.route('**/auth/v1/user',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(owner)}));
+    await page.route('**/functions/v1/owner-customer-directory',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({metrics:{totalRegistrations:0,verifiedAccounts:0,unverifiedRegistrations:0,actualCustomers:0,testRegistrations:0,realCustomerRequests:0,validationTestRequests:0},customers:[],requests:[]})}));
     await page.route('**/rest/v1/**',route=>{
       const url=new URL(route.request().url());let body=[];
       if(url.pathname.endsWith('/rpc/manage_job_schedule')){scheduledPayload=route.request().postDataJSON();body='30000000-0000-4000-8000-000000000002';}

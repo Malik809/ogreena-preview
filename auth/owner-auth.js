@@ -73,7 +73,7 @@ async function runFormRequest(form, pendingMessage, request, onSuccess) {
 
 function switchTab(name) {
   document.querySelectorAll('[data-auth-tab]').forEach(button => button.classList.toggle('active', button.dataset.authTab === name));
-  document.querySelectorAll('#signInForm,#signUpForm,#recoveryForm,#newPasswordForm').forEach(form => { form.hidden = form.id !== ({signin:'signInForm',signup:'signUpForm',recovery:'recoveryForm',password:'newPasswordForm'}[name]); });
+  document.querySelectorAll('#signInForm,#signUpForm,#confirmationForm,#recoveryForm,#newPasswordForm').forEach(form => { form.hidden = form.id !== ({signin:'signInForm',signup:'signUpForm',confirmation:'confirmationForm',recovery:'recoveryForm',password:'newPasswordForm'}[name]); });
   setStatus('');
 }
 
@@ -83,7 +83,7 @@ const requestedNext = new URLSearchParams(location.search).get('next');
 const safeNext = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '';
 const recoveryHash = new URLSearchParams(location.hash.replace(/^#/, ''));
 let recoveryMode = requestedMode === 'password' || recoveryHash.get('type') === 'recovery';
-if (['signin', 'signup', 'recovery', 'password'].includes(requestedMode)) switchTab(requestedMode);
+if (['signin', 'signup', 'confirmation', 'recovery', 'password'].includes(requestedMode)) switchTab(requestedMode);
 if (recoveryMode) switchTab('password');
 
 document.querySelector('#signUpForm').addEventListener('submit', async event => {
@@ -152,6 +152,16 @@ document.querySelector('#recoveryForm').addEventListener('submit', async event =
   const values = Object.fromEntries(new FormData(form));
   await runFormRequest(form, 'Requesting a secure recovery email…', () => supabase.auth.resetPasswordForEmail(values.email, { redirectTo: recoveryRedirect }), async () => {
     form.reset(); setStatus('If that account exists, a recovery email has been sent.', 'success');
+  });
+});
+
+document.querySelector('#confirmationForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form));
+  await runFormRequest(form, 'Requesting a new confirmation email…', () => supabase.auth.resend({ type:'signup', email:values.email, options:{ emailRedirectTo:authRedirect } }), async () => {
+    form.reset();
+    setStatus('If an unverified account exists for that email, a new confirmation link has been sent. Check the inbox and spam folder.', 'success');
   });
 });
 
