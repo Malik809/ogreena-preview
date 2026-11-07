@@ -23,6 +23,7 @@ const directory={metrics:{totalRegistrations:2,verifiedAccounts:1,unverifiedRegi
     const unverifiedEmail=viewport.name==='iphone'?directoryView.locator('.customer-registration-email',{hasText:'unverified@example.com'}):directoryView.locator('td',{hasText:'unverified@example.com'});
     try{await verifiedEmail.first().waitFor({timeout:5000});}catch(error){throw new Error(`${viewport.name}: registration directory did not open; status=${await page.locator('#globalStatus').textContent()}; operations=${await page.locator('#operationList').innerText()}`);}
     if(!await unverifiedEmail.count())throw new Error(`${viewport.name}: Total Registrations did not include the unverified account`);
+    if(await page.getByRole('button',{name:/Make Employee/i}).count())throw new Error(`${viewport.name}: customer directory still exposes employee promotion controls`);
     if(viewport.name==='iphone'&&(!await page.locator('.customer-directory-table').isHidden()||await page.locator('.customer-directory-cards').count()!==1))throw new Error('iphone: wide desktop table is still visible');
     if(viewport.name==='desktop'&&(!await page.locator('.customer-directory-cards').isHidden()||!await page.locator('.customer-directory-table').isVisible()))throw new Error('desktop: table layout was not preserved');
     await page.getByPlaceholder('Name, email, phone, or address').fill('nobody');
@@ -33,7 +34,10 @@ const directory={metrics:{totalRegistrations:2,verifiedAccounts:1,unverifiedRegi
     if(await page.locator('#operationList').getByText('carpet cleaning',{exact:false}).count())throw new Error(`${viewport.name}: test request filter includes real requests`);
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
     if(overflow>1)throw new Error(`${viewport.name}: owner directory overflows by ${overflow}px`);
-    console.log(`${viewport.name}: dynamic metrics, private directory, search, request filtering, and responsive layout PASS`);
+    await page.getByRole('button',{name:'Business Operations'}).click();
+    await page.getByRole('button',{name:'Employee Access'}).click();
+    try{await page.getByRole('button',{name:'Invite Existing Employee'}).waitFor({timeout:5000});}catch(error){throw new Error(`${viewport.name}: employee management is unavailable in Employee Access`);}
+    console.log(`${viewport.name}: private customer directory is view-only; employee management, search, request filtering, and responsive layout PASS`);
     await page.close();
   }
   await browser.close();
