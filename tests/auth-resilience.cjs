@@ -41,6 +41,7 @@ async function fillSignup(page, suffix) {
     await duplicate.close();
 
     const confirmation = await browser.newPage({ viewport });
+    await confirmation.addInitScript(() => window.localStorage.removeItem('ogreena-confirmation-resend-after'));
     let confirmationRedirect = '';
     await confirmation.route('**/auth/v1/resend**', route => {
       confirmationRedirect = new URL(route.request().url()).searchParams.get('redirect_to') || '';
@@ -52,7 +53,15 @@ async function fillSignup(page, suffix) {
     await confirmation.locator('#authStatus.success').waitFor();
     if (!/new confirmation link has been sent/i.test(await confirmation.locator('#authStatus').innerText())) throw new Error(`${viewport.name}: resend confirmation response is unclear`);
     if (confirmationRedirect !== 'https://ogreena.com/auth/') throw new Error(`${viewport.name}: resend confirmation redirect is incorrect`);
+    if (!await confirmation.locator('#confirmationForm button[type="submit"]').isDisabled()) throw new Error(`${viewport.name}: confirmation resend cooldown was not applied`);
+    if (!/send another email in/i.test(await confirmation.locator('#confirmationForm button[type="submit"]').innerText())) throw new Error(`${viewport.name}: confirmation cooldown is not explained`);
     await confirmation.close();
+
+    const expired = await browser.newPage({ viewport });
+    await expired.goto(`${base}/auth/#error=access_denied&error_code=otp_expired`, { waitUntil:'networkidle' });
+    if (!await expired.locator('#confirmationForm').isVisible()) throw new Error(`${viewport.name}: expired confirmation did not open the resend form`);
+    if (!/invalid or expired/i.test(await expired.locator('#authStatus').innerText())) throw new Error(`${viewport.name}: expired confirmation guidance is unclear`);
+    await expired.close();
 
     const owner = await browser.newPage({ viewport });
     const ownerUser = { id: '00000000-0000-4000-8000-000000000010', email: 'owner@example.invalid', email_confirmed_at: new Date().toISOString(), role: 'authenticated' };

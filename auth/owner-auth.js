@@ -10,6 +10,8 @@ const authRedirect = 'https://ogreena.com/auth/';
 // the project's allowed redirects. Supabase adds the recovery session to it.
 const recoveryRedirect = 'https://ogreena.com/auth/';
 const OWNER_SESSION_HANDOFF_KEY = 'ogreena-owner-session-handoff';
+const CONFIRMATION_COOLDOWN_KEY = 'ogreena-confirmation-resend-after';
+const CONFIRMATION_COOLDOWN_MS = 60 * 1000;
 
 const authPanel = document.querySelector('#authPanel');
 const accountPanel = document.querySelector('#accountPanel');
@@ -56,6 +58,26 @@ function setFormBusy(form, busy) {
   form.querySelectorAll('button,input').forEach(control => { control.disabled = busy; });
 }
 
+function applyConfirmationCooldown(form) {
+  const button = form.querySelector('button[type="submit"]');
+  const originalLabel = 'Send New Confirmation Email';
+  const update = () => {
+    const resendAfter = Number(window.localStorage.getItem(CONFIRMATION_COOLDOWN_KEY) || 0);
+    const seconds = Math.max(0, Math.ceil((resendAfter - Date.now()) / 1000));
+    if (!seconds) {
+      button.disabled = false;
+      button.textContent = originalLabel;
+      window.localStorage.removeItem(CONFIRMATION_COOLDOWN_KEY);
+      return false;
+    }
+    button.disabled = true;
+    button.textContent = `Send another email in ${seconds}s`;
+    return true;
+  };
+  if (!update()) return;
+  const timer = window.setInterval(() => { if (!update()) window.clearInterval(timer); }, 1000);
+}
+
 async function runFormRequest(form, pendingMessage, request, onSuccess) {
   if (form.dataset.submitting === 'true') return;
   setStatus(pendingMessage);
@@ -85,6 +107,12 @@ const recoveryHash = new URLSearchParams(location.hash.replace(/^#/, ''));
 let recoveryMode = requestedMode === 'password' || recoveryHash.get('type') === 'recovery';
 if (['signin', 'signup', 'confirmation', 'recovery', 'password'].includes(requestedMode)) switchTab(requestedMode);
 if (recoveryMode) switchTab('password');
+const callbackError = recoveryHash.get('error_code') || recoveryHash.get('error');
+if (callbackError && !recoveryMode) {
+  switchTab('confirmation');
+  setStatus('This confirmation link is invalid or expired. Enter your email to request a new confirmation link.', 'error');
+}
+applyConfirmationCooldown(document.querySelector('#confirmationForm'));
 
 document.querySelector('#signUpForm').addEventListener('submit', async event => {
   event.preventDefault();
@@ -159,10 +187,16 @@ document.querySelector('#confirmationForm').addEventListener('submit', async eve
   event.preventDefault();
   const form = event.currentTarget;
   const values = Object.fromEntries(new FormData(form));
+  let sent = false;
   await runFormRequest(form, 'Requesting a new confirmation email…', () => supabase.auth.resend({ type:'signup', email:values.email, options:{ emailRedirectTo:authRedirect } }), async () => {
+    sent = true;
     form.reset();
     setStatus('If an unverified account exists for that email, a new confirmation link has been sent. Check the inbox and spam folder.', 'success');
   });
+  if (sent) {
+    window.localStorage.setItem(CONFIRMATION_COOLDOWN_KEY, String(Date.now() + CONFIRMATION_COOLDOWN_MS));
+    applyConfirmationCooldown(form);
+  }
 });
 
 document.querySelector('#newPasswordForm').addEventListener('submit', async event => {
