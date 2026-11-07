@@ -20,6 +20,7 @@ create policy community_events_organizer_read on public.community_events for sel
 create policy community_events_owner_read on public.community_events for select to authenticated using ((select private.is_owner()));
 create policy community_events_organizer_insert on public.community_events for insert to authenticated with check (organizer_id=(select auth.uid()) and moderation_status='pending' and approved_by is null and approved_at is null);
 create policy community_events_organizer_update on public.community_events for update to authenticated using (organizer_id=(select auth.uid())) with check (organizer_id=(select auth.uid()));
+create policy community_events_owner_update on public.community_events for update to authenticated using ((select private.is_owner())) with check ((select private.is_owner()));
 create policy community_events_organizer_delete on public.community_events for delete to authenticated using (organizer_id=(select auth.uid()));
 create or replace function private.secure_community_event_write() returns trigger language plpgsql security definer set search_path=pg_catalog,public as $$
 declare recent_count integer;
@@ -38,7 +39,7 @@ end $$;
 revoke all on function private.secure_community_event_write() from public,anon,authenticated;
 drop trigger if exists secure_community_event_write on public.community_events;
 create trigger secure_community_event_write before insert or update on public.community_events for each row execute function private.secure_community_event_write();
-create or replace function public.moderate_community_event(event_id uuid,decision text,note text default null) returns public.community_events language plpgsql security definer set search_path=pg_catalog,public as $$
+create or replace function public.moderate_community_event(event_id uuid,decision text,note text default null) returns public.community_events language plpgsql security invoker set search_path=pg_catalog,public as $$
 declare result public.community_events;
 begin
   if not (select private.is_owner()) then raise exception 'Owner access required'; end if;
