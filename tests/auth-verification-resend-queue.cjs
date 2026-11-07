@@ -1,0 +1,14 @@
+const fs=require('fs');
+const assert=require('assert');
+const sql=fs.readFileSync('supabase/migrations/20261107172741_auth_verification_resend_queue.sql','utf8');
+assert.match(sql,/create table if not exists private\.auth_verification_resend_queue/);
+assert.match(sql,/primary key references auth\.users\(id\)/);
+assert.match(sql,/email_confirmed_at is null/);
+assert.match(sql,/role='customer'/);
+assert.match(sql,/test\|demo\|sample\|example\|invalid\|validation\|playwright\|mock/);
+assert.match(sql,/status='sending'[\s\S]+http_request_id/);
+assert.match(sql,/redirect_to=https%3A%2F%2Fogreena\.com%2Fauth%2F/);
+assert.match(sql,/status='failed'[\s\S]+stopped/);
+assert.match(sql,/\*\/3 \* \* \* \*/);
+assert.doesNotMatch(sql,/email_confirmed_at\s*=/);
+console.log('auth verification resend queue: private eligibility, deduplication, throttling, redirect, and stop-on-error PASS');
