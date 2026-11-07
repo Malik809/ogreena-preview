@@ -67,7 +67,7 @@
       <a data-menu-search="electrical services electrician outlets switches lighting" href="${siteRoot}services/electrical-services/">Electrical Services</a>
       <a data-menu-search="all services" href="${siteRoot}#services">All Services</a>
       <a data-menu-search="products natural cleaning products store" href="${siteRoot}products/">Products</a>
-      <a data-menu-search="kinship network community" href="${siteRoot}kinship-network/">Kinship Network</a>
+      <a data-menu-search="kinship network community" href="${siteRoot}kinship-network/">Community Events</a>
       <a data-menu-search="blog green articles cleaning tips" href="${siteRoot}eco-cleaning-home-1/">Blog / Green Articles</a>
       <a data-menu-search="careers hiring jobs application employment" href="${siteRoot}hiring-application/">Careers / Hiring</a>
       <a data-menu-search="contact phone call estimate" href="${siteRoot}#contact">Contact</a>
