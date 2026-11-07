@@ -17,9 +17,14 @@ const directory={metrics:{totalRegistrations:2,verifiedAccounts:1,unverifiedRegi
     await page.goto(`${base}/owner/`,{waitUntil:'networkidle'});
     if(!directoryAuthorized)throw new Error(`${viewport.name}: customer directory request did not include the owner session`);
     for(const [label,value] of [['Total Registrations','2'],['Verified Accounts','1'],['Unverified Registrations','1'],['Actual Customers','1'],['New Service Requests','1'],['Test Requests','1']]){const card=page.getByRole('button',{name:new RegExp(label,'i')});if(!await card.count()||!((await card.textContent())||'').includes(value))throw new Error(`${viewport.name}: ${label} metric is incorrect`);}
-    await page.getByRole('button',{name:/Verified Accounts/i}).click();
-    try{await page.locator('#operationList').getByText('verified@example.com').waitFor({timeout:5000});}catch(error){throw new Error(`${viewport.name}: verified directory did not open; status=${await page.locator('#globalStatus').textContent()}; operations=${await page.locator('#operationList').innerText()}`);}
-    if(await page.locator('#operationList').getByText('unverified@example.com').count())throw new Error(`${viewport.name}: verified filter includes unverified accounts`);
+    await page.getByRole('button',{name:/Total Registrations/i}).click();
+    const directoryView=viewport.name==='iphone'?page.locator('.customer-directory-cards'):page.locator('.customer-directory-table');
+    const verifiedEmail=viewport.name==='iphone'?directoryView.locator('.customer-registration-email',{hasText:'verified@example.com'}):directoryView.locator('td',{hasText:'verified@example.com'});
+    const unverifiedEmail=viewport.name==='iphone'?directoryView.locator('.customer-registration-email',{hasText:'unverified@example.com'}):directoryView.locator('td',{hasText:'unverified@example.com'});
+    try{await verifiedEmail.first().waitFor({timeout:5000});}catch(error){throw new Error(`${viewport.name}: registration directory did not open; status=${await page.locator('#globalStatus').textContent()}; operations=${await page.locator('#operationList').innerText()}`);}
+    if(!await unverifiedEmail.count())throw new Error(`${viewport.name}: Total Registrations did not include the unverified account`);
+    if(viewport.name==='iphone'&&(!await page.locator('.customer-directory-table').isHidden()||await page.locator('.customer-directory-cards').count()!==1))throw new Error('iphone: wide desktop table is still visible');
+    if(viewport.name==='desktop'&&(!await page.locator('.customer-directory-cards').isHidden()||!await page.locator('.customer-directory-table').isVisible()))throw new Error('desktop: table layout was not preserved');
     await page.getByPlaceholder('Name, email, phone, or address').fill('nobody');
     if(!await page.getByText('No records yet.').count())throw new Error(`${viewport.name}: customer search did not filter records`);
     await page.getByRole('button',{name:'Overview'}).click();
