@@ -519,9 +519,10 @@ $('#businessForm').addEventListener('submit', event => { event.preventDefault();
 const SHIPPING_CONTENT_KEY = 'product-shipping-settings';
 const BUILT_IN_SHIPPING_CARRIERS = ['USPS','UPS','FedEx'];
 const PROVISIONAL_PACKAGE_SPECS = {
-  spray_bottle:{ weight_lb:3, length_in:5, width_in:5, height_in:13 },
+  spray_bottle:{ weight_lb:3, length_in:6, width_in:6, height_in:12 },
   gallon:{ weight_lb:10, length_in:8, width_in:8, height_in:14 }
 };
+let loadedProductShippingSettings = {};
 function normalizedCarrierNames(value) {
   const names = String(value || '').split(',').map(name => name.trim()).filter(Boolean);
   if (names.some(name => name.length > 60 || !/^[A-Za-z0-9][A-Za-z0-9 .&'()/-]*$/.test(name))) throw new Error('Carrier names may use letters, numbers, spaces, and standard business-name punctuation');
@@ -533,8 +534,13 @@ function productShippingPayload(form) {
   const selectedCarriers = ['carrier_usps','carrier_ups','carrier_fedex'].filter(name => values.get(name)).map(name => ({carrier_usps:'USPS',carrier_ups:'UPS',carrier_fedex:'FedEx'})[name]);
   const carriers = [...new Map([...selectedCarriers, ...normalizedCarrierNames(values.get('other_carriers'))].map(name => [name.toLowerCase(), name])).values()];
   const packageSpecs = Object.fromEntries([['spray_bottle','spray'],['gallon','gallon']].map(([category,prefix]) => [category,Object.fromEntries(['weight_lb','length_in','width_in','height_in'].map(field => [field,Number(values.get(`${prefix}_${field}`))]))]));
+  const packageFieldStatus = structuredClone(loadedProductShippingSettings.package_specs_field_status || {});
+  const sprayStatus = packageFieldStatus.spray_bottle;
+  if (sprayStatus?.dimensions_verified === true && ['length_in','width_in','height_in'].some(field => Number(sprayStatus[field]) !== packageSpecs.spray_bottle[field])) {
+    packageFieldStatus.spray_bottle = { ...sprayStatus, dimensions_verified:false, dimensions_source:'owner_edited_after_verification', dimensions_verified_at:null };
+  }
   const coverage = String(values.get('coverage') || 'us_contiguous_48');
-  const settings = { mode:'category_flat_rate', coverage, includes_alaska_hawaii:coverage === 'us_50_states_dc', physical_street_addresses_only:values.get('po_boxes') === 'not_supported', category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carrier_preferences_version:1, carriers, package_specs:packageSpecs, po_boxes:values.get('po_boxes'), territories:values.get('territories'), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null };
+  const settings = { mode:'category_flat_rate', coverage, includes_alaska_hawaii:coverage === 'us_50_states_dc', physical_street_addresses_only:values.get('po_boxes') === 'not_supported', category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carrier_preferences_version:1, carriers, package_specs:packageSpecs, package_specs_field_status:packageFieldStatus, po_boxes:values.get('po_boxes'), territories:values.get('territories'), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null };
   return { settings, confirmActualMeasurements:values.get('confirm_actual_measurements') === 'on', confirmCarrierEligibility:values.get('confirm_carrier_eligibility') === 'on' };
 }
 async function loadProductShipping() {
@@ -542,6 +548,7 @@ async function loadProductShipping() {
   const result = await supabase.from('website_content').select('content_value,draft_value').eq('content_key', SHIPPING_CONTENT_KEY).maybeSingle();
   if (result.error) throw result.error;
   const settings = result.data?.draft_value || result.data?.content_value || {};
+  loadedProductShippingSettings = settings;
   const categoryRates = settings.category_rates_cents || {};
   form.elements.coverage.value = settings.coverage || 'us_contiguous_48';
   form.elements.spray_bottle_rate_dollars.value = Number.isInteger(categoryRates.spray_bottle) ? (categoryRates.spray_bottle / 100).toFixed(2) : '4.00';
