@@ -17,14 +17,20 @@ Deno.serve(async request=>{
   const anonKey=Deno.env.get('SUPABASE_ANON_KEY');
   const serviceKey=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if(!url||!anonKey||!serviceKey)return json({error:'Supabase server configuration is incomplete'},500);
-  const authorization=request.headers.get('Authorization')||'';
-  const token=authorization.replace(/^Bearer\s+/i,'');
-  if(!token)return json({error:'Authentication required'},401);
-  const authClient=createClient(url,anonKey,{auth:{persistSession:false,autoRefreshToken:false}});
-  const {data:{user},error:userError}=await authClient.auth.getUser(token);
-  if(userError||!user)return json({error:'Authentication required'},401);
-
   const admin=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
+  const body=await request.json().catch(()=>({}));
+  const databaseDeliveryId=body?.source==='database_outbox'&&typeof body?.delivery_id==='string'?body.delivery_id:'';
+  if(databaseDeliveryId){
+    const delivery=await admin.from('business_notification_deliveries').select('id,status,recipient_email').eq('id',databaseDeliveryId).maybeSingle();
+    if(delivery.error||!delivery.data||!['pending','failed'].includes(delivery.data.status)||delivery.data.recipient_email!=='office@ogreena.com')return json({error:'Valid database outbox record required'},403);
+  }else{
+    const authorization=request.headers.get('Authorization')||'';
+    const token=authorization.replace(/^Bearer\s+/i,'');
+    if(!token)return json({error:'Authentication required'},401);
+    const authClient=createClient(url,anonKey,{auth:{persistSession:false,autoRefreshToken:false}});
+    const {data:{user},error:userError}=await authClient.auth.getUser(token);
+    if(userError||!user)return json({error:'Authentication required'},401);
+  }
   const {data:deliveries,error:claimError}=await admin.rpc('claim_business_notifications',{batch_size:10});
   if(claimError)return json({error:'Notification queue could not be claimed'},500);
   if(!deliveries?.length)return json({ok:true,processed:0});
@@ -40,8 +46,9 @@ Deno.serve(async request=>{
   let sent=0,failed=0;
   for(const delivery of deliveries){
     const dashboardUrl=`https://ogreena.com${delivery.dashboard_path}`;
-    const subject=delivery.event_type==='service_request'?`New Ogreena service request: ${delivery.request_type}`:`New Ogreena customer message: ${delivery.request_type}`;
-    const html=`<h2>${escapeHtml(subject)}</h2><p><strong>Customer:</strong> ${escapeHtml(delivery.customer_name)}</p><p><strong>Request type:</strong> ${escapeHtml(delivery.request_type)}</p><p><strong>Summary:</strong> ${escapeHtml(delivery.summary)}</p><p><a href="${dashboardUrl}">Open the secure Ogreena Business Dashboard</a></p><p>Sign-in is required to view full customer details.</p>`;
+    const labels:Record<string,string>={customer_registration:'New Ogreena customer registration',customer_question:'New Ogreena customer question',customer_message:'New Ogreena customer message',service_request:'New Ogreena service request'};
+    const subject=`${labels[delivery.event_type]||'New Ogreena customer activity'}: ${delivery.request_type}`;
+    const html=`<h2>${escapeHtml(subject)}</h2><p><strong>Customer:</strong> ${escapeHtml(delivery.customer_name)}</p><p><strong>Email:</strong> ${escapeHtml(delivery.customer_email||'Not provided')}</p><p><strong>Request type:</strong> ${escapeHtml(delivery.request_type)}</p><p><strong>Summary:</strong> ${escapeHtml(delivery.summary)}</p><p><a href="${dashboardUrl}">Open the secure Ogreena Business Dashboard</a></p><p>Sign-in is required to view full customer details.</p>`;
     try{
       const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${resendKey}`,'Content-Type':'application/json'},body:JSON.stringify({from:fromEmail,to:[delivery.recipient_email],subject,html})});
       const responseBody=await response.json().catch(()=>({}));

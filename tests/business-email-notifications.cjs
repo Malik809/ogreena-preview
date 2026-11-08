@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const migration=fs.readFileSync('supabase/migrations/20261106205226_business_email_notification_outbox.sql','utf8');
+const officeMigration=fs.readFileSync('supabase/migrations/20261108214500_office_business_notifications.sql','utf8');
 const edge=fs.readFileSync('supabase/functions/send-business-notifications/index.ts','utf8');
 const customer=fs.readFileSync('auth/owner-auth.js','utf8');
 const messenger=fs.readFileSync('messages/messenger.js','utf8');
@@ -9,6 +10,12 @@ const ownerPage=fs.readFileSync('owner/index.html','utf8');
 
 assert.match(migration,/business_notification_deliveries/);
 assert.match(migration,/far\.i@ogreena\.com/);
+assert.match(officeMigration,/office@ogreena\.com/);
+assert.match(officeMigration,/customer_registration/);
+assert.match(officeMigration,/customer_question/);
+assert.match(officeMigration,/auth_users_enqueue_business_registration_notification/);
+assert.match(officeMigration,/business_notification_deliveries_dispatch/);
+assert.match(officeMigration,/general-inquiry/);
 assert.match(migration,/unique\(event_type,source_id,recipient_email\)/);
 assert.match(migration,/service_requests_enqueue_business_notification/);
 assert.match(migration,/messages_enqueue_business_notification/);
@@ -20,6 +27,11 @@ assert.match(edge,/RESEND_API_KEY/);
 assert.match(edge,/NOTIFICATION_FROM_EMAIL/);
 assert.match(edge,/api\.resend\.com\/emails/);
 assert.match(edge,/Sign-in is required to view full customer details/);
+assert.match(edge,/database_outbox/);
+assert.match(edge,/recipient_email!==\s*'office@ogreena\.com'/);
+assert.match(edge,/customer_registration/);
+assert.match(edge,/customer_question/);
+assert.match(edge,/customer_email/);
 assert.match(edge,/status:'failed'/);
 assert.doesNotMatch(edge,/console\.log\([^)]*(customer|summary|delivery)/i);
 assert.match(customer,/send-business-notifications/);
@@ -29,4 +41,4 @@ assert.match(owner,/business_notification_deliveries/);
 assert.match(owner,/operations:requests/);
 assert.doesNotMatch(edge,/TWILIO|SMS/i);
 
-console.log('Private deduplicated email outbox, owner-only delivery log, authenticated dispatcher, and failure logging PASS');
+console.log('Private deduplicated email outbox, office recipient, database dispatch, registration/question coverage, and failure logging PASS');
