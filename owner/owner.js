@@ -539,6 +539,9 @@ function productShippingPayload(form) {
   if (sprayStatus?.dimensions_verified === true && ['length_in','width_in','height_in'].some(field => Number(sprayStatus[field]) !== packageSpecs.spray_bottle[field])) {
     packageFieldStatus.spray_bottle = { ...sprayStatus, dimensions_verified:false, dimensions_source:'owner_edited_after_verification', dimensions_verified_at:null };
   }
+  if (sprayStatus?.weight_verified === true && Number(sprayStatus.weight_lb) !== packageSpecs.spray_bottle.weight_lb) {
+    packageFieldStatus.spray_bottle = { ...packageFieldStatus.spray_bottle, weight_verified:false, weight_status:'owner_edited_after_verification', weight_verified_at:null };
+  }
   const coverage = String(values.get('coverage') || 'us_contiguous_48');
   const settings = { mode:'category_flat_rate', coverage, includes_alaska_hawaii:coverage === 'us_50_states_dc', physical_street_addresses_only:values.get('po_boxes') === 'not_supported', category_rates_cents:categoryRates, rates_approved:true, origin_zip:String(values.get('origin_zip') || '').trim() || null, carrier_preferences_version:1, carriers, package_specs:packageSpecs, package_specs_field_status:packageFieldStatus, po_boxes:values.get('po_boxes'), territories:values.get('territories'), email_provider:String(values.get('email_provider') || '').trim() || null, sender_email:String(values.get('sender_email') || '').trim() || null };
   return { settings, confirmActualMeasurements:values.get('confirm_actual_measurements') === 'on', confirmCarrierEligibility:values.get('confirm_carrier_eligibility') === 'on' };
