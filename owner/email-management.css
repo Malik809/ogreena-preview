@@ -1,0 +1,9 @@
+.customer-email-management{margin-bottom:18px}
+.email-management-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.email-management-counts div{padding:12px;border-radius:12px;background:#f3f8f4}
+.email-management-counts strong{display:block;font-size:1.6rem;color:#0f5f3d}
+.email-management-counts small{display:block}
+.email-customer-selector{font-size:.82rem;font-weight:700;color:#50675b}
+.record-email-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.record-email-actions .small-btn{padding:6px 8px;font-size:.78rem}
+@media(max-width:900px){.email-management-counts{grid-template-columns:1fr}.customer-email-management .editor-actions{display:grid}.customer-email-management .small-btn{width:100%}}
