@@ -17,4 +17,6 @@ assert.match(productsSource, /productCheckoutAuthorized/, 'Stripe Buy Now must r
 assert.doesNotMatch(productsSource, /squareUrl|square\.link|checkout\.square\.site/, 'public Buy Now must not route to Square');
 assert.match(productsSource, /aria-disabled="true"/, 'Buy Now must remain non-navigating while sales authorization is closed');
 
-console.log('Public product checkout checks passed: 5/5 products use gated Stripe Checkout; Square links are not public.');
+assert.match(productsSource, /checkoutEligible !== true/, 'ineligible products must not expose Buy Now');
+assert.match(productsSource, /not available for online purchase/i, 'ineligible checkout attempts must be blocked');
+console.log('Public product checkout checks passed: approved products use gated Stripe Checkout; T-Fresche and Square are not in the buying flow.');

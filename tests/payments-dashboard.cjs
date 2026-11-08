@@ -120,6 +120,8 @@ expect(checkout, "shipping.category_rates_cents?.[shippingCategory]", 'server-si
 expect(checkout, "shipping.owner_approved !== true", 'shipping activation gate');
 expect(checkout, "shipping.package_specs_verified !== true", 'verified package measurement gate');
 expect(checkout, "shipping.carrier_eligibility_verified !== true", 'verified carrier eligibility gate');
+expect(checkout, "const ONLINE_PRODUCT_IDS = new Set(['og-trinity-32oz','og-floor-32oz','og-trinity-gallon','og-floor-gallon'])", 'server-approved online product allowlist');
+expect(checkout, "if (!ONLINE_PRODUCT_IDS.has(requestedProductId))", 'server blocks T-Fresche and unknown products');
 expect(refund, 'stripeAccount:transaction.stripe_account_id', 'refund merchant context');
 expect(payoutSchedule, "const MERCHANT_ACCOUNT_ID = 'acct_1UUtHREjIGxDre3j'", 'payout schedule account isolation');
 expect(payoutSchedule, "payoutError.code !== 'more_permissions_required'", 'optional next-payout permission handling');

@@ -9,6 +9,7 @@ type ShippingAddress = { name:string; line1:string; line2?:string; city:string; 
 const CONTIGUOUS_STATE_CODES = new Set(['AL','AZ','AR','CA','CO','CT','DE','FL','GA','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']);
 const ALL_STATE_CODES = new Set([...CONTIGUOUS_STATE_CODES,'AK','HI','DC']);
 const PO_BOX_PATTERN = /\b(?:P(?:OST(?:AL)?)?\.?\s*O(?:FFICE)?\.?|P\.?\s*O\.?)\s*BOX\b/i;
+const ONLINE_PRODUCT_IDS = new Set(['og-trinity-32oz','og-floor-32oz','og-trinity-gallon','og-floor-gallon']);
 
 function validatedShippingAddress(input: unknown, shipping: Record<string, unknown>): ShippingAddress {
   const address = (input || {}) as Record<string, unknown>;
@@ -57,13 +58,15 @@ Deno.serve(async request => {
     let productCustomerId: string | null = null;
     if (kind === 'product') {
       if (!settings.product_payments_enabled) throw new Error('Product checkout is unavailable');
+      const requestedProductId = String(body.productId || '');
+      if (!ONLINE_PRODUCT_IDS.has(requestedProductId)) throw new Error('This product is not approved for online sale');
       const { data: shippingRecord, error: shippingError } = await admin.from('website_content').select('content_value').eq('content_key','product-shipping-settings').eq('published',true).single();
       if (shippingError) throw new Error('Product shipping is not approved');
       const shipping = shippingRecord?.content_value || {};
       if (shipping.mode !== 'category_flat_rate' || !['us_contiguous_48','us_50_states_dc'].includes(shipping.coverage) || shipping.rates_approved !== true || shipping.owner_approved !== true || !/^\d{5}(-\d{4})?$/.test(shipping.origin_zip || '')) throw new Error('Product shipping is not approved');
       if (!Array.isArray(shipping.carriers) || !shipping.carriers.length || !shipping.packages) throw new Error('Product fulfillment details are incomplete');
       if (shipping.package_specs_verified !== true || shipping.carrier_eligibility_verified !== true) throw new Error('Product package measurements and carrier eligibility must be verified');
-      const { data: product } = await admin.from('products').select('id,name,size,price_cents,visible,shipping_category').eq('id', String(body.productId)).single();
+      const { data: product } = await admin.from('products').select('id,name,size,price_cents,visible,shipping_category').eq('id', requestedProductId).single();
       if (!product?.visible) throw new Error('Product is unavailable');
       const shippingCategory = String(product.shipping_category || '');
       const shippingRate = shipping.category_rates_cents?.[shippingCategory];

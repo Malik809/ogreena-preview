@@ -7,6 +7,7 @@
   let productCheckoutAuthorized = false;
 
   function buyAction(product) {
+    if (product.checkoutEligible !== true) return '<button class="small-btn" type="button" disabled>Not available online</button>';
     return `<button class="small-btn primary" type="button" data-buy-product="${product.id}"${productCheckoutAuthorized ? '' : ' aria-disabled="true"'}>Buy Now</button>`;
   }
 
@@ -78,6 +79,8 @@
   }
 
   function startCheckout(productId) {
+    const product = products.find(item => item.id === productId);
+    if (!product || product.checkoutEligible !== true) { showMessage('This product is not available for online purchase.'); return; }
     if (!productCheckoutAuthorized) { showCheckoutBlocked(); return; }
     shippingAddressDialog(productId);
   }
@@ -92,7 +95,7 @@
     }
     dialog.innerHTML = `<button class="dialog-close" type="button" aria-label="Close product details">×</button><img src="${product.image}" alt="${product.name} — ${product.size}"><div><span class="product-size">${product.size}</span><h2>${product.name}</h2><strong>$${product.price.toFixed(2)}</strong><p>Original Ogreena cleaning product. Secure card checkout is provided by Stripe after owner activation.</p>${buyAction(product)}</div>`;
     dialog.querySelector('.dialog-close').addEventListener('click', () => dialog.close());
-    dialog.querySelector('[data-buy-product]').addEventListener('click', () => startCheckout(product.id));
+    dialog.querySelector('[data-buy-product]')?.addEventListener('click', () => startCheckout(product.id));
     dialog.showModal();
   }
 
