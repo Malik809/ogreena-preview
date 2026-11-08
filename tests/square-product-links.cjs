@@ -19,4 +19,6 @@ assert.match(productsSource, /aria-disabled="true"/, 'Buy Now must remain non-na
 
 assert.match(productsSource, /checkoutEligible !== true/, 'ineligible products must not expose Buy Now');
 assert.match(productsSource, /not available for online purchase/i, 'ineligible checkout attempts must be blocked');
-console.log('Public product checkout checks passed: approved products use gated Stripe Checkout; T-Fresche and Square are not in the buying flow.');
+assert(products.filter(product => product.checkoutEligible === true).every(product => ['og-trinity-32oz','og-floor-32oz'].includes(product.id)), 'only the two approved sprays may expose gated checkout');
+assert(products.filter(product => ['og-trinity-gallon','og-floor-gallon','og-t-fresche-32oz'].includes(product.id)).every(product => product.checkoutEligible === false), 'gallons and T-Fresche must stay disabled');
+console.log('Public product checkout checks passed: only approved sprays use gated Stripe Checkout; gallons, T-Fresche, and Square are not in the buying flow.');

@@ -119,9 +119,10 @@ expect(checkout, "automatic_tax:{ enabled:true, liability:{ type:'self' as const
 expect(checkout, "display_name:productShipping!.category === 'gallon' ? 'Gallon-product shipping' : 'Spray-bottle shipping'", 'owner-approved category shipping rate');
 expect(checkout, "shipping.category_rates_cents?.[shippingCategory]", 'server-side category shipping lookup');
 expect(checkout, "shipping.owner_approved !== true", 'shipping activation gate');
-expect(checkout, "shipping.package_specs_verified !== true", 'verified package measurement gate');
-expect(checkout, "shipping.carrier_eligibility_verified !== true", 'verified carrier eligibility gate');
-expect(checkout, "const ONLINE_PRODUCT_IDS = new Set(['og-trinity-32oz','og-floor-32oz','og-trinity-gallon','og-floor-gallon'])", 'server-approved online product allowlist');
+expect(checkout, 'productEligibility.package_measurements_verified !== true', 'per-product package measurement gate');
+expect(checkout, "const ONLINE_PRODUCT_IDS = new Set(['og-trinity-32oz','og-floor-32oz'])", 'server-approved spray-only product allowlist');
+expect(checkout, 'productEligibility.packaging_verified !== true', 'per-product packaging verification gate');
+expect(checkout, 'productEligibility.carrier_eligibility_verified !== true', 'per-product carrier verification gate');
 expect(checkout, "if (!ONLINE_PRODUCT_IDS.has(requestedProductId))", 'server blocks T-Fresche and unknown products');
 expect(refund, 'stripeAccount:transaction.stripe_account_id', 'refund merchant context');
 expect(payoutSchedule, "const MERCHANT_ACCOUNT_ID = 'acct_1UUtHREjIGxDre3j'", 'payout schedule account isolation');
