@@ -5,13 +5,10 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_13onHaeoGy3uEVnezcGZCQ_RtSzNOlM
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage, storageKey: 'ogreena-auth-session', lock: safariSafeAuthLock }
 });
-const authRedirect = 'https://ogreena.com/auth/';
 // This exact production path is already used by Ogreena Auth and is present in
 // the project's allowed redirects. Supabase adds the recovery session to it.
 const recoveryRedirect = 'https://ogreena.com/auth/';
 const OWNER_SESSION_HANDOFF_KEY = 'ogreena-owner-session-handoff';
-const CONFIRMATION_COOLDOWN_KEY = 'ogreena-confirmation-resend-after';
-const CONFIRMATION_COOLDOWN_MS = 60 * 1000;
 
 const authPanel = document.querySelector('#authPanel');
 const accountPanel = document.querySelector('#accountPanel');
@@ -29,8 +26,7 @@ function friendlyError(error) {
   const code = error.code || '';
   if (code === 'request_timeout') return 'The secure account service took too long to respond. Your account may already exist. Check your email, then use Sign In or Reset Password before trying again.';
   if (['email_exists', 'user_already_exists', 'identity_already_exists'].includes(code)) return 'An account already exists for this email. Please sign in or use Reset Password.';
-  if (code === 'email_not_confirmed') return 'Please confirm your email before signing in. Check your inbox and spam folder for the Ogreena confirmation email.';
-  if (code === 'over_email_send_rate_limit') return 'Too many confirmation emails were requested. Please wait a few minutes, then try again.';
+  if (code === 'email_not_confirmed') return 'Customer signup configuration is incomplete. Please contact Ogreena for account assistance.';
   if (code === 'over_request_rate_limit') return 'Too many account requests were made. Please wait a few minutes, then try again.';
   if (code === 'weak_password') return 'Please choose a stronger password with at least 8 characters.';
   if (code === 'session_not_found' || /auth session missing|invalid.*token|expired/i.test(error.message || '')) return 'This password-reset link is invalid or expired. Choose Reset Password to request a new email.';
@@ -58,26 +54,6 @@ function setFormBusy(form, busy) {
   form.querySelectorAll('button,input').forEach(control => { control.disabled = busy; });
 }
 
-function applyConfirmationCooldown(form) {
-  const button = form.querySelector('button[type="submit"]');
-  const originalLabel = 'Send New Confirmation Email';
-  const update = () => {
-    const resendAfter = Number(window.localStorage.getItem(CONFIRMATION_COOLDOWN_KEY) || 0);
-    const seconds = Math.max(0, Math.ceil((resendAfter - Date.now()) / 1000));
-    if (!seconds) {
-      button.disabled = false;
-      button.textContent = originalLabel;
-      window.localStorage.removeItem(CONFIRMATION_COOLDOWN_KEY);
-      return false;
-    }
-    button.disabled = true;
-    button.textContent = `Send another email in ${seconds}s`;
-    return true;
-  };
-  if (!update()) return;
-  const timer = window.setInterval(() => { if (!update()) window.clearInterval(timer); }, 1000);
-}
-
 async function runFormRequest(form, pendingMessage, request, onSuccess) {
   if (form.dataset.submitting === 'true') return;
   setStatus(pendingMessage);
@@ -95,7 +71,7 @@ async function runFormRequest(form, pendingMessage, request, onSuccess) {
 
 function switchTab(name) {
   document.querySelectorAll('[data-auth-tab]').forEach(button => button.classList.toggle('active', button.dataset.authTab === name));
-  document.querySelectorAll('#signInForm,#signUpForm,#confirmationForm,#recoveryForm,#newPasswordForm').forEach(form => { form.hidden = form.id !== ({signin:'signInForm',signup:'signUpForm',confirmation:'confirmationForm',recovery:'recoveryForm',password:'newPasswordForm'}[name]); });
+  document.querySelectorAll('#signInForm,#signUpForm,#recoveryForm,#newPasswordForm').forEach(form => { form.hidden = form.id !== ({signin:'signInForm',signup:'signUpForm',recovery:'recoveryForm',password:'newPasswordForm'}[name]); });
   setStatus('');
 }
 
@@ -104,29 +80,32 @@ const requestedMode = new URLSearchParams(location.search).get('mode');
 const requestedNext = new URLSearchParams(location.search).get('next');
 const safeNext = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '';
 const recoveryHash = new URLSearchParams(location.hash.replace(/^#/, ''));
-let recoveryMode = requestedMode === 'password' || recoveryHash.get('type') === 'recovery';
-if (['signin', 'signup', 'confirmation', 'recovery', 'password'].includes(requestedMode)) switchTab(requestedMode);
-if (recoveryMode) switchTab('password');
-const callbackError = recoveryHash.get('error_code') || recoveryHash.get('error');
-if (callbackError && !recoveryMode) {
-  switchTab('confirmation');
-  setStatus('This confirmation link is invalid or expired. Enter your email to request a new confirmation link.', 'error');
+// A normal signed-in session or a hand-written URL must never authorize a
+// password change. Only Supabase's validated PASSWORD_RECOVERY event below
+// unlocks the password update form.
+let recoveryMode = false;
+if (['signin', 'signup', 'recovery', 'password'].includes(requestedMode)) switchTab(requestedMode);
+if (requestedMode === 'password' || recoveryHash.get('type') === 'recovery') {
+  switchTab('password');
+  setStatus('Validating your secure password-reset link…');
 }
-applyConfirmationCooldown(document.querySelector('#confirmationForm'));
+const callbackError = recoveryHash.get('error_code') || recoveryHash.get('error');
+if (callbackError && !recoveryMode) setStatus('This account link is invalid or expired. Use Reset Password if you need account recovery.', 'error');
 
 document.querySelector('#signUpForm').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;
   const values = Object.fromEntries(new FormData(form));
-  await runFormRequest(form, 'Creating your secure Ogreena account…', () => supabase.auth.signUp({ email: values.email, password: values.password, options: { data: { display_name: values.display_name, requested_account_type: values.account_type }, emailRedirectTo: authRedirect } }), async data => {
+  await runFormRequest(form, 'Creating your secure Ogreena account…', () => supabase.auth.signUp({ email: values.email, password: values.password, options: { data: { display_name: values.display_name, requested_account_type: values.account_type } } }), async data => {
     form.reset();
     if (!data.session && Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
       switchTab('signin');
       document.querySelector('#signInForm input[name="email"]').value = values.email;
-      setStatus('This account already exists and may already be verified. Sign in with the existing password instead of creating another account.', 'success');
+      setStatus('This account already exists. Sign in with the existing password instead of creating another account.', 'success');
       return;
     }
-    setStatus(data.session ? 'Account created and signed in.' : 'Account created. Check your email for the Ogreena confirmation link before signing in.', 'success');
+    if (!data.session) throw new Error('Customer signup did not return an immediate session. Email confirmation must be disabled before this release is published.');
+    setStatus('Account created and signed in. Opening your Customer Profile…', 'success');
   });
 });
 
@@ -145,11 +124,6 @@ document.querySelector('#signInForm').addEventListener('submit', async event => 
     window.localStorage.setItem('ogreena-auth-session', JSON.stringify(signedInSession));
     const persistedSession = JSON.parse(window.localStorage.getItem('ogreena-auth-session') || 'null');
     if (persistedSession?.user?.id !== user.id) throw new Error('The owner session could not be saved in this browser.');
-    if (!user.email_confirmed_at) {
-      const error = new Error('Email is not confirmed');
-      error.code = 'email_not_confirmed';
-      throw error;
-    }
     const { data: roleRow, error: roleError } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
     if (roleError) throw roleError;
     if (roleRow?.role === 'owner') {
@@ -181,22 +155,6 @@ document.querySelector('#recoveryForm').addEventListener('submit', async event =
   await runFormRequest(form, 'Requesting a secure recovery email…', () => supabase.auth.resetPasswordForEmail(values.email, { redirectTo: recoveryRedirect }), async () => {
     form.reset(); setStatus('If that account exists, a recovery email has been sent.', 'success');
   });
-});
-
-document.querySelector('#confirmationForm').addEventListener('submit', async event => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const values = Object.fromEntries(new FormData(form));
-  let sent = false;
-  await runFormRequest(form, 'Requesting a new confirmation email…', () => supabase.auth.resend({ type:'signup', email:values.email, options:{ emailRedirectTo:authRedirect } }), async () => {
-    sent = true;
-    form.reset();
-    setStatus('If an unverified account exists for that email, a new confirmation link has been sent. Check the inbox and spam folder.', 'success');
-  });
-  if (sent) {
-    window.localStorage.setItem(CONFIRMATION_COOLDOWN_KEY, String(Date.now() + CONFIRMATION_COOLDOWN_MS));
-    applyConfirmationCooldown(form);
-  }
 });
 
 document.querySelector('#newPasswordForm').addEventListener('submit', async event => {

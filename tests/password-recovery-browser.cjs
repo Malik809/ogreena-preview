@@ -8,7 +8,7 @@ const user = {
   role: 'authenticated'
 };
 const session = {
-  access_token: 'mock-recovery-access',
+  access_token: 'mock-ordinary-session-access',
   refresh_token: 'mock-recovery-refresh',
   expires_in: 3600,
   expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -37,10 +37,9 @@ const session = {
     await page.locator('#newPasswordForm input[name="password"]').fill('UpdatedPassword123!');
     await page.locator('#newPasswordForm input[name="password_confirmation"]').fill('UpdatedPassword123!');
     await page.locator('#newPasswordForm button').click();
-    await page.locator('#signInForm').waitFor({ state:'visible' });
-    if (!/updated successfully/i.test(await page.locator('#authStatus').innerText())) throw new Error(`${viewport.name}: success confirmation missing`);
+    if (!/invalid or expired/i.test(await page.locator('#authStatus').innerText())) throw new Error(`${viewport.name}: ordinary session was allowed to change a password without a recovery event`);
     await page.close();
-    console.log(`${viewport.name}: recovery form, password update, and responsive layout PASS`);
+    console.log(`${viewport.name}: ordinary session blocked from recovery-only password update and responsive layout PASS`);
   }
   await browser.close();
 })().catch(error => { console.error(error.stack || error); process.exit(1); });

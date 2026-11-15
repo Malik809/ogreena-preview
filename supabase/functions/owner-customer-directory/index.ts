@@ -56,7 +56,9 @@ Deno.serve(async request=>{
   const customers=allUsers.filter(account=>customerIds.has(account.id)).map(account=>{
     const profile=profileMap[account.id]||{};
     const isTestAccount=[account.email,profile.display_name].some(isTestText);
-    const verified=Boolean(account.email_confirmed_at&&account.last_sign_in_at)&&!isTestAccount;
+    // Supabase Auth is the source of truth for email verification. Test-account
+    // classification and sign-in activity are separate dashboard attributes.
+    const verified=Boolean(account.email_confirmed_at);
     const address=[profile.property_street_address,profile.property_unit,profile.property_city,profile.property_state,profile.property_zip].filter(Boolean).join(', ');
     const requestHistory:any[]=requestsByCustomer[account.id]||[];
     const appointmentHistory:any[]=appointmentsByCustomer[account.id]||[];
