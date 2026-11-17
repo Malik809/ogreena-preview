@@ -9,6 +9,7 @@ const owner=fs.readFileSync('owner/owner.js','utf8');
 const ownerPage=fs.readFileSync('owner/index.html','utf8');
 const notificationTemplate=fs.readFileSync('supabase/functions/send-business-notifications/notification-template.mjs','utf8');
 const completionMigration=fs.readFileSync('supabase/migrations/20261117213000_messenger_office_email_notifications.sql','utf8');
+const claimFix=fs.readFileSync('supabase/migrations/20261117215500_fix_guarded_notification_claim.sql','utf8');
 
 assert.match(migration,/business_notification_deliveries/);
 assert.match(migration,/far\.i@ogreena\.com/);
@@ -58,5 +59,8 @@ assert.match(owner,/requestedOwnerConversation/);
 assert.match(completionMigration,/customer_message_notifications_enabled boolean not null default false/);
 assert.match(completionMigration,/delivery_mode in \('automatic','controlled_test'\)/);
 assert.match(completionMigration,/new\.delivery_mode='automatic'/);
+assert.match(claimFix,/security definer/);
+assert.match(claimFix,/revoke all on function public\.claim_business_notifications\(integer\) from public,anon,authenticated/);
+assert.match(claimFix,/grant execute on function public\.claim_business_notifications\(integer\) to service_role/);
 
 console.log('Private deduplicated email outbox, office recipient, database dispatch, registration/question coverage, and failure logging PASS');

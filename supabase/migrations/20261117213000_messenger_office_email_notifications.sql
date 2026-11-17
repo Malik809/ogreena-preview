@@ -81,7 +81,7 @@ revoke all on function private.enqueue_customer_message_notification() from publ
 create or replace function public.claim_business_notifications(batch_size integer default 10)
 returns setof public.business_notification_deliveries
 language sql
-security invoker
+security definer
 set search_path=''
 as $$
   with claimed as (
