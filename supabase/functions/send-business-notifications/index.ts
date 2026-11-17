@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { buildMessageEmail,escapeHtml,retryDelayMinutes } from './notification-template.mjs';
 
 const cors={
   'Access-Control-Allow-Origin':'https://ogreena.com',
@@ -7,7 +8,6 @@ const cors={
   'Content-Type':'application/json'
 };
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
-const escapeHtml=(value:string)=>value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
 
 Deno.serve(async request=>{
   if(request.method==='OPTIONS')return new Response('ok',{headers:cors});
@@ -19,7 +19,7 @@ Deno.serve(async request=>{
   if(!url||!anonKey||!serviceKey)return json({error:'Supabase server configuration is incomplete'},500);
   const admin=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
   const body=await request.json().catch(()=>({}));
-  const databaseDeliveryId=body?.source==='database_outbox'&&typeof body?.delivery_id==='string'?body.delivery_id:'';
+  const databaseDeliveryId=['database_outbox','database_retry'].includes(body?.source)&&typeof body?.delivery_id==='string'?body.delivery_id:'';
   if(databaseDeliveryId){
     const delivery=await admin.from('business_notification_deliveries').select('id,status,recipient_email').eq('id',databaseDeliveryId).maybeSingle();
     if(delivery.error||!delivery.data||!['pending','failed'].includes(delivery.data.status)||delivery.data.recipient_email!=='office@ogreena.com')return json({error:'Valid database outbox record required'},403);
@@ -39,16 +39,18 @@ Deno.serve(async request=>{
   const fromEmail=Deno.env.get('NOTIFICATION_FROM_EMAIL');
   if(!resendKey||!fromEmail){
     const missing=[!resendKey?'RESEND_API_KEY':null,!fromEmail?'NOTIFICATION_FROM_EMAIL':null].filter(Boolean).join(', ');
-    await Promise.all(deliveries.map((delivery:{id:string})=>admin.from('business_notification_deliveries').update({status:'failed',last_error:`Email provider is not configured. Missing ${missing}.`,available_at:new Date(Date.now()+15*60*1000).toISOString(),updated_at:new Date().toISOString()}).eq('id',delivery.id)));
+    await Promise.all(deliveries.map((delivery:{id:string,attempt_count:number})=>admin.from('business_notification_deliveries').update({status:'failed',last_error:`Email provider is not configured. Missing ${missing}.`,available_at:new Date(Date.now()+retryDelayMinutes(delivery.attempt_count)*60*1000).toISOString(),updated_at:new Date().toISOString()}).eq('id',delivery.id)));
     return json({error:`Email provider is not configured. Missing ${missing}.`,processed:deliveries.length},503);
   }
 
   let sent=0,failed=0;
   for(const delivery of deliveries){
-    const dashboardUrl=`https://ogreena.com${delivery.dashboard_path}`;
     const labels:Record<string,string>={customer_registration:'New Ogreena customer registration',customer_question:'New Ogreena customer question',customer_message:'New Ogreena customer message',service_request:'New Ogreena service request'};
-    const subject=`${labels[delivery.event_type]||'New Ogreena customer activity'}: ${delivery.request_type}`;
-    const html=`<h2>${escapeHtml(subject)}</h2><p><strong>Customer:</strong> ${escapeHtml(delivery.customer_name)}</p><p><strong>Email:</strong> ${escapeHtml(delivery.customer_email||'Not provided')}</p><p><strong>Request type:</strong> ${escapeHtml(delivery.request_type)}</p><p><strong>Summary:</strong> ${escapeHtml(delivery.summary)}</p><p><a href="${dashboardUrl}">Open the secure Ogreena Business Dashboard</a></p><p>Sign-in is required to view full customer details.</p>`;
+    const isMessage=['customer_message','customer_question'].includes(delivery.event_type);
+    const messageEmail=isMessage?buildMessageEmail(delivery):null;
+    const dashboardUrl=`https://ogreena.com${delivery.dashboard_path}`;
+    const subject=messageEmail?.subject||`${labels[delivery.event_type]||'New Ogreena customer activity'}: ${delivery.request_type}`;
+    const html=messageEmail?.html||`<h2>${escapeHtml(subject)}</h2><p><strong>Customer:</strong> ${escapeHtml(delivery.customer_name)}</p><p><strong>Email:</strong> ${escapeHtml(delivery.customer_email||'Not provided')}</p><p><strong>Request type:</strong> ${escapeHtml(delivery.request_type)}</p><p><strong>Summary:</strong> ${escapeHtml(delivery.summary)}</p><p><a href="${dashboardUrl}">Open the secure Ogreena Business Dashboard</a></p><p>Sign-in is required to view full customer details.</p>`;
     try{
       const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${resendKey}`,'Content-Type':'application/json'},body:JSON.stringify({from:fromEmail,to:[delivery.recipient_email],subject,html})});
       const responseBody=await response.json().catch(()=>({}));
@@ -58,7 +60,7 @@ Deno.serve(async request=>{
       sent++;
     }catch(error){
       const message=error instanceof Error?error.message:'Email delivery failed';
-      await admin.from('business_notification_deliveries').update({status:'failed',provider:'resend',last_error:message.slice(0,1000),available_at:new Date(Date.now()+15*60*1000).toISOString(),updated_at:new Date().toISOString()}).eq('id',delivery.id);
+      await admin.from('business_notification_deliveries').update({status:'failed',provider:'resend',last_error:message.slice(0,1000),available_at:new Date(Date.now()+retryDelayMinutes(delivery.attempt_count)*60*1000).toISOString(),updated_at:new Date().toISOString()}).eq('id',delivery.id);
       failed++;
     }
   }

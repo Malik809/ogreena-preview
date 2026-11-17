@@ -17,6 +17,7 @@ let ownerMessageChannel = null;
 let ownerDirectoryData = null;
 let customerDirectoryFilter = 'all';
 let requestDirectoryFilter = 'real';
+const requestedOwnerConversation = new URLSearchParams(location.search).get('conversation');
 const loadedOwnerSections = new Set();
 const OWNER_SESSION_HANDOFF_KEY = 'ogreena-owner-session-handoff';
 
@@ -476,6 +477,10 @@ async function loadOperations() {
       assignment.innerHTML+=' <select data-conversation-assignment="'+conversation.id+'"><option value="">Owner only</option>'+messengerEmployees.map(employee=>'<option value="'+employee.id+'" '+(conversation.assigned_employee_id===employee.id?'selected':'')+'>'+escapeHtml(employee.name)+'</option>').join('')+'</select>';
       thread.querySelector('.owner-thread-summary')?.append(assignment);
     });
+    if(requestedOwnerConversation){
+      const requestedThread=target.querySelector('[data-owner-conversation="'+CSS.escape(requestedOwnerConversation)+'"]');
+      if(requestedThread){requestedThread.dataset.emailTarget='true';requestedThread.scrollIntoView({block:'start'});requestedThread.querySelector('.owner-thread-summary')?.focus?.();}
+    }
     const unreadIds=messages.filter(row=>row.sender_id!==currentUserId&&!row.read_at).map(row=>row.id);if(unreadIds.length){requireOk(await supabase.from('messages').update({read_at:new Date().toISOString()}).in('id',unreadIds));setOwnerUnreadCount(0);}
     if(!ownerMessageChannel)ownerMessageChannel=supabase.channel('owner-service-messenger').on('postgres_changes',{event:'*',schema:'public',table:'messages'},async()=>{const unreadResult=await supabase.from('messages').select('id',{count:'exact',head:true}).neq('sender_id',currentUserId).is('read_at',null);if(!unreadResult.error)setOwnerUnreadCount(unreadResult.count||0);if(operationView==='messages')loadOperations();}).on('postgres_changes',{event:'*',schema:'public',table:'service_conversations'},()=>{if(operationView==='messages')loadOperations();}).subscribe();
   } else if(operationView==='customers'){
