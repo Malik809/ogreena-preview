@@ -1,0 +1,27 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const migration=read('supabase/migrations/20261117230000_separate_account_relationships_and_provider_directory.sql');
+const owner=read('owner/owner.js');
+const account=read('careers-account/careers-account.js');
+
+assert.match(migration,/primary key \(user_id, relationship\)/,'one account may hold multiple relationships');
+assert.match(migration,/elsif requested_type='job_applicant'/,'future provider signup is classified separately');
+assert.doesNotMatch(migration,/update public\.user_roles[\s\S]{0,120}job_applicant/,'provider signup must not rewrite existing roles');
+assert.match(migration,/if decision='hired' then/,'worker access requires an explicit hire decision');
+assert.match(migration,/decision not in \('reviewing','approved','hired','rejected'\)/,'provider approval is distinct from worker hiring');
+assert.match(migration,/account_relationships_owner_read/,'relationships stay private');
+assert.match(migration,/provider_directory_staff_access/,'staff directory access is explicit');
+assert.match(migration,/private\.has_provider_directory_access/,'private provider data requires authorization');
+assert.match(migration,/set_provider_directory_staff_access/,'only the owner can grant staff directory access');
+assert.match(migration,/Not provided \(legacy client\)/,'cached application pages remain compatible during rollout');
+assert.match(migration,/job_applications_private_read/,'provider RLS is consolidated into one private read policy');
+assert.match(account,/requested_service_area:v\.service_area/);
+assert.match(account,/requested_license_details:v\.license_details/);
+assert.match(owner,/Private Ogreena contractor contact network/);
+assert.match(owner,/data-provider-search/);
+assert.match(owner,/data-provider-specialty/);
+assert.match(owner,/mailto:/);
+console.log('Future customer, worker, and service-provider separation: PASS');
