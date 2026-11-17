@@ -52,7 +52,9 @@
           <form id="applicationForm" class="auth-form">
             <label>Full name<input name="full_name" autocomplete="name" required></label>
             <label>Phone<input name="phone" type="tel" autocomplete="tel" required></label>
-            <label>Position of interest<input name="position" required maxlength="120"></label>
+            <label>Position or service offering<input name="position" required maxlength="120" placeholder="Example: HVAC installer or independent service professional"></label>
+            <fieldset class="career-service-choices"><legend>Ogreena service categories</legend><p class="muted">Select every published category that matches your professional skills.</p><div id="careerServiceChoices"></div></fieldset>
+            <fieldset class="career-service-choices"><legend>Professional specialties</legend><div><label><input type="checkbox" name="specialties" value="hvac-installation"><span>HVAC / Heat Pump &amp; Mini-Split Installation</span></label></div></fieldset>
             <label>Availability<textarea name="availability" required maxlength="1000"></textarea></label>
             <label>Relevant experience<textarea name="experience" required minlength="10" maxlength="4000"></textarea></label>
             <button class="small-btn primary">Submit Application</button>
@@ -62,7 +64,8 @@
       </div>
     </section>
   </main>
+  <script src="../service-order.js?v=10"></script>
   <script src="../vendor/supabase-2.57.4.min.js"></script>
-  <script src="careers-account.js?v=1"></script>
+  <script src="careers-account.js?v=2"></script>
 </body>
 </html>

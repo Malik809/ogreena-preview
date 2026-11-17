@@ -1,0 +1,13 @@
+.work-with-ogreena {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.work-with-ogreena h3 { font-size: 16px; margin: 0 0 6px; }
+.work-with-ogreena p { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+.work-with-ogreena > strong,
+.work-with-ogreena > span { display: block; }
+.work-with-ogreena > strong { color: var(--green-dark); font-size: 12px; }
+.work-with-ogreena > span { color: var(--muted); font-size: 11px; margin-top: 2px; }
+.work-with-ogreena-actions { display: grid; gap: 8px; margin-top: 12px; }
+.work-with-ogreena-actions .small-btn { text-align: center; width: 100%; }
