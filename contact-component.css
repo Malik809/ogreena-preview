@@ -1,0 +1,142 @@
+.ogreena-contact .content-head {
+  align-items: flex-start;
+}
+
+.ogreena-contact .content-head p {
+  margin: 6px 0 0;
+}
+
+.ogreena-contact .contact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ogreena-contact .contact-option {
+  display: flex;
+  min-width: 0;
+  min-height: 150px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f2f9f3, #fffaf0);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ogreena-contact .contact-option:hover,
+.ogreena-contact .contact-option:focus-visible {
+  border-color: var(--gold);
+  box-shadow: 0 8px 24px rgba(35, 74, 53, .08);
+}
+
+.ogreena-contact .contact-option b {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.ogreena-contact .contact-option strong {
+  color: var(--green);
+  font-size: 13px;
+}
+
+.ogreena-contact .contact-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.customer-contact {
+  grid-column: 1 / -1;
+}
+
+.customer-email-panel {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.customer-email-panel h3,
+.customer-email-panel p {
+  margin: 0 0 10px;
+}
+
+.customer-email-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.customer-email-form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.customer-email-form input,
+.customer-email-form textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cdd7d1;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  font: inherit;
+}
+
+.customer-email-form input[readonly] {
+  background: #f2f5f3;
+  color: var(--muted);
+}
+
+.customer-email-form textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.customer-email-form .wide {
+  grid-column: 1 / -1;
+}
+
+.customer-email-status {
+  min-height: 22px;
+  margin: 0;
+  color: var(--green);
+  font-weight: 700;
+}
+
+.customer-email-status.error {
+  color: var(--danger);
+}
+
+@media (max-width: 980px) {
+  .ogreena-contact .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ogreena-contact .contact-option {
+    min-height: 112px;
+  }
+}
+
+@media (max-width: 720px) {
+  .customer-email-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customer-email-form .wide {
+    grid-column: auto;
+  }
+
+  .customer-contact {
+    grid-column: auto;
+    margin-bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+}

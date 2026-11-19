@@ -213,6 +213,44 @@ const signupWelcome=document.querySelector('#signupWelcome');
 document.querySelector('#skipSignupWelcome').addEventListener('click',()=>{signupWelcome.hidden=true;sessionStorage.removeItem(SIGNUP_WELCOME_KEY);document.querySelector('#profileDetails').scrollIntoView({behavior:'smooth',block:'start'});});
 document.querySelector('#welcomeRequestService').addEventListener('click',()=>{signupWelcome.hidden=true;sessionStorage.removeItem(SIGNUP_WELCOME_KEY);document.querySelector('#requestServices').scrollIntoView({behavior:'smooth',block:'start'});});
 
+function configureCustomerEmailForm(user){
+  const form=document.querySelector('[data-customer-email-form]');
+  if(!form||form.dataset.ready==='true')return;
+  form.dataset.ready='true';
+  form.elements.from.value=user.email||'';
+  const formStatus=form.querySelector('.customer-email-status');
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    if(form.dataset.submitting==='true')return;
+    const subject=form.elements.subject.value.trim(),message=form.elements.message.value.trim();
+    if(!subject||!message)return;
+    const submissionId=form.dataset.submissionId||crypto.randomUUID();
+    form.dataset.submissionId=submissionId;
+    form.dataset.submitting='true';
+    form.setAttribute('aria-busy','true');
+    form.querySelector('button[type="submit"]').disabled=true;
+    formStatus.className='customer-email-status wide';
+    formStatus.textContent='Sending your email securely…';
+    try{
+      const {data,error}=await supabase.functions.invoke('send-customer-email',{body:{subject,message,submissionId}});
+      if(error)throw error;
+      if(!data?.ok)throw new Error(data?.error||'Email could not be sent.');
+      form.reset();
+      form.elements.from.value=user.email||'';
+      form.elements.to.value='office@ogreena.com';
+      delete form.dataset.submissionId;
+      formStatus.textContent=data.duplicate?'Your email was already received.':'Your email was sent to Ogreena and saved in Messenger.';
+    }catch(error){
+      formStatus.classList.add('error');
+      formStatus.textContent=error?.message||'Email could not be sent. Please try again.';
+    }finally{
+      form.dataset.submitting='false';
+      form.setAttribute('aria-busy','false');
+      form.querySelector('button[type="submit"]').disabled=false;
+    }
+  });
+}
+
 function contactPropertyValues(form) {
   const values = Object.fromEntries(new FormData(form));
   return {
@@ -446,6 +484,7 @@ async function renderSession(session) {
   document.querySelector('#welcomeName').textContent = profile?.display_name ? `${profile.display_name} · Customer Profile` : 'Customer Profile';
   signupWelcome.hidden=sessionStorage.getItem(SIGNUP_WELCOME_KEY)!=='true';
   document.querySelector('#accountEmail').textContent = user.email;
+  configureCustomerEmailForm(user);
   fillContactPropertyForms(profile);
   await loadServiceCatalog();
   await Promise.all([loadProducts(), loadRequests(user.id), loadCustomerActivity(user.id)]);

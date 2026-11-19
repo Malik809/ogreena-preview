@@ -36,6 +36,7 @@ const session = { access_token:'mock-customer-access', refresh_token:'mock-custo
     const headings = await page.locator('#accountPanel .account-grid > .card > h2').allTextContents();
     const expected = ['Profile', 'Ogreena Products', 'Service Requests', 'Service history'];
     if (JSON.stringify(headings) !== JSON.stringify(expected)) throw new Error(`${viewport.name}: customer sections are ${JSON.stringify(headings)}`);
+    if (!await page.locator('[data-ogreena-contact]').getByRole('heading', { name:'Contact Ogreena' }).isVisible()) throw new Error(`${viewport.name}: Contact Ogreena is missing after the customer sections`);
     if (await page.getByText('Business owner account', { exact:false }).count()) throw new Error(`${viewport.name}: business-owner section is still present`);
     if (!await page.getByText(/Scheduled: Nov 10, 2026/).count()) throw new Error(`${viewport.name}: scheduled appointment is missing from the customer request`);
     if (await page.locator('#requestForm [name="service_address_street"]').inputValue() !== savedProfile.property_street_address) throw new Error(`${viewport.name}: saved address did not prefill the request`);
@@ -56,9 +57,14 @@ const session = { access_token:'mock-customer-access', refresh_token:'mock-custo
     if (submittedRequest.request_customer_phone !== savedProfile.phone || submittedRequest.request_customer_name !== savedProfile.display_name) throw new Error(`${viewport.name}: customer contact snapshot is incomplete`);
     if (!Array.isArray(submittedRequest.selected_items) || submittedRequest.selected_items.length !== 1) throw new Error(`${viewport.name}: selected service snapshot request is missing`);
     if (await page.locator('#contactPropertyForm [name="property_street_address"]').inputValue() !== savedProfile.property_street_address) throw new Error(`${viewport.name}: one-time address overwrote the saved profile`);
+    const contact = page.locator('[data-ogreena-contact]');
+    if (await contact.locator('a[href="tel:+15104729327"]').count() !== 1) throw new Error(`${viewport.name}: customer Call action is missing`);
+    if (await contact.locator('[data-email-toggle]').count() !== 1) throw new Error(`${viewport.name}: internal customer Email action is missing`);
+    if (await contact.locator('a[href^="mailto:"]').count() !== 0) throw new Error(`${viewport.name}: customer Email opens an external mail application`);
+    if (await contact.locator('a[href="../messages/?service=general-inquiry"]').count() !== 1) throw new Error(`${viewport.name}: existing Messenger action is missing`);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     if (overflow > 1) throw new Error(`${viewport.name}: customer profile overflows by ${overflow}px`);
-    console.log(`${viewport.name}: profile prefill, immutable request snapshot, role separation, and responsive width PASS`);
+    console.log(`${viewport.name}: profile data, service requests, Contact Ogreena, and responsive width PASS`);
     await page.close();
   }
   await browser.close();

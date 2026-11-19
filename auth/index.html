@@ -8,6 +8,7 @@
   <link rel="icon" type="image/jpeg" href="../assets/ogreena-original-logo.jpg">
   <link rel="stylesheet" href="../styles.css">
   <link rel="stylesheet" href="../brand.css">
+  <link rel="stylesheet" href="../contact-component.css?v=1">
   <link rel="stylesheet" href="auth.css">
   <style>[hidden]{display:none!important}.account-product img{display:block;width:100%;height:110px;object-fit:contain;margin-bottom:8px;background:#fff}</style>
 </head>
@@ -85,12 +86,14 @@
           <div id="requestList"></div>
         </article>
         <article class="card"><h2>Service history</h2><div id="customerHistory"><p class="muted">Loading history…</p></div></article>
+        <article class="card customer-contact ogreena-contact" data-ogreena-contact data-contact-intro="Need assistance with a service? Contact our office." data-messenger-href="../messages/?service=general-inquiry" data-internal-email="true"></article>
       </div>
     </section>
   </main>
   <div id="toast"></div>
   <script src="../vendor/supabase-2.57.4.min.js"></script>
   <script src="../service-catalog.js?v=1"></script>
+  <script src="../contact-component.js?v=1"></script>
   <script src="owner-auth.js?v=26"></script>
 </body>
 </html>

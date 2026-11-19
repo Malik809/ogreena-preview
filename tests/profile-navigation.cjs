@@ -42,6 +42,8 @@ for (const section of customerSections) {
   assert.ok(sectionIndex > lastSection, `${section} must appear in the required customer-dashboard order`);
   lastSection = sectionIndex;
 }
+assert.ok(customerPage.indexOf('data-ogreena-contact') > lastSection, 'Contact Ogreena must follow the existing customer-dashboard sections');
+assert.match(customerPage, /contact-component\.js\?v=1/);
 assert.match(business, /\.eq\('user_id', user\.id\)/);
 assert.match(business, /\.eq\('role', 'owner'\)/);
 assert.match(businessPolicies, /alter table public\.business_memberships enable row level security/);
