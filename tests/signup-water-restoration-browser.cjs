@@ -20,7 +20,7 @@ const session={access_token:'mock-new-customer-access',refresh_token:'mock-new-c
     await page.locator('#signupWelcome').waitFor({state:'visible'});
     if((await page.locator('#welcomeName').textContent())?.trim()!=='New Customer · Customer Profile')throw new Error(`${viewport.name}: customer name not shown`);
     const call=page.getByRole('link',{name:/Call Ogreena/});
-    if(await call.getAttribute('href')!=='tel:+15104729327')throw new Error(`${viewport.name}: signup call link is wrong`);
+    if(await call.first().getAttribute('href')!=='tel:+15104729327')throw new Error(`${viewport.name}: signup call link is wrong`);
     if(!await page.getByRole('link',{name:/Message Ogreena/}).isVisible())throw new Error(`${viewport.name}: message action missing`);
     await page.getByRole('button',{name:/Request Service/}).click();
     if(!await page.locator('#requestServices').isVisible())throw new Error(`${viewport.name}: request panel unavailable`);
@@ -29,8 +29,8 @@ const session={access_token:'mock-new-customer-access',refresh_token:'mock-new-c
 
     await page.goto(`${base}/services/water-restoration/`,{waitUntil:'networkidle'});
     if((await page.locator('#serviceTitle').textContent())?.trim()!=='Water Restoration')throw new Error(`${viewport.name}: Water Restoration title missing`);
-    if(!await page.getByRole('button',{name:'Message Ogreena',exact:true}).first().isVisible())throw new Error(`${viewport.name}: service message button missing`);
-    if(!await page.getByRole('link',{name:/Call \(510\) 472-9327/}).first().isVisible())throw new Error(`${viewport.name}: service call button missing`);
+    if(!await page.locator('.service-quick-actions').getByRole('button',{name:'Message',exact:true}).isVisible())throw new Error(`${viewport.name}: service message button missing`);
+    if(!await page.locator('.service-quick-actions').getByRole('link',{name:/Call Ogreena/}).isVisible())throw new Error(`${viewport.name}: service call button missing`);
     if(await page.getByText(/24\/7 emergency response available/i).count())throw new Error(`${viewport.name}: unsupported emergency claim shown`);
     overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
     if(overflow>1)throw new Error(`${viewport.name}: service page overflows by ${overflow}px`);

@@ -80,6 +80,10 @@ document.querySelectorAll('[data-auth-tab]').forEach(button => button.addEventLi
 const requestedMode = new URLSearchParams(location.search).get('mode');
 const requestedNext = new URLSearchParams(location.search).get('next');
 const safeNext = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '';
+const requestedContact = new URLSearchParams(location.search).get('contact');
+const requestedService = new URLSearchParams(location.search).get('service');
+const requestedReturn = new URLSearchParams(location.search).get('return');
+const safeServiceReturn = requestedReturn && /^\/services\/[a-z0-9-]+\/$/.test(requestedReturn) ? requestedReturn : '';
 const recoveryHash = new URLSearchParams(location.hash.replace(/^#/, ''));
 // A normal signed-in session or a hand-written URL must never authorize a
 // password change. Only Supabase's validated PASSWORD_RECOVERY event below
@@ -249,6 +253,30 @@ function configureCustomerEmailForm(user){
       form.querySelector('button[type="submit"]').disabled=false;
     }
   });
+}
+
+function applyRequestedContactContext(){
+  if(requestedContact!=='email')return;
+  const form=document.querySelector('[data-customer-email-form]');
+  const panel=document.querySelector('.customer-email-panel');
+  const toggle=document.querySelector('[data-email-toggle]');
+  if(!form||!panel)return;
+  panel.hidden=false;
+  toggle?.setAttribute('aria-expanded','true');
+  if(requestedService&&!form.elements.subject.value){
+    const serviceName=requestedService.split('-').map(word=>word.charAt(0).toUpperCase()+word.slice(1)).join(' ');
+    form.elements.subject.value=`${serviceName} inquiry`;
+  }
+  if(safeServiceReturn&&!panel.querySelector('[data-service-return]')){
+    const link=document.createElement('a');
+    link.className='small-btn';
+    link.dataset.serviceReturn='true';
+    link.href=safeServiceReturn;
+    link.textContent='Back to service';
+    panel.prepend(link);
+  }
+  panel.scrollIntoView({block:'start'});
+  form.elements.message.focus({preventScroll:true});
 }
 
 function contactPropertyValues(form) {
@@ -487,6 +515,7 @@ async function renderSession(session) {
   configureCustomerEmailForm(user);
   fillContactPropertyForms(profile);
   await loadServiceCatalog();
+  applyRequestedContactContext();
   await Promise.all([loadProducts(), loadRequests(user.id), loadCustomerActivity(user.id)]);
 }
 

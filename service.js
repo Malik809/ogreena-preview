@@ -129,6 +129,8 @@ if (item) {
   document.querySelector('#serviceDesc').textContent = item.description;
   window.OgreenaServiceIcons.renderInto(document.querySelector('#serviceIcon'), { slug:document.body.dataset.service, name:item.name, icon:item.icon });
   const requestService = () => { location.href = `${siteRoot}messages/?service=${encodeURIComponent(document.body.dataset.service)}`; };
+  const serviceReturnPath = `/services/${encodeURIComponent(document.body.dataset.service)}/`;
+  const emailOgreenaUrl = `${siteRoot}auth/?contact=email&service=${encodeURIComponent(document.body.dataset.service)}&return=${encodeURIComponent(serviceReturnPath)}`;
   const requestLabel = item.requestLabel || 'Message Ogreena';
   document.querySelectorAll('[data-request],[data-unavailable]').forEach(control => {
     control.addEventListener('click', requestService);
@@ -139,6 +141,16 @@ if (item) {
     control.removeAttribute('aria-disabled');
     control.classList.remove('disabled-action');
   });
+
+  const quickActions = document.querySelector('.service-profile .profile-actions');
+  quickActions.classList.add('service-quick-actions');
+  quickActions.setAttribute('aria-label', `${item.name} contact options`);
+  quickActions.innerHTML = `
+    <a class="small-btn" href="${common.phoneHref}" aria-label="Call Ogreena at ${common.phone}">Call</a>
+    <button class="small-btn" type="button" data-top-message>Message</button>
+    <a class="small-btn" href="${emailOgreenaUrl}" data-top-email>Email</a>`;
+  document.querySelector('.service-profile .identity').append(quickActions);
+  quickActions.querySelector('[data-top-message]').addEventListener('click', requestService);
 
   document.querySelector('#overview').innerHTML = `
     <article class="card profile-accent">
@@ -156,10 +168,10 @@ if (item) {
     </article>
     <article class="card action-card">
       <div><h2>Ready to discuss the work?</h2><p class="muted">Tell Ogreena what you need and confirm availability.</p></div>
-      <div class="form-actions"><a class="small-btn" href="${common.phoneHref}">Call ${common.phone}</a><button class="small-btn" type="button" data-message-ogreena>Message Ogreena</button><button class="small-btn primary" type="button" data-generated-unavailable>${requestLabel}</button></div>
+      <div class="form-actions service-contact-actions"><a class="small-btn" href="${common.phoneHref}">Call</a><button class="small-btn" type="button" data-message-ogreena>Message</button><a class="small-btn" href="${emailOgreenaUrl}">Email</a>${requestLabel !== 'Message Ogreena' ? `<button class="small-btn primary" type="button" data-generated-request>${requestLabel}</button>` : ''}</div>
     </article>`;
   document.querySelector('[data-message-ogreena]').addEventListener('click',requestService);
-  document.querySelector('[data-generated-unavailable]').addEventListener('click', requestService);
+  document.querySelector('[data-generated-request]')?.addEventListener('click', requestService);
 
   document.querySelector('#coveragePanel').innerHTML = `
     <article class="card"><div class="card-title"><h2>Service areas</h2><span class="tag">Confirm availability</span></div>
@@ -197,13 +209,13 @@ if (item) {
   document.querySelector('#contactPanel').innerHTML = `
     <article class="card"><div class="card-title"><h2>Contact Ogreena</h2><span class="tag">${item.name}</span></div>
       <div class="contact-grid">
-        <a class="contact-option" href="${common.phoneHref}"><b>Call Ogreena</b><span>${common.phone}</span></a>
-        <a class="contact-option" href="${directionsUrl}" target="_blank" rel="noopener"><b>Get Directions</b><span>Open map directions</span></a>
-        <button class="contact-option" type="button" data-contact-unavailable><b>Request service</b><span>Start an online request</span></button>
+        <a class="contact-option" href="${common.phoneHref}"><b>Call</b><span>${common.phone}</span></a>
+        <button class="contact-option" type="button" data-contact-message><b>Message</b><span>Open Ogreena Messenger</span></button>
+        <a class="contact-option" href="${emailOgreenaUrl}"><b>Email</b><span>Use Ogreena's secure email form</span></a>
       </div>
       <div class="address-block"><b>Ogreena</b><br>${common.address}<br>${common.hours}</div>
     </article>`;
-  document.querySelector('[data-contact-unavailable]').addEventListener('click', requestService);
+  document.querySelector('[data-contact-message]').addEventListener('click', requestService);
 
   const sidebar = document.querySelector('.service-layout aside .info-list');
   sidebar.innerHTML = `
