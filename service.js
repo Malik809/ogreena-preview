@@ -165,13 +165,7 @@ if (item) {
     <article class="card">
       <div class="card-title"><h2>Types of jobs covered</h2><span class="tag">${item.availability}</span></div>
       <div class="job-grid">${item.jobs.map(value => `<div class="job-chip">${value}</div>`).join('')}</div>
-    </article>
-    <article class="card action-card">
-      <div><h2>Ready to discuss the work?</h2><p class="muted">Tell Ogreena what you need and confirm availability.</p></div>
-      <div class="form-actions service-contact-actions"><a class="small-btn" href="${common.phoneHref}">Call</a><button class="small-btn" type="button" data-message-ogreena>Message</button><a class="small-btn" href="${emailOgreenaUrl}">Email</a>${requestLabel !== 'Message Ogreena' ? `<button class="small-btn primary" type="button" data-generated-request>${requestLabel}</button>` : ''}</div>
     </article>`;
-  document.querySelector('[data-message-ogreena]').addEventListener('click',requestService);
-  document.querySelector('[data-generated-request]')?.addEventListener('click', requestService);
 
   document.querySelector('#coveragePanel').innerHTML = `
     <article class="card"><div class="card-title"><h2>Service areas</h2><span class="tag">Confirm availability</span></div>

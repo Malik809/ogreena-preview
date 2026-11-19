@@ -30,9 +30,12 @@ const session = { access_token:'mock-service-access', refresh_token:'mock-servic
         const email = quick.getByRole('link',{name:'Email',exact:true});
         const emailUrl = new URL(await email.getAttribute('href'), page.url());
         if (emailUrl.pathname !== '/auth/' || emailUrl.searchParams.get('contact') !== 'email' || emailUrl.searchParams.get('service') !== slug || emailUrl.searchParams.get('return') !== `/services/${slug}/`) throw new Error(`${viewport.name} ${slug}: Email context is wrong`);
-        const bottom = page.locator('.service-contact-actions');
-        if (await bottom.getByRole('button',{name:'Message',exact:true}).count() !== 1) throw new Error(`${viewport.name} ${slug}: duplicate bottom Message action`);
-        if (await bottom.getByRole('link',{name:'Email',exact:true}).count() !== 1) throw new Error(`${viewport.name} ${slug}: bottom Email is missing`);
+        if (await page.getByRole('heading',{name:'Ready to discuss the work?'}).count() !== 0) throw new Error(`${viewport.name} ${slug}: bottom contact section still exists`);
+        if (await page.locator('.action-card, .service-contact-actions').count() !== 0) throw new Error(`${viewport.name} ${slug}: bottom contact markup left empty space`);
+        await page.getByRole('button',{name:'Pricing',exact:true}).click();
+        if (!await page.locator('#pricingPanel').isVisible()) throw new Error(`${viewport.name} ${slug}: Pricing tab no longer works`);
+        if (await page.locator('#pricingPanel [data-price-request], #pricingPanel [data-service-selection]').count() < 1) throw new Error(`${viewport.name} ${slug}: estimate request functionality is missing`);
+        await page.getByRole('button',{name:'Overview',exact:true}).click();
         const overflow = await page.evaluate(()=>document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
         if (overflow) throw new Error(`${viewport.name} ${slug}: horizontal overflow`);
       }
