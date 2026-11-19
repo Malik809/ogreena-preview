@@ -1,6 +1,7 @@
 const common = {
   address: '5600 Martin Luther King Jr Way, Suite 102, Oakland, CA 94609',
   phone: '(510) 472-9327',
+  phoneHref: 'tel:+15104729327',
   hours: 'Published hours: 9:00 AM–5:00 PM. Call to confirm day-specific availability.',
   areas: ['Oakland', 'Berkeley', 'Alameda', 'Emeryville', 'San Leandro', 'Richmond', 'Hayward', 'San Francisco', 'Surrounding Bay Area communities']
 };
@@ -92,6 +93,13 @@ const serviceData = {
     handles: ['Walkways and entry areas', 'Suitable hardscape and exterior surfaces', 'Property-presentation cleaning', 'Seasonal exterior upkeep', 'Coordination with graffiti removal or facility maintenance'],
     jobs: ['Residential exteriors', 'Apartment and commercial entries', 'Walkways and common areas', 'Managed-property maintenance']
   },
+  'water-restoration': {
+    name: 'Water Restoration', icon: '≋', availability: 'Residential and commercial by assessment', cover: 'pressure-washing', requestLabel: 'Request Restoration Estimate',
+    description: 'Water extraction, structural drying, moisture inspection, water-damage cleanup, and restoration estimates for Bay Area homes and properties, limited to the scope confirmed after assessment.',
+    handles: ['Water extraction from accessible affected areas', 'Moisture inspection and documentation', 'Structural drying based on site conditions', 'Water-damage cleanup within an approved scope', 'Restoration estimates after property assessment'],
+    jobs: ['Homes and apartments', 'Rental and managed properties', 'Commercial spaces by assessment', 'Water-damage cleanup and drying requests'],
+    notice: 'Availability, equipment needs and the exact restoration scope must be confirmed before work is accepted. Ogreena does not advertise 24/7 emergency response, mold remediation, hazardous-material work or other specialized services on this page.'
+  },
   'landscaping': {
     name: 'Landscaping', icon: '♧', availability: 'Residential and commercial', requestLabel: 'Request Estimate',
     description: 'Professional landscaping, lawn care, yard maintenance, and property groundskeeping services throughout the Bay Area.',
@@ -112,6 +120,7 @@ const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeU
 const siteRoot = location.hostname.endsWith('.github.io') ? '/ogreena-preview/' : '/';
 
 if (item) {
+  document.querySelectorAll('a[href^="tel:"]').forEach(link=>{link.href=common.phoneHref;const number=link.querySelector('span');if(number)number.textContent=common.phone;});
   const cover = document.querySelector('.service-profile .cover');
   cover.style.backgroundImage = `url('${siteRoot}assets/service-covers/${item.cover || document.body.dataset.service}.jpg')`;
   cover.setAttribute('role', 'img');
@@ -147,8 +156,9 @@ if (item) {
     </article>
     <article class="card action-card">
       <div><h2>Ready to discuss the work?</h2><p class="muted">Tell Ogreena what you need and confirm availability.</p></div>
-      <div class="form-actions"><a class="small-btn" href="tel:+15104729327">Call ${common.phone}</a><button class="small-btn primary" type="button" data-generated-unavailable>${requestLabel}</button></div>
+      <div class="form-actions"><a class="small-btn" href="${common.phoneHref}">Call ${common.phone}</a><button class="small-btn" type="button" data-message-ogreena>Message Ogreena</button><button class="small-btn primary" type="button" data-generated-unavailable>${requestLabel}</button></div>
     </article>`;
+  document.querySelector('[data-message-ogreena]').addEventListener('click',requestService);
   document.querySelector('[data-generated-unavailable]').addEventListener('click', requestService);
 
   document.querySelector('#coveragePanel').innerHTML = `
@@ -187,7 +197,7 @@ if (item) {
   document.querySelector('#contactPanel').innerHTML = `
     <article class="card"><div class="card-title"><h2>Contact Ogreena</h2><span class="tag">${item.name}</span></div>
       <div class="contact-grid">
-        <a class="contact-option" href="tel:+15104729327"><b>Call Ogreena</b><span>${common.phone}</span></a>
+        <a class="contact-option" href="${common.phoneHref}"><b>Call Ogreena</b><span>${common.phone}</span></a>
         <a class="contact-option" href="${directionsUrl}" target="_blank" rel="noopener"><b>Get Directions</b><span>Open map directions</span></a>
         <button class="contact-option" type="button" data-contact-unavailable><b>Request service</b><span>Start an online request</span></button>
       </div>
@@ -197,7 +207,7 @@ if (item) {
 
   const sidebar = document.querySelector('.service-layout aside .info-list');
   sidebar.innerHTML = `
-    <div class="info-row"><i>☎</i><div><b>Direct call</b><a href="tel:+15104729327">${common.phone}</a></div></div>
+    <div class="info-row"><i>☎</i><div><b>Direct call</b><a href="${common.phoneHref}">${common.phone}</a></div></div>
     <div class="info-row"><i>⌖</i><div><b>Business address</b><a href="${directionsUrl}" target="_blank" rel="noopener">${common.address}</a></div></div>
     <div class="info-row"><i>◷</i><div><b>Published hours</b><span>9:00 AM–5:00 PM; call to confirm the day</span></div></div>
     <div class="info-row"><i>⌂</i><div><b>Availability</b><span>${item.availability}</span></div></div>`;

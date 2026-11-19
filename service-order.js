@@ -14,6 +14,7 @@
     { slug:'mattress-cleaning', name:'Mattress Cleaning', icon:'▱', summary:'Twin, full, queen and king mattress care' },
     { slug:'floor-polishing', name:'Floor Polishing', icon:'◇', summary:'Residential floor polishing by square foot' },
     { slug:'pressure-washing', name:'Pressure Washing', icon:'≈', summary:'Exterior hard-surface cleaning' },
+    { slug:'water-restoration', name:'Water Restoration', icon:'≋', summary:'Water extraction, drying and damage cleanup' },
     { slug:'landscaping', name:'Landscaping', icon:'♧', summary:'Lawn care, yard cleanup and grounds maintenance' },
     { slug:'hauling', name:'Hauling & Junk Removal', icon:'▰', summary:'Junk removal, furniture removal and property cleanouts' }
   ];

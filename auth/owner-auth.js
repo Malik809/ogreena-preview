@@ -9,6 +9,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 // the project's allowed redirects. Supabase adds the recovery session to it.
 const recoveryRedirect = 'https://ogreena.com/auth/';
 const OWNER_SESSION_HANDOFF_KEY = 'ogreena-owner-session-handoff';
+const SIGNUP_WELCOME_KEY = 'ogreena-show-signup-welcome';
 
 const authPanel = document.querySelector('#authPanel');
 const accountPanel = document.querySelector('#accountPanel');
@@ -96,7 +97,7 @@ document.querySelector('#signUpForm').addEventListener('submit', async event => 
   event.preventDefault();
   const form = event.currentTarget;
   const values = Object.fromEntries(new FormData(form));
-  await runFormRequest(form, 'Creating your secure Ogreena account…', () => supabase.auth.signUp({ email: values.email, password: values.password, options: { data: { display_name: values.display_name, requested_account_type: values.account_type } } }), async data => {
+  await runFormRequest(form, 'Creating your secure Ogreena account…', () => supabase.auth.signUp({ email: values.email, password: values.password, options: { data: { display_name: values.display_name, phone: values.phone?.trim() || null, requested_account_type: values.account_type } } }), async data => {
     form.reset();
     if (!data.session && Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
       switchTab('signin');
@@ -105,7 +106,13 @@ document.querySelector('#signUpForm').addEventListener('submit', async event => 
       return;
     }
     if (!data.session) throw new Error('Customer signup did not return an immediate session. Email confirmation must be disabled before this release is published.');
+    if (values.phone?.trim()) {
+      const { error:phoneError } = await supabase.from('profiles').update({ phone:values.phone.trim() }).eq('id',data.user.id);
+      if (phoneError) throw phoneError;
+    }
+    sessionStorage.setItem(SIGNUP_WELCOME_KEY,'true');
     setStatus('Account created and signed in. Opening your Customer Profile…', 'success');
+    await renderSession(data.session);
   });
 });
 
@@ -201,6 +208,10 @@ let publishedServices = [];
 let activeRequestCategory = '';
 const selectedRequestItems = new Map();
 let currentCustomerProfile = null;
+
+const signupWelcome=document.querySelector('#signupWelcome');
+document.querySelector('#skipSignupWelcome').addEventListener('click',()=>{signupWelcome.hidden=true;sessionStorage.removeItem(SIGNUP_WELCOME_KEY);document.querySelector('#profileDetails').scrollIntoView({behavior:'smooth',block:'start'});});
+document.querySelector('#welcomeRequestService').addEventListener('click',()=>{signupWelcome.hidden=true;sessionStorage.removeItem(SIGNUP_WELCOME_KEY);document.querySelector('#requestServices').scrollIntoView({behavior:'smooth',block:'start'});});
 
 function contactPropertyValues(form) {
   const values = Object.fromEntries(new FormData(form));
@@ -433,6 +444,7 @@ async function renderSession(session) {
   if (employeeRequestResult.data) { location.replace('../careers-account/?type=employee&mode=signin'); return; }
   document.querySelector('#roleBadge').textContent = role[0].toUpperCase() + role.slice(1);
   document.querySelector('#welcomeName').textContent = profile?.display_name ? `${profile.display_name} · Customer Profile` : 'Customer Profile';
+  signupWelcome.hidden=sessionStorage.getItem(SIGNUP_WELCOME_KEY)!=='true';
   document.querySelector('#accountEmail').textContent = user.email;
   fillContactPropertyForms(profile);
   await loadServiceCatalog();

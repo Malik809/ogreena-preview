@@ -11,7 +11,7 @@ function repairHaulingRoute() {
 }
 function renderServices() {
   const services = serviceOrder.getServices();
-  const featuredSlugs = ['carpet-cleaning','house-cleaning','deep-cleaning','move-in-move-out-cleaning','landscaping','hauling'];
+  const featuredSlugs = ['carpet-cleaning','house-cleaning','deep-cleaning','move-in-move-out-cleaning','water-restoration','landscaping','hauling'];
   const featured = services.filter(service => featuredSlugs.includes(service.slug));
   document.querySelector('#featuredServices').innerHTML = (servicesExpanded ? services : featured).map(serviceCard).join('');
   document.querySelector('#allServices').innerHTML = services.map(serviceCard).join('');
