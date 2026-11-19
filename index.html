@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="brand.css">
   <link rel="stylesheet" href="work-with-ogreena.css?v=1">
+  <link rel="stylesheet" href="contact-tab.css?v=1">
 </head>
 <body class="presentation-mode">
   <header class="topbar">
@@ -29,7 +30,7 @@
         <div class="identity"><h1>Ogreena <span class="verified">✓</span></h1><p>Bay Area cleaning, electrical and facility-maintenance services for homes, properties and businesses.</p></div>
         <div class="profile-actions"><a class="small-btn primary" href="tel:+15104729327">☎ (510) 472-9327</a></div>
       </div>
-      <nav class="tabs" aria-label="Profile sections"><button class="tab active" data-tab="about">About</button><button class="tab" data-tab="services">Services</button><button class="tab" data-tab="reviews">Reviews</button><button class="tab" data-tab="contact">Contact</button></nav>
+      <nav class="tabs" aria-label="Profile sections" role="tablist"><button class="tab active" id="tab-about" data-tab="about" role="tab" aria-controls="panel-about" aria-selected="true">About</button><button class="tab" id="tab-services" data-tab="services" role="tab" aria-controls="panel-services" aria-selected="false">Services</button><button class="tab" id="tab-reviews" data-tab="reviews" role="tab" aria-controls="panel-reviews" aria-selected="false">Reviews</button><button class="tab" id="tab-contact" data-tab="contact" role="tab" aria-controls="panel-contact" aria-selected="false">Contact</button></nav>
     </section>
     <div class="layout">
       <aside class="left-col">
@@ -37,7 +38,7 @@
         <div class="notice">Job photos shared in Ogreena Messenger remain private to the customer and authorized owner.</div>
       </aside>
       <section class="right-col">
-        <div class="tab-panel active" id="panel-about">
+        <div class="tab-panel active" id="panel-about" role="tabpanel" aria-labelledby="tab-about" tabindex="-1">
           <div class="card"><div class="content-head"><h2>About Ogreena</h2><span class="tag">Business profile</span></div><p>Ogreena provides cleaning and property-support services for residential and commercial customers. This profile-first layout keeps services, reviews, contact details and booking in one organized place—without turning the homepage into an advertisement.</p></div>
           <section class="card electrification-feature" aria-labelledby="electrification-title">
             <div class="electrification-kicker">Oakland and San Francisco Bay Area</div>
@@ -51,15 +52,15 @@
           </section>
           <div class="card"><div class="content-head"><h2>Featured services</h2><button class="small-btn" id="serviceToggle" type="button" aria-expanded="false" aria-controls="featuredServices">View All</button></div><div class="service-grid" id="featuredServices"></div></div>
         </div>
-        <div class="tab-panel" id="panel-services"><div class="content-head"><h2>All services</h2><span class="muted">Browse without an account</span></div><div class="service-grid" id="allServices"></div></div>
-        <div class="tab-panel" id="panel-reviews"><div class="card"><div class="content-head"><h2>Verified customer feedback</h2><span class="tag">Google reviews</span></div><div class="review"><div class="stars">★★★★★</div><blockquote>“I had an amazing experience with Ogreena Cleaning Services today!”</blockquote><small>Veronica Kincaid · Google review</small></div><div class="review"><div class="stars">★★★★★</div><blockquote>“The service was amazing!”</blockquote><small>Channing Villanueva · Google review</small></div><p class="muted">Only verified review excerpts are shown. No fictional customer testimonials are presented as real.</p></div></div>
-        <div class="tab-panel" id="panel-contact"><div class="card"><div class="content-head"><h2>Contact Ogreena</h2></div><div class="contact-grid"><a class="contact-option" href="tel:+15104729327"><b>Call directly</b><span>(510) 472-9327</span></a><button class="contact-option" type="button" data-unavailable><b>Message Ogreena</b><span>Chat directly with our team</span></button></div></div></div>
+        <div class="tab-panel" id="panel-services" role="tabpanel" aria-labelledby="tab-services" tabindex="-1"><div class="content-head"><h2>All services</h2><span class="muted">Browse without an account</span></div><div class="service-grid" id="allServices"></div></div>
+        <div class="tab-panel" id="panel-reviews" role="tabpanel" aria-labelledby="tab-reviews" tabindex="-1"><div class="card"><div class="content-head"><h2>Verified customer feedback</h2><span class="tag">Google reviews</span></div><div class="review"><div class="stars">★★★★★</div><blockquote>“I had an amazing experience with Ogreena Cleaning Services today!”</blockquote><small>Veronica Kincaid · Google review</small></div><div class="review"><div class="stars">★★★★★</div><blockquote>“The service was amazing!”</blockquote><small>Channing Villanueva · Google review</small></div><p class="muted">Only verified review excerpts are shown. No fictional customer testimonials are presented as real.</p></div></div>
+        <div class="tab-panel" id="panel-contact" role="tabpanel" aria-labelledby="tab-contact" tabindex="-1"><div class="card contact-card"><div class="content-head"><div><h2>Contact Ogreena</h2><p class="muted">Have a question or need service? Contact our office directly.</p></div></div><div class="contact-grid"><a class="contact-option" href="tel:+15104729327" aria-label="Call Ogreena at (510) 472-9327"><span class="contact-label">Phone</span><b>(510) 472-9327</b><strong>Call</strong></a><a class="contact-option" href="mailto:office@ogreena.com" aria-label="Email Ogreena at office@ogreena.com"><span class="contact-label">Email</span><b>office@ogreena.com</b><strong>Email</strong></a><a class="contact-option" href="messages/?service=general-inquiry" aria-label="Open Ogreena Messenger"><span class="contact-label">Ogreena Messenger</span><b>Send a message through the website.</b><strong>Message Ogreena</strong></a></div></div></div>
       </section>
     </div>
   </main>
   <nav class="mobile-nav"><a href="./"><b>Profile</b>Home</a><a href="#" data-mobile-services><b>Services</b>Browse</a><a data-auth-guest href="auth/?mode=signup"><b>+</b>Sign Up</a><a data-auth-guest href="auth/?mode=signin"><b>Account</b>Sign In</a><a data-auth-profile href="customer/" hidden><b>Account</b>My Profile</a><a data-auth-owner href="owner/" hidden><b>Owner</b>Dashboard</a><a data-auth-signout href="#" hidden><b>Exit</b>Sign Out</a></nav>
   <footer class="footer">Ogreena · Bay Area cleaning and property services</footer>
   <div id="toast"></div>
-  <script src="navigation.js?v=17"></script><script src="service-order.js?v=11"></script><script src="service-icons.js?v=15"></script><script src="product-catalog.js?v=5"></script><script src="products.js?v=7"></script><script src="app.js?v=23"></script><script src="vendor/supabase-2.57.4.min.js"></script><script src="owner-auth-nav.js?v=4"></script><script type="module" src="/public-data.js?v=3"></script>
+  <script src="navigation.js?v=17"></script><script src="service-order.js?v=11"></script><script src="service-icons.js?v=15"></script><script src="product-catalog.js?v=5"></script><script src="products.js?v=7"></script><script src="app.js?v=24"></script><script src="vendor/supabase-2.57.4.min.js"></script><script src="owner-auth-nav.js?v=4"></script><script type="module" src="/public-data.js?v=3"></script>
 </body>
 </html>

@@ -1,0 +1,63 @@
+.tab-panel {
+  scroll-margin-top: 82px;
+}
+
+.tab-panel:focus {
+  outline: none;
+}
+
+.contact-card .content-head {
+  align-items: flex-start;
+}
+
+.contact-card .content-head p {
+  margin: 6px 0 0;
+}
+
+.contact-card .contact-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.contact-card .contact-option {
+  display: flex;
+  min-width: 0;
+  min-height: 150px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  background: linear-gradient(135deg, #f2f9f3, #fffaf0);
+  color: var(--ink);
+}
+
+.contact-card .contact-option:hover,
+.contact-card .contact-option:focus-visible {
+  border-color: var(--gold);
+  box-shadow: 0 8px 24px rgba(35, 74, 53, .08);
+}
+
+.contact-card .contact-option b {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.contact-card .contact-option strong {
+  color: var(--green);
+  font-size: 13px;
+}
+
+.contact-card .contact-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .contact-card .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-card .contact-option {
+    min-height: 112px;
+  }
+}

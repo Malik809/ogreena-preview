@@ -32,7 +32,25 @@ document.addEventListener('click', event => {
   event.preventDefault();
   location.assign(new URL('services/hauling/', location.href));
 }, true);
-function showTab(name){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===name));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));document.querySelector(`#panel-${name}`).classList.add('active');location.hash=name}document.querySelectorAll('[data-tab]').forEach(x=>x.addEventListener('click',()=>showTab(x.dataset.tab)));document.querySelector('[data-mobile-services]').addEventListener('click',e=>{e.preventDefault();showTab('services');scrollTo({top:0,behavior:'smooth'})});if(location.hash&&document.querySelector(`#panel-${location.hash.slice(1)}`))showTab(location.hash.slice(1));
+function showTab(name,{scroll=false,focus=false,updateHash=true}={}){
+  const panel=document.querySelector(`#panel-${name}`);
+  if(!panel)return false;
+  document.querySelectorAll('.tab').forEach(tab=>{
+    const active=tab.dataset.tab===name;
+    tab.classList.toggle('active',active);
+    tab.setAttribute('aria-selected',String(active));
+  });
+  document.querySelectorAll('.tab-panel').forEach(item=>item.classList.toggle('active',item===panel));
+  if(updateHash&&location.hash!==`#${name}`)history.replaceState(null,'',`#${name}`);
+  if(scroll)panel.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+  if(focus)panel.focus({preventScroll:true});
+  return true;
+}
+document.querySelectorAll('[data-tab]').forEach(tab=>tab.addEventListener('click',()=>showTab(tab.dataset.tab,{scroll:true,focus:true})));
+document.querySelector('[data-mobile-services]')?.addEventListener('click',event=>{event.preventDefault();showTab('services',{scroll:true,focus:true})});
+function showHashTab(){const name=location.hash.slice(1);if(name)showTab(name,{scroll:true,focus:false,updateHash:false})}
+if(location.hash)requestAnimationFrame(showHashTab);
+window.addEventListener('hashchange',showHashTab);
 document.querySelectorAll('[data-unavailable]').forEach(button => button.addEventListener('click', () => {
   location.href='messages/?service=general-inquiry';
 }));
