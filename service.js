@@ -94,7 +94,7 @@ const serviceData = {
     jobs: ['Residential exteriors', 'Apartment and commercial entries', 'Walkways and common areas', 'Managed-property maintenance']
   },
   'water-restoration': {
-    name: 'Water Restoration', icon: '≋', availability: 'Residential and commercial by assessment', cover: 'pressure-washing', requestLabel: 'Request Restoration Estimate',
+    name: 'Water Restoration', icon: '≋', availability: 'Residential and commercial by assessment', cover: 'water-restoration', requestLabel: 'Request Restoration Estimate',
     description: 'Water extraction, structural drying, moisture inspection, water-damage cleanup, and restoration estimates for Bay Area homes and properties, limited to the scope confirmed after assessment.',
     handles: ['Water extraction from accessible affected areas', 'Moisture inspection and documentation', 'Structural drying based on site conditions', 'Water-damage cleanup within an approved scope', 'Restoration estimates after property assessment'],
     jobs: ['Homes and apartments', 'Rental and managed properties', 'Commercial spaces by assessment', 'Water-damage cleanup and drying requests'],
