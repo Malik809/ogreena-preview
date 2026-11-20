@@ -9,6 +9,20 @@ const cors={
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:cors});
 const testPattern=/(^|[+._\s-])(test|demo|sample|example|invalid|validation|playwright|mock)([+._@\s-]|$)/i;
 const isTestText=(value:unknown)=>testPattern.test(String(value||''))||String(value||'').toLowerCase().endsWith('.invalid');
+const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const looksLikeGeneratedIdentifier=(value:unknown)=>{
+  const name=String(value||'').trim();
+  if(!name||uuidPattern.test(name))return true;
+  if(/^[A-Za-z0-9_-]{24,}$/.test(name))return true;
+  if(!/^[A-Za-z]{16,}$/.test(name))return false;
+  const upper=(name.match(/[A-Z]/g)||[]).length;
+  const lower=(name.match(/[a-z]/g)||[]).length;
+  return upper>=4&&lower>=4;
+};
+const customerDisplayName=(value:unknown)=>{
+  const name=String(value||'').trim().replace(/\s+/g,' ');
+  return looksLikeGeneratedIdentifier(name)?'Name not provided':name;
+};
 
 Deno.serve(async request=>{
   if(request.method==='OPTIONS')return new Response('ok',{headers:cors});
@@ -67,7 +81,7 @@ Deno.serve(async request=>{
     const hasScheduledJob=appointmentHistory.some(row=>['confirmed','completed'].includes(row.status)&&row.request_id&&!requestMap[row.request_id]?.isValidationTest);
     const hasCompletedPurchase=purchaseHistory.length>0;
     const actualCustomer=hasLegitimateRequest||hasScheduledJob||hasCompletedPurchase;
-    return {id:account.id,name:profile.display_name||'Account holder',email:account.email||'',registeredAt:account.created_at,lastSignInAt:account.last_sign_in_at||null,phone:profile.phone||'',propertyAddress:address,propertyType:profile.property_type||'',verified,isTestAccount,accountSource:account.app_metadata?.provider==='email'?'Public email signup':'Registered account',actualCustomer,activity:{hasLegitimateRequest,hasScheduledJob,hasCompletedPurchase,requestCount:requestHistory.length,appointmentCount:appointmentHistory.length,completedPurchaseCount:purchaseHistory.length},requestHistory,appointmentHistory,purchaseHistory};
+    return {id:account.id,name:customerDisplayName(profile.display_name),email:account.email||'',registeredAt:account.created_at,lastSignInAt:account.last_sign_in_at||null,phone:profile.phone||'',propertyAddress:address,propertyType:profile.property_type||'',verified,isTestAccount,accountSource:account.app_metadata?.provider==='email'?'Public email signup':'Registered account',actualCustomer,activity:{hasLegitimateRequest,hasScheduledJob,hasCompletedPurchase,requestCount:requestHistory.length,appointmentCount:appointmentHistory.length,completedPurchaseCount:purchaseHistory.length},requestHistory,appointmentHistory,purchaseHistory};
   }).sort((a,b)=>new Date(b.registeredAt).getTime()-new Date(a.registeredAt).getTime());
   const realRequests=requestRows.filter(row=>!row.isValidationTest),validationTestRequests=requestRows.filter(row=>row.isValidationTest);
   return json({
